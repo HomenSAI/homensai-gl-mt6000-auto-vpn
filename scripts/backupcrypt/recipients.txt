@@ -1,0 +1,3 @@
+# Public age recipients of the HomenS.AI private backups (scripts/backupcrypt/agetool.py, docs/architecture/AGE-TOFU-2026-11-04.ru.md).
+# Encryption also checks the copy pinned in the owner's DPAPI store; edit only with `agetool.py recipients --trust-repo` after review.
+age14y9hfcl2s7uzaunnqnd90l8m842v9qkfcxajqk6nrrquedt3wausf3d488

@@ -1,0 +1,12 @@
+{
+  "decoder": "zxing-cpp 3.1.1 (pinned in the run command)",
+  "python": "3.12.15",
+  "scope": "dummy keys only; QR ECC level Q; render_png scale 6, quiet zone 4",
+  "secret_failures": 0,
+  "secret_round_trips": 60,
+  "sizes": [
+    41
+  ],
+  "totp_failures": 0,
+  "totp_round_trips": 20
+}

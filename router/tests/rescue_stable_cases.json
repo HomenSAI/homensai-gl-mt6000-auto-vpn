@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared by test_rescue_stable.py and lua/test_rescue_stable.lua (03.11.2026): recovery_settings.normalized/stable_seconds == pair.recovery_normalized/stable_seconds, native_switch.committed_recovery_decision/source_ready == transaction.committed_recovery_decision/source_ready. Decisions: journal confirmed 900, now 1000 unless given; the fake recovery_ready answers true when the stability it is asked for is <= ready_upto; the fake health of the reserve answers reserve_health.",
+  "_comment": "Shared by test_rescue_stable.py and lua/test_rescue_stable.lua (03.11.2026): recovery_settings.normalized/stable_seconds == pair.recovery_normalized/stable_seconds, native_switch.committed_recovery_decision/source_ready == transaction.committed_recovery_decision/source_ready. Decisions: journal confirmed 900, now 1000 unless given; the fake recovery_ready answers true when the stability it is asked for is <= ready_upto; the fake health of the reserve answers reserve_health (\"unknown\" = None/nil). Owner decision 07.11.2026 (F-80): hold_reserve holds a WORKING reserve only; a reserve the detector calls failed AND a fresh negative probe confirms is rescued to a verified primary after rescue_stable under any return policy.",
   "normalized": [
     {"name": "defaults since 03.11.2026", "settings": {}, "primary_stable": 120, "rescue_stable": 10},
     {"name": "0 keeps the old rule", "settings": {"recovery_rescue_stable": "0"}, "primary_stable": 120, "rescue_stable": 0},
@@ -42,8 +42,20 @@
      "asked": 120, "action": "RESTORE-PRIMARY", "reason": "PRIMARY-STABLY-RECOVERED"},
     {"name": "healthy reserve: the damped hold", "settings": {}, "reserve_failed": false, "hold": 240, "ready_upto": 239,
      "asked": 240, "action": "OBSERVE", "reason": "PAIR-RATE-LIMIT"},
-    {"name": "hold_reserve policy: no automatic return, also when the reserve failed", "settings": {"recovery_return_policy": "hold_reserve"}, "reserve_failed": true, "ready_upto": 600,
-     "reserve_health": false, "asked": null, "action": "HOLD", "reason": "RESERVE-FAILED"}
+    {"name": "hold_reserve (owner decision 07.11.2026, F-80): a reserve proven failed by a fresh probe is rescued after rescue_stable", "settings": {"recovery_return_policy": "hold_reserve"}, "reserve_failed": true, "ready_upto": 10,
+     "reserve_health": false, "asked": 10, "action": "RESTORE-PRIMARY", "reason": "RESERVE-FAILED-PRIMARY-VERIFIED"},
+    {"name": "hold_reserve: proven failed, the primary 9 s stable: hold on the failed reserve for now", "settings": {"recovery_return_policy": "hold_reserve"}, "reserve_failed": true, "ready_upto": 9,
+     "reserve_health": false, "asked": 10, "action": "HOLD", "reason": "RESERVE-FAILED"},
+    {"name": "hold_reserve: the rescue ignores the damped return_hold (bounded by the attempt budget only)", "settings": {"recovery_return_policy": "hold_reserve"}, "reserve_failed": true, "hold": 600, "ready_upto": 10,
+     "reserve_health": false, "asked": 10, "action": "RESTORE-PRIMARY", "reason": "RESERVE-FAILED-PRIMARY-VERIFIED"},
+    {"name": "hold_reserve: the detector says failed, the fresh probe is unknown: hold, the primary is not asked", "settings": {"recovery_return_policy": "hold_reserve"}, "reserve_failed": true, "ready_upto": 600,
+     "reserve_health": "unknown", "asked": null, "action": "HOLD", "reason": "RESERVE-HEALTH-UNKNOWN"},
+    {"name": "hold_reserve: the detector says failed, the fresh probe is alive: stays, the primary is not asked", "settings": {"recovery_return_policy": "hold_reserve"}, "reserve_failed": true, "ready_upto": 600,
+     "reserve_health": true, "asked": null, "action": "OBSERVE", "reason": "CLIENT-CONFIRMED"},
+    {"name": "hold_reserve: a working reserve is never left, the primary is not asked (unchanged)", "settings": {"recovery_return_policy": "hold_reserve"}, "reserve_failed": false, "ready_upto": 600,
+     "asked": null, "action": "OBSERVE", "reason": "CLIENT-CONFIRMED"},
+    {"name": "hold_reserve: a working reserve under a damped hold is never left (unchanged)", "settings": {"recovery_return_policy": "hold_reserve"}, "reserve_failed": false, "hold": 240, "ready_upto": 600,
+     "asked": null, "action": "OBSERVE", "reason": "CLIENT-CONFIRMED"}
   ],
   "source_ready": [
     {"name": "the rescue return is proven with rescue_stable", "reason": "RESERVE-FAILED-PRIMARY-VERIFIED", "settings": {}, "ready_upto": 10, "asked": 10, "ready": true},
@@ -99,6 +111,8 @@
     {"name": "consecutive, healthy reserve, damped hold 240 s", "settings": {"failure_model": "consecutive"}, "reserve_failed": false, "ready_upto": 240, "asked": 240, "action": "RESTORE-PRIMARY", "reason": "PRIMARY-STABLY-RECOVERED", "model_asked": false, "hold": 240, "model_ready": false},
     {"name": "consecutive, FAILED reserve: rescue seconds", "settings": {"failure_model": "consecutive"}, "reserve_failed": true, "ready_upto": 10, "asked": 10, "action": "RESTORE-PRIMARY", "reason": "RESERVE-FAILED-PRIMARY-VERIFIED", "model_asked": false, "model_ready": false},
     {"name": "consecutive, FAILED reserve, primary 9 s: hold", "settings": {"failure_model": "consecutive"}, "reserve_failed": true, "ready_upto": 9, "asked": 10, "action": "HOLD", "reason": "RESERVE-FAILED", "model_asked": false, "reserve_health": false},
-    {"name": "hmm, healthy reserve, hold_reserve policy: no automatic return, gate never asked", "settings": {"recovery_return_policy": "hold_reserve", "failure_model": "hmm"}, "reserve_failed": false, "ready_upto": 600, "asked": null, "action": "OBSERVE", "reason": "CLIENT-CONFIRMED", "model_asked": false}
+    {"name": "hmm, healthy reserve, hold_reserve policy: no automatic return, gate never asked", "settings": {"recovery_return_policy": "hold_reserve", "failure_model": "hmm"}, "reserve_failed": false, "ready_upto": 600, "asked": null, "action": "OBSERVE", "reason": "CLIENT-CONFIRMED", "model_asked": false},
+    {"name": "hmm, FAILED reserve (fresh probe) under hold_reserve, model NOT ready: the rescue is not delayed", "settings": {"recovery_return_policy": "hold_reserve", "failure_model": "hmm"}, "reserve_failed": true, "reserve_health": false, "ready_upto": 10, "asked": 10, "action": "RESTORE-PRIMARY", "reason": "RESERVE-FAILED-PRIMARY-VERIFIED", "model_asked": false, "model_ready": false},
+    {"name": "hmm-fast, FAILED reserve (fresh probe) under hold_reserve, primary 9 s stable: hold", "settings": {"recovery_return_policy": "hold_reserve", "failure_model": "hmm-fast"}, "reserve_failed": true, "reserve_health": false, "ready_upto": 9, "asked": 10, "action": "HOLD", "reason": "RESERVE-FAILED", "model_asked": false, "model_ready": false}
   ]
 }

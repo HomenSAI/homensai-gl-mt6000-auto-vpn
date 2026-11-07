@@ -1,0 +1,334 @@
+{
+ "killed": 40,
+ "total": 40,
+ "rows": [
+  {
+   "mutation": "manifest-bytes-not-canonical-checked",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=4)"
+  },
+  {
+   "mutation": "manifest-schema-unchecked",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "file-hash-ignored",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "file-missing-ignored",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "bundle-extra-file-ignored",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "signature-not-verified",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "revoked-signer-accepted",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "signer-may-differ-from-chain-entry",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "missing-signature-accepted",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=3)"
+  },
+  {
+   "mutation": "chain-link-not-required",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=4)"
+  },
+  {
+   "mutation": "chain-link-any-hash",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "chain-entry-release-unchecked",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "chain-errors-swallowed",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "path-dotdot-allowed",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=7)"
+  },
+  {
+   "mutation": "path-unsorted-allowed",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "empty-category-contradiction-allowed",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "symlink-followed",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "required-category-optional",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "evidence-overwritten",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "duplicate-paths-allowed",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "sign-evidence-hash-not-in-entry",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=6)"
+  },
+  {
+   "mutation": "sign-manifest-signature-not-written",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=6, errors=1)"
+  },
+  {
+   "mutation": "sign-changed-files-accepted",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "sign-other-release-accepted",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "sign-already-signed-accepted",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "chain-evidence-field-not-parsed",
+   "tests": [
+    "test_signing_report",
+    "test_signing_install.InstallSignatureTests",
+    "test_signing_install.KitConsistencyTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=10, errors=9)"
+  },
+  {
+   "mutation": "chain-evidence-upper-case-allowed",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "chain-evidence-in-imported-history",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "chain-evidence-key-not-writable",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=10, errors=6)"
+  },
+  {
+   "mutation": "chain-evidence-silently-dropped",
+   "tests": [
+    "test_signing_report"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=20)"
+  },
+  {
+   "mutation": "kit-does-not-strip-evidence",
+   "tests": [
+    "test_signing_install.InstallSignatureTests",
+    "test_signing_install.KitConsistencyTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "kit-evidence-upper-case-allowed",
+   "tests": [
+    "test_signing_install.InstallSignatureTests",
+    "test_signing_install.KitConsistencyTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "kit-signs-the-stripped-entry",
+   "tests": [
+    "test_signing_install.InstallSignatureTests",
+    "test_signing_install.KitConsistencyTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "kit-revocations-miss-evidence-lines",
+   "tests": [
+    "test_signing_install.InstallSignatureTests",
+    "test_signing_install.KitConsistencyTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1) after the added test",
+   "first_run": "SURVIVED: no test declared a revocation inside an entry that carries evidence_sha256",
+   "fix": "test_signing_install.InstallSignatureTests.test_revocation_declared_in_an_entry_with_evidence_applies"
+  },
+  {
+   "mutation": "file-hash-ignored@drill",
+   "tests": [
+    "test_signing_lab.AllDrills"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "file-missing-ignored@drill",
+   "tests": [
+    "test_signing_lab.AllDrills"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "chain-link-not-required@drill",
+   "tests": [
+    "test_signing_lab.AllDrills"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "signature-not-verified@drill",
+   "tests": [
+    "test_signing_lab.AllDrills"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "manifest-bytes-not-canonical-checked@drill",
+   "tests": [
+    "test_signing_lab.AllDrills"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "kit-does-not-strip-evidence@drill",
+   "tests": [
+    "test_signing_lab.AllDrills"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  }
+ ]
+}

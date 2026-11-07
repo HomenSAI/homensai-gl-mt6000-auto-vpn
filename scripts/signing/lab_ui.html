@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Signing Lab</title>
+<style nonce="{{NONCE}}">
+/* Look of router/ui/mockup/core.css + f1.css (feat/ui-f1-20261104): tokens, golden 38.2/61.8 columns, lamps. */
+:root{--bg:#f3f5f8;--card:#fff;--card2:#f8fafc;--ink:#14202c;--mute:#5a6774;--line:#dbe2ea;--acc:#0b63c5;--acc-ink:#fff;--acc-soft:#e3eefb;
+--ok:#1f9e4f;--ok-soft:#e2f5e9;--warn:#c98a00;--warn-soft:#fcf1d6;--bad:#d23b33;--bad-soft:#fbe4e2;--off-soft:#eceff2;
+--lamp-g:#22b24c;--lamp-y:#f2b705;--lamp-r:#e23d35;--lamp-n:#a3acb6;--shadow:0 1px 2px rgba(16,30,45,.06),0 4px 14px rgba(16,30,45,.06);
+--r:14px;--font:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Arial,sans-serif;--mono:ui-monospace,"Cascadia Mono",Consolas,monospace;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f151c;--card:#17202a;--card2:#1c2632;--ink:#e6edf4;--mute:#9aa8b6;--line:#2a3644;--acc:#4c9bf0;--acc-ink:#06121f;--acc-soft:#16304d;
+--ok:#43c873;--ok-soft:#163625;--warn:#f0b53a;--warn-soft:#3a2f12;--bad:#ff6b62;--bad-soft:#401c1a;--off-soft:#242e39;--lamp-n:#5f6b78;--shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f151c;--card:#17202a;--card2:#1c2632;--ink:#e6edf4;--mute:#9aa8b6;--line:#2a3644;--acc:#4c9bf0;--acc-ink:#06121f;--acc-soft:#16304d;
+--ok:#43c873;--ok-soft:#163625;--warn:#f0b53a;--warn-soft:#3a2f12;--bad:#ff6b62;--bad-soft:#401c1a;--off-soft:#242e39;--lamp-n:#5f6b78;--shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--font);min-height:100vh;display:flex;flex-direction:column;-webkit-text-size-adjust:100%}
+a{color:var(--acc)}button,input{font:inherit;color:inherit}h1,h2,h3{margin:0;line-height:1.25}h2{font-size:1.1rem}p{margin:.35em 0}
+.wrap{width:100%;max-width:1220px;margin:0 auto;padding:0 16px}main{flex:1;padding:13px 0 21px}.mute{color:var(--mute)}.small{font-size:.86rem}.mono{font-family:var(--mono)}
+.banner{background:repeating-linear-gradient(135deg,var(--warn-soft) 0 12px,transparent 12px 24px);border-bottom:1px dashed var(--warn);font-weight:700;font-size:.9rem}
+.banner .wrap{padding-top:6px;padding-bottom:6px}
+.hdr{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.hdr .wrap{display:flex;align-items:center;gap:10px;min-height:56px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:flex;align-items:center;gap:8px;min-width:0}.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#0b63c5,#16a3b8);display:grid;place-items:center;color:#fff;font-weight:800;font-size:.8rem;flex:none}
+.brand b .ai{color:var(--acc)}.badge{font:600 .72rem/1 var(--mono);background:var(--acc-soft);color:var(--acc);padding:4px 7px;border-radius:999px;white-space:nowrap}
+.sp{flex:1}.iconbtn{border:1px solid var(--line);background:var(--card2);border-radius:9px;min-width:36px;height:34px;padding:0 9px;cursor:pointer;font-size:.85rem;font-weight:600}.iconbtn:hover{border-color:var(--acc)}
+.attr{border-top:1px solid var(--line);background:var(--card);font-size:.8rem;color:var(--mute)}.attr .wrap{display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:10px;padding-bottom:12px}.attr strong{color:var(--ink)}.attr strong .ai{color:var(--acc)}
+.gold{display:grid;grid-template-columns:38.2fr 61.8fr;gap:13px;align-items:start}.gcol{display:flex;flex-direction:column;gap:13px;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:13px;min-width:0}.card h2{margin-bottom:8px}
+.lamp{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--lamp-n);flex:none}
+.lamp.g{background:var(--lamp-g);animation:hv-blink 2.4s ease-in-out infinite}.lamp.y{background:var(--lamp-y);animation:hv-blink 1s ease-in-out infinite}.lamp.r{background:var(--lamp-r);animation:hv-blink 1.4s ease-in-out infinite}
+@keyframes hv-blink{0%,100%{opacity:1}50%{opacity:.4}}@media (prefers-reduced-motion:reduce){.lamp{animation:none!important}}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:6px 12px;min-height:36px;cursor:pointer;font-weight:600;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--acc)}.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}.btn.danger{color:var(--bad)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;font-size:.88rem;margin:0}.kv dt{color:var(--mute)}.kv dd{margin:0;overflow-wrap:anywhere}
+.scen{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 2px;border-top:1px solid var(--line)}.scen:first-of-type{border-top:0}
+.scen h3{font-size:.97rem}.scen .act{display:flex;gap:6px}.tag{font:700 .78rem var(--mono);color:var(--mute)}
+.chip{display:inline-block;border-radius:999px;padding:2px 9px;font-size:.78rem;font-weight:700;background:var(--off-soft);color:var(--mute)}.chip.PASS{background:var(--ok-soft);color:var(--ok)}.chip.FAIL,.chip.BLOCKED{background:var(--bad-soft);color:var(--bad)}.chip.SKIP,.chip.CANCELLED,.chip.RUN{background:var(--warn-soft);color:var(--warn)}
+pre.log{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:8px;max-height:340px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:12.5px/1.4 var(--mono);margin:8px 0}
+.prompt{border-left:3px solid var(--acc);background:var(--acc-soft);padding:8px 10px;border-radius:0 8px 8px 0;margin:8px 0}.prompt input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);margin:6px 0;font-family:var(--mono)}
+.secret{border:2px dashed var(--warn);border-radius:10px;padding:10px;margin:8px 0;overflow-wrap:anywhere}.secret svg{display:block;max-width:100%;height:auto;background:#fff}.secret code{font:13px/1.5 var(--mono)}.codes{list-style:decimal;padding-left:26px;font:14px/1.7 var(--mono);margin:6px 0}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:6px 9px;border-radius:0 8px 8px 0;font-size:.86rem;margin:6px 0}
+dialog{border:1px solid var(--line);border-radius:var(--r);background:var(--card);color:var(--ink);max-width:min(460px,calc(100vw - 32px))}dialog::backdrop{background:rgba(0,0,0,.45)}
+#sheet{display:none}#runcard{scroll-margin-top:72px}
+@media (max-width:900px){.gold{display:flex;flex-direction:column;align-items:stretch}.gcol{display:contents}.scen{grid-template-columns:auto minmax(0,1fr)}.scen .act{grid-column:1/-1}}
+@media print{body>*:not(#sheet){display:none!important}#sheet{display:block;color:#000;background:#fff;font:14px sans-serif}#sheet ol{font:18px monospace;line-height:2}}
+</style>
+</head>
+<body>
+<div class="banner"><div class="wrap" data-t="banner"></div></div>
+<header class="hdr"><div class="wrap">
+  <div class="brand"><span class="logo">HS</span><b>HomenS<span class="ai">.AI</span> Auto VPN</b></div>
+  <span class="badge">{{PROGRAM}}</span><span class="badge" data-t="labname"></span>
+  <span class="sp"></span>
+  <button class="iconbtn" id="lang" type="button">EN</button>
+  <button class="iconbtn" id="theme" type="button" aria-label="theme">&#9680;</button>
+  <button class="iconbtn" id="quit" type="button" data-t="stop"></button>
+</div></header>
+<main><div class="wrap"><div class="gold">
+  <div class="gcol">
+    <section class="card"><h2 data-t="state"></h2><dl class="kv" id="state"></dl></section>
+    <section class="card"><h2 data-t="actions"></h2>
+      <div class="act"><button class="btn pri" id="runall" type="button" data-t="runall"></button>
+      <a class="btn" id="report" href="/report" target="_blank" rel="noopener" data-t="report"></a>
+      <button class="btn danger" id="reset" type="button" data-t="reset"></button></div>
+      <p class="small mute" data-t="runallhelp"></p>
+    </section>
+  </div>
+  <div class="gcol">
+    <section class="card" id="runcard" hidden><h2><span id="runtitle"></span> <span class="chip RUN" id="runstatus"></span></h2>
+      <div id="secrets"></div><div id="prompt"></div><pre class="log" id="log" aria-live="polite"></pre>
+      <button class="btn" id="cancel" type="button" data-t="cancel"></button>
+    </section>
+    <section class="card"><h2 data-t="scenarios"></h2><p class="small mute" data-t="modes"></p><div id="scen"></div></section>
+  </div>
+</div></div></main>
+<footer class="attr"><div class="wrap">
+  <span><strong>HomenS<span class="ai">.AI</span> Auto VPN</strong></span><span>GL.iNet GL-MT6000 · Flint 2</span>
+  <span>Developer · <a href="https://homensai.com" target="_blank" rel="noopener">Serhii Khomenko</a></span>
+  <span><span data-t="program"></span> {{PROGRAM}}</span><span>{{STYLE}}</span>
+</div></footer>
+<dialog id="ask"><p id="asktext"></p><div class="act"><button class="btn danger" id="askyes" type="button" data-t="yes"></button> <button class="btn" id="askno" type="button" data-t="no"></button></div></dialog>
+<div id="sheet"></div>
+<script nonce="{{NONCE}}">
+'use strict';
+const CSRF='{{CSRF}}',DRILLS={{DRILLS}};
+const T={ru:{banner:'ТЕСТОВАЯ ЛАБОРАТОРИЯ. Здесь только тестовые ключи: подписать настоящий релиз ими нельзя. Настоящие ключи не затрагиваются.',labname:'тестовая лаборатория',stop:'Стоп',state:'Состояние',actions:'Действия',runall:'Запустить все учения',report:'Отчёт',reset:'Сброс лаборатории',runallhelp:'«Все учения» идут в отдельной временной папке с авто-кодами и не меняют ваши тестовые ключи.',cancel:'Отменить',scenarios:'Сценарии',modes:'«С телефоном» спрашивает настоящие 6 цифр и коды с листа. «Авто» подставляет их сам, только для тестового семени.',program:'Программа',yes:'Да',no:'Нет',manual:'С телефоном',auto:'Авто',go:'Подтвердить',saved:'Сохранил(а)',print:'Печать',hide:'Скрыть',once:'Показано один раз. После скрытия не появится.',keys:'Ключи',totp:'TOTP',codes:'Коды восстановления',chain:'Голова цепочки',revoked:'Отозвано',ots:'OpenTimestamps',age:'age',lab:'Папка',router:'Симулятор роутера',none:'нет',enrolled:'телефон привязан',notenrolled:'не привязан',locked:'блокировка, с:',left:'осталось',of:'из',pending:'ожидает',entries:'записей',signer:'подпись',yesid:'есть',resetq:'Стереть всю папку лаборатории? Настоящие ключи не затрагиваются.',quitq:'Остановить лабораторию?',stopped:'Лаборатория остановлена. Страницу можно закрыть.',running:'идёт',notrun:'не запускалось',sheettitle:'ТЕСТОВЫЕ коды восстановления (не настоящие)',sheetnote:'Лист тренировочный. Каждый код работает один раз.',busy:'Другое учение ещё идёт',old:'старый',firstrun:'при первом учении'},
+en:{banner:'TEST LAB. Test keys only: they can never sign a real release. The real keys are not touched.',labname:'test lab',stop:'Stop',state:'State',actions:'Actions',runall:'Run all drills',report:'Report',reset:'Reset lab',runallhelp:'"All drills" run in a separate temporary folder with automatic codes and leave your test keys alone.',cancel:'Cancel',scenarios:'Scenarios',modes:'"With phone" asks for the real 6 digits and the paper codes. "Auto" fills them in, for the test seed only.',program:'Program',yes:'Yes',no:'No',manual:'With phone',auto:'Auto',go:'Confirm',saved:'Stored',print:'Print',hide:'Hide',once:'Shown once. It will not come back after hiding.',keys:'Keys',totp:'TOTP',codes:'Recovery codes',chain:'Chain head',revoked:'Revoked',ots:'OpenTimestamps',age:'age',lab:'Folder',router:'Router simulator',none:'none',enrolled:'phone enrolled',notenrolled:'not enrolled',locked:'locked, s:',left:'left',of:'of',pending:'pending',entries:'entries',signer:'signed by',yesid:'present',resetq:'Delete the whole lab folder? The real keys are not touched.',quitq:'Stop the lab?',stopped:'The lab has stopped. You can close this page.',running:'running',notrun:'not run',sheettitle:'TEST recovery codes (not real)',sheetnote:'Practice sheet. Each code works once.',busy:'Another drill is still running',old:'old',firstrun:'at the first drill'}};
+const HELP={a:['Создаёт main и reserve с меткой TEST и пишет своё начало цепочки.','Creates main and reserve marked TEST and starts its own chain.'],b:['QR на экране, 6 цифр для подтверждения, затем 10 кодов.','QR on screen, 6 digits to confirm, then 10 codes.'],c:['Новый набор: показ один раз и печать.','A new set: shown once, with a print view.'],d:['Строки main и reserve и QR после кода с телефона. Сохраните обе для шага e.','The main and reserve lines and QR after the phone code. Keep both for step e.'],e:['Стирает хранилище лаборатории и возвращает ключи из строки.','Wipes the lab store and restores the keys from the line.'],f:['Подпись, запись в цепочку, проверка Python и настоящим usign.','Signature, chain entry, checks by Python and real usign.'],g:['Код с листа вместо телефона, новый QR, старый телефон не работает.','A paper code instead of the phone, a new QR, the old phone stops working.'],h:['Новый набор кодов, старые умирают. Трата всех кодов на копии.','A new code set kills the old one. All codes spent on a copy.'],i:['Подпись резервным ключом, main отозван, роутер принимает.','Signing with reserve, main revoked, the router accepts.'],j:['Отзыв и отказ в поддельной подписи. Показывает и предел защиты.','Revocation and a refused forgery. Also shows the limit of the protection.'],k:['Аварийная замена ключей и доверие на симуляторе роутера.','Emergency re-key and trust on the simulated router.'],l:['Откат на старый релиз и форк истории отвергаются.','A rollback to an old release and a forked history are refused.'],m:['Только 32-байтный хеш уходит к календарям. Нужна сеть.','Only a 32-byte hash goes to the calendars. Needs network.'],n:['Создание, показ и импорт личности, шифрование тестового архива.','Identity create, reveal and import, encrypting a fake archive.']};
+let lang='ru',current=null,position=0,timer=null,state=null;
+const $=id=>document.getElementById(id);
+function store(name,value){try{if(value===undefined)return localStorage.getItem(name);localStorage.setItem(name,value)}catch(e){return null}}
+function t(key){return T[lang][key]||key}
+function pick(row){return lang==='ru'?row.ru:row.en}
+function text(tag,value,cls){const e=document.createElement(tag);e.textContent=value;if(cls)e.className=cls;return e}
+async function api(path,body){const r=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF},body:JSON.stringify(body)});return{status:r.status,data:await r.json().catch(()=>({}))}}
+function applyLang(){document.documentElement.lang=lang;$('lang').textContent=lang==='ru'?'EN':'RU';document.querySelectorAll('[data-t]').forEach(e=>{e.textContent=t(e.dataset.t)});drawScen();if(state)drawState()}
+function row(dl,key,value,lamp){dl.append(text('dt',t(key)));const d=document.createElement('dd');if(lamp){const l=document.createElement('span');l.className='lamp '+lamp;d.append(l,' ')}d.append(value);dl.append(d)}
+function drawState(){const s=state,d=$('state');d.textContent='';
+ row(d,'keys',s.keys.length?s.keys.map(k=>(k.name||t('old'))+' '+k.id+(k.revoked_from!==null?' ('+t('revoked')+' '+k.revoked_from+')':'')).join(', '):t('none'),s.keys.length?'g':'n');
+ const o=s.totp||{};row(d,'totp',o.locked_seconds>0?t('locked')+' '+o.locked_seconds:(o.enrolled?t('enrolled'):t('notenrolled')),o.locked_seconds>0?'r':(o.enrolled?'g':'n'));
+ const c=s.codes||{};row(d,'codes',c.problem&&c.problem!=='RECOVERY-CODES-NONE'?c.problem:t('left')+' '+(c.left||0)+' '+t('of')+' '+(c.total||10),c.left>3?'g':(c.left>0?'y':'n'));
+ const h=s.chain||{};row(d,'chain',h.error?h.error:(h.entries?h.head+', '+h.entries+' '+t('entries')+', '+t('signer')+' '+h.signer:t('none')),h.error?'r':(h.entries?'g':'n'));
+ row(d,'revoked',s.revoked.length?s.revoked.join(', '):t('none'));
+ row(d,'ots',s.ots.length?s.ots.map(r=>r.version+': '+(r.status==='pending'?t('pending'):r.status)).join(', '):t('none'));
+ const a=s.age||{};row(d,'age',a.identity?(a.recipient||t('yesid')):t('none'),a.identity?'g':'n');
+ row(d,'router',s.sandbox||t('firstrun'));row(d,'lab',s.lab);
+ document.querySelectorAll('[data-chip]').forEach(e=>{const r=(s.results||{})[e.dataset.chip];e.textContent=r?r.status:t('notrun');e.className='chip '+(r?r.status:'')});
+ document.querySelectorAll('[data-lamp]').forEach(e=>{const r=(s.results||{})[e.dataset.lamp];e.className='lamp '+(!r?'n':r.status==='PASS'?'g':r.status==='FAIL'||r.status==='BLOCKED'?'r':'y')})}
+function drawScen(){const box=$('scen');box.textContent='';DRILLS.forEach((x,i)=>{const r=document.createElement('div');r.className='scen';
+ const l=document.createElement('span');l.dataset.lamp=x.id;l.className='lamp n';
+ const b=document.createElement('div');const h=document.createElement('h3');h.append(text('span',x.id+'. ','tag'),pick(x),' ');const c=text('span','','chip');c.dataset.chip=x.id;h.append(c);b.append(h,text('p',HELP[x.id][lang==='ru'?0:1],'small mute'));
+ const a=document.createElement('div');a.className='act';[['manual',false],['auto',true]].forEach(([k,auto])=>{const q=text('button',t(k),'btn'+(auto?'':' pri'));q.type='button';q.addEventListener('click',()=>run(x,auto));a.append(q)});
+ r.append(l,b,a);box.append(r)})}
+function startView(title){$('runcard').hidden=false;$('runtitle').textContent=title;$('runstatus').textContent=t('running');$('runstatus').className='chip RUN';$('log').textContent='';$('prompt').textContent='';$('secrets').textContent='';$('runcard').scrollIntoView({behavior:'smooth',block:'start'})}
+async function run(x,auto){const r=await api('/api/run',{drill:x.id,auto});if(r.status!==200){alertRun(r);return}current=r.data.op;position=0;startView(x.id+'. '+pick(x));poll()}
+function alertRun(r){startView('');$('runstatus').textContent='!';$('log').textContent=r.data.error||t('busy')}
+async function runAll(){const r=await api('/api/run-all',{});if(r.status!==200){alertRun(r);return}current=r.data.op;position=0;startView(t('runall'));poll()}
+function log(line){const l=$('log');l.textContent+=line+'\n';l.scrollTop=l.scrollHeight}
+function secretBox(e){const box=document.createElement('div');box.className='secret';
+ if(e.kind==='qr'){const w=document.createElement('div');w.innerHTML=e.svg.replace(/^<\?xml[^>]*>\s*/,'');box.append(w)}
+ if(e.kind==='line'||e.kind==='manual')box.append(text('code',e.text));
+ if(e.kind==='codes'){const o=document.createElement('ol');o.className='codes';e.codes.forEach(c=>o.append(text('li',c)));box.append(o);const p=text('button',t('print'),'btn');p.type='button';p.addEventListener('click',()=>printCodes(e.codes));box.append(p,' ')}
+ box.append(text('p',t('once'),'small mute'));const h=text('button',t('hide'),'btn');h.type='button';h.addEventListener('click',()=>{box.remove();$('sheet').textContent=''});box.append(h);$('secrets').append(box)}
+function printCodes(codes){const s=$('sheet');s.textContent='';s.append(text('h2',t('sheettitle')),text('p','HomenS.AI Auto VPN'));const o=document.createElement('ol');codes.forEach(c=>o.append(text('li',c)));s.append(o,text('p',t('sheetnote')));window.print()}
+function promptBox(e){const box=$('prompt');box.textContent='';const p=document.createElement('div');p.className='prompt';p.append(text('b',pick(e)));
+ if(e.prompt)p.append(text('p',e.prompt,'small mute'));
+ const send=async value=>{box.textContent='';await api('/api/answer',{op:current,value})};
+ if(e.kind==='confirm'){$('asktext').textContent=pick(e);$('ask').showModal();$('askyes').onclick=()=>{$('ask').close();send('yes')};$('askno').onclick=()=>{$('ask').close();send('no')};return}
+ if(e.kind==='ack'){const b=text('button',t('saved'),'btn pri');b.type='button';b.addEventListener('click',()=>send(''));p.append(document.createElement('br'),b);box.append(p);return}
+ const i=document.createElement('input');i.type=e.kind==='secret'?'password':'text';i.autocomplete='off';i.spellcheck=false;
+ const b=text('button',t('go'),'btn pri');b.type='button';b.addEventListener('click',()=>send(i.value));i.addEventListener('keydown',k=>{if(k.key==='Enter')send(i.value)});p.append(i,b);box.append(p);i.focus()}
+function handle(e){if(e.type==='step')log((e.ok?'• ':'✗ ')+pick(e));else if(e.type==='tool')log('    '+e.text);else if(e.type==='drill')log('=== '+e.id+'. '+pick(e));else if(e.type==='note'){const n=text('p',pick(e),'note');$('secrets').append(n);log('! '+pick(e))}else if(e.type==='secret')secretBox(e);else if(e.type==='prompt')promptBox(e);else if(e.type==='result'){log('--> '+e.status+(e.message?': '+e.message:''));$('runstatus').textContent=e.status;$('runstatus').className='chip '+e.status}}
+async function poll(){clearTimeout(timer);if(!current)return;const r=await api('/api/events?op='+current+'&after='+position);if(r.status===200){r.data.events.forEach(handle);position=r.data.next;if(r.data.done){current=null;await refresh();return}}timer=setTimeout(poll,500)}
+async function refresh(){const r=await api('/api/state');if(r.status===200){state=r.data;drawState()}}
+function ask(message){return new Promise(done=>{$('asktext').textContent=message;$('ask').showModal();$('askyes').onclick=()=>{$('ask').close();done(true)};$('askno').onclick=()=>{$('ask').close();done(false)}})}
+function theme(){const r=document.documentElement,n=r.dataset.theme==='dark'?'light':'dark';r.dataset.theme=n;store('lab-theme',n)}
+$('lang').addEventListener('click',()=>{lang=lang==='ru'?'en':'ru';store('lab-lang',lang);applyLang()});$('theme').addEventListener('click',theme);
+$('runall').addEventListener('click',runAll);$('cancel').addEventListener('click',()=>{if(current)api('/api/cancel',{op:current})});
+$('reset').addEventListener('click',async()=>{if(await ask(t('resetq'))){const r=await api('/api/reset',{confirm:'RESET'});if(r.status!==200)alertRun(r);refresh()}});
+$('quit').addEventListener('click',async()=>{if(await ask(t('quitq'))){await api('/api/quit',{});document.querySelector('main').textContent=t('stopped')}});
+lang=store('lab-lang')==='en'?'en':'ru';{const v=store('lab-theme');if(v==='dark'||v==='light')document.documentElement.dataset.theme=v}
+applyLang();refresh();
+</script>
+</body>
+</html>

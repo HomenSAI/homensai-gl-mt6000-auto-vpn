@@ -84,6 +84,8 @@ for(const language of ['en','ru']){
     assert(f.c.autoControlModel(s,T).fresh,'a worker wait is not stale controller data');assert(f.c.autoControlModel(s,T).transitioning);
     const v=surfaces(f,s);assert.equal(v.light.key,'switching');assert(!green(v),'no green while moving');
     assert(!/нет связи|no connection|устарел|out of date/i.test(v.side.text()));
+    // review F-51: a sub-second router average is a real average, not a missing one; 0 and above 600 s are refused
+    for(const [avg,want] of [[0.76,0.76],[0.999,0.999],[1,1],[600,600],[600.001,null],[0,null]]){f.c.uiOperationTimerText({switch_timing:{avg_seconds:avg,count:3}},T);assert.equal(f.c.UI_SWITCH_AVG,want,'switch average '+avg);}
     const timer=f.c.uiOperationTimerText(s,T);assert(timer.includes(ru?'Применение правил роутера':'Applying router rules'),'stage is named: '+timer);
     assert(timer.includes(ru?'0:42 прошло':'0:42 elapsed'),'elapsed from the request: '+timer);assert(timer.includes(ru?'ожидается':'expected')||timer.includes(ru?'предел через 1:20':'limit in 1:20'),'expected time (average +25%) or the real deadline: '+timer);
     const pendingCard=v.manual.all().find(n=>n.attrs['data-manual-direction']==='reserve');assert(pendingCard.all().some(n=>n.attrs['data-op-timer']),'the switching card carries the shared timer');
@@ -117,9 +119,9 @@ for(const language of ['en','ru']){
   {
     // Connection wording: only a lost router-program answer is "no connection".
     const f=fixture(language),stale=base();stale.native_failover.time=T-200;const sv=surfaces(f,stale);
-    assert(!/нет связи|no connection/i.test(sv.side.text()),'stale controller with fresh RPC is not a lost connection');assert(sv.side.text().includes(ru?'Auto вкл.':'Auto ON'),'Auto the owner turned on stays on while data is late');
+    assert(!/нет связи|no connection/i.test(sv.side.text()),'stale controller with fresh RPC is not a lost connection');assert(sv.side.text().includes(f.c.autoStateText(sv.light)),'Auto the owner turned on stays on while data is late');
     assert(!/Нет связи с роутером|No connection to the router/.test(sv.home.text()));
-    const lost=Object.assign(base(),{rpc_error:'RPC-UNAVAILABLE'});const lv=surfaces(f,lost);assert(/No connection to the router program|Нет связи с программой роутера/.test(lv.side.text()),'owner 01.11.2026: a lost answer (monitoring red) is shown as no connection, never as Auto ON');
+    const lost=Object.assign(base(),{rpc_error:'RPC-UNAVAILABLE'});const lv=surfaces(f,lost);assert(/No answer, retrying|Нет ответа, повтор/.test(lv.side.text()),'a missed RPC is a yellow retry with the confirmed Auto switch still on');
   }
   {
     // Reload during an operation: the backend request keeps the buttons busy with a deadline-bounded stage.

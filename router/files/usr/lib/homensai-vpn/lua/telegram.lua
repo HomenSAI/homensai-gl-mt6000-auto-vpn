@@ -148,6 +148,7 @@ function M.parse_items(value)
   local all={};for _,k in ipairs(M.ITEMS) do all[k]=true end
   if value==nil or value=='' or value==NULL then return all end
   if value=='none' then return {} end
+  if value=='brief' then return {brief=true} end
   if type(value)~='string' then return all end
   local chosen={}
   for part in string.gmatch(value..',','([^,]*),') do if all[part] then chosen[part]=true end end
@@ -159,9 +160,64 @@ end
 ------------------------------------------------------------------------------------------------------
 local function role_name(role) return role=='source' and 'Primary channel' or (role=='target' and 'Reserve channel' or nil) end
 
+-- Same current five-minute check population as channel_guidance.channelReliability.
+function M.channel_reliability(status,identifier,now)
+  local n,bad=0,0
+  for _,row in ipairs(get(status,'samples',{})) do
+    if row.id==identifier and finite(row.time) and now-fnum(row.time)>=-5 and now-fnum(row.time)<=300
+        and row.code~='CHECK-001' and row.code~='CHECK-LIMIT' and row.code~='PROFILE-INACTIVE' then
+      n=n+1
+      if not ((row.code==nil or row.code==NULL) and row.dns_ok==true and finite(row.https_success) and fnum(row.https_success)>=2) then bad=bad+1 end
+    end
+  end
+  if n<6 then return nil end
+  return {n=n,bad=bad,loss=100*bad/n}
+end
+function M.format_brief(status,start,end_,now,key)
+  local native=dict(status.native_failover);local history=dict(status.native_history)
+  local reliability=dict(get(dict(status.accounting),'reliability'))
+  local alarm=codeword(native.alarm) and native.alarm or nil
+  local lines={'HomenSAI Auto VPN · кратко','Период: '..M.strftime('%d.%m %H:%M',start)..' — '..M.strftime('%d.%m %H:%M',end_)..' · Европа/Берлин'}
+  if key then lines[#lines+1]='Отчёт: '..key end
+  lines[#lines+1]='Авария: '..(alarm and alarm..' · автопереключение остановлено' or 'нет')
+  local errors={}
+  local function add(code) if codeword(code) and code~=alarm then errors[code]=(errors[code] or 0)+1 end end
+  local function inside(e) return finite(e.time) and start<=fnum(e.time) and fnum(e.time)<end_ end
+  for _,e in ipairs(get(reliability,'events',{})) do if e.kind=='FAILURE' and inside(e) then add(e.code) end end
+  for _,e in ipairs(get(history,'events',{})) do
+    if (e.state=='BLOCKED' or e.state=='FAILED') and inside(e) then
+      local seen={};for _,code in ipairs(get(e,'codes',{})) do if not seen[code] then add(code);seen[code]=true end end
+    end
+  end
+  if truthy(history.error) then errors['HISTORY-001']=(errors['HISTORY-001'] or 0)+1 end
+  local keys={};for code in pairs(errors) do keys[#keys+1]=code end;table.sort(keys)
+  local details={};for _,code in ipairs(keys) do details[#details+1]=code..(errors[code]>1 and ' ×'..errors[code] or '') end
+  lines[#lines+1]='Ошибки: '..M.limited_text(#details>0 and table.concat(details,'; ') or 'нет',1800)
+  local switches={};local total=0
+  for _,e in ipairs(get(history,'events',{})) do
+    if inside(e) and not truthy(e.trial) and e.transition_completed==true and e.route_changed==true
+        and (e.transition_outcome=='committed' or e.transition_outcome=='restored') and not truthy(e.activation_reapply) then
+      local identity=canon.encode(canon.array({get(e,'attempt_id',get(e,'sequence',NULL)),e.transition_outcome,get(e,'destination_role',NULL)}))
+      if not switches[identity] then switches[identity]=true;total=total+1 end
+    end
+  end
+  lines[#lines+1]='Переключения: '..(truthy(history.error) and 'нет данных' or total..' (сохранённые события)')
+  local percentages={}
+  for _,pair in ipairs({{'source','основной'},{'target','резервный'}}) do
+    local identifier
+    for _,p in ipairs(get(status,'profiles',{})) do if p.role==pair[1] then identifier=p.id;break end end
+    if not truthy(identifier) then identifier=native[pair[1]] end
+    local r=truthy(identifier) and M.channel_reliability(status,identifier,now) or nil
+    percentages[#percentages+1]=pair[2]..': '..(r and (100-math.floor(r.loss+0.5))..'%' or 'нет данных')
+  end
+  lines[#lines+1]='Надёжность сейчас, 5 мин: '..table.concat(percentages,'; ')
+  return M.limited_text(table.concat(lines,'\n'))
+end
+
 function M.format_report(status,minutes,now,items)
   items=items or M.parse_items(nil)
   status=dict(status)
+  if items.brief and count(items)==1 then return M.format_brief(status,now-minutes*60,now,now) end
   local lines={'HomenSAI Auto VPN · monitoring',M.strftime('%d.%m.%Y %H:%M Europe/Berlin',now),'Report interval: '..pystr(minutes)..' min'}
   if items.servers then
     lines[#lines+1]='Currently connected servers:'
@@ -318,6 +374,7 @@ function M.format_period(status,job,now,items)
   items=items or M.parse_items(nil)
   status=dict(status)
   local start,end_=job.start,job['end']
+  if items.brief and count(items)==1 then return M.format_brief(status,start,end_,now,job.key) end
   local first=M.strftime('%Y-%m-%d',start);local last=M.strftime('%Y-%m-%d',end_-1)
   local accounting=dict(get(status,'accounting',canon.object()));local history=dict(get(status,'native_history',canon.object()))
   local lines={'HomenSAI Auto VPN · '..string.upper(string.sub(job.kind,1,1))..string.sub(job.kind,2)..' summary','Report id: '..job.key,
@@ -553,6 +610,231 @@ local function sort_uncertain(uncertain)
   return out
 end
 
+-- A long VENDOR-WORKER-BUSY (pair.busy_fields) is told at once, apart from the schedule: no report is moved, the sender state
+-- and flash are not touched. RAM key: one notice per cause and pid until the state ends; a failed send is tried again after
+-- the usual backoff. The router needs its own way to Telegram: with no route there is no notice, the status still shows it.
+-- The text says what was observed, not that GL is idle. Twin: telegram_report.vendor_notice.
+M.NOTICE_FILE='telegram-vendor-notice.json'
+M.NOTICE_MAX_AGE=60
+M.NOTICE_TEXT={
+  ['VENDOR-BUSY-RTP-LOCK-DEAD']='The GL.iNet rtp2 lock file names a process that is no longer running. This does not prove GL.iNet has finished: a killed rtp2 can leave its child commands running. A router reboot clears the file.',
+  ['VENDOR-BUSY-RTP-LOCK-LIVE']='An rtp2 process named in the GL.iNet lock file is running.',
+  ['VENDOR-BUSY-TUNNEL-SWITCH']='A GL.iNet tunnel-switch lock file is present.',
+  ['VENDOR-BUSY-WORKERS']='No GL.iNet lock file is visible, but GL.iNet workers or service queues are running.',
+  ['VENDOR-BUSY-UNIDENTIFIED']='The router reports GL.iNet busy and the cause could not be identified. A missing file does not prove GL.iNet is idle.'}
+function M.vendor_notice_key(native,now)
+  if not is_dict(native) or native.state~='BLOCKED' or not M.NOTICE_TEXT[native.reason] then return nil end
+  local stamp=num(native.time)
+  if not stamp or now-stamp>M.NOTICE_MAX_AGE then return nil end
+  return native.reason..':'..(num(native.vendor_lock_pid) and string.format('%d',num(native.vendor_lock_pid)) or '0')
+end
+function M.vendor_notice_text(native)
+  local pid=num(native.vendor_lock_pid)
+  local workers=num(native.vendor_workers)
+  return 'HomenSAI Auto VPN notice: '..native.reason..'\nObserved: Auto has been blocked by VENDOR-WORKER-BUSY for '..
+    string.format('%d',num(native.busy_seconds) or 0)..' s. '..M.NOTICE_TEXT[native.reason]..
+    (pid and ('\nLock pid: '..string.format('%d',pid)) or '')..'\nVendor workers seen: '..(workers and string.format('%d',workers) or 'not read')..
+    '\nAuto stays blocked and makes no switch attempt. It does not remove any lock.'
+end
+-- vendor_notice(d, config, status, state, now) -> state
+function M.vendor_notice(d,config,status,state,now)
+  local native=get(status,'native_failover')
+  local path=d.runtime..'/'..M.NOTICE_FILE
+  local key=M.vendor_notice_key(native,now)
+  local okr,seen=pcall(read_json,d,path,canon.object())
+  local known=okr and is_dict(seen) and seen.key or nil
+  if key==nil then
+    if known~=nil then pcall(d.remove,path) end
+    return state
+  end
+  if known==key then return state end
+  d.lock(function()
+    local oks,err=pcall(d.send,config,M.limited_text(M.vendor_notice_text(native)))
+    if oks then
+      d.write(path,canon.encode(canon.object({key=key})))
+      state=with(state,{last_code='TELEGRAM-DELIVERED'})
+    else
+      if not M.is_delivery_error(err) then err=delivery_error('TELEGRAM-DELIVERY-UNKNOWN',true) end
+      local counter=err.uncertain and 'unknown_deliveries' or 'known_failures'
+      state=with(state,{attempt=canon.float(now),last_code=err.code,retry_after=err.retry_after})
+      state[counter]=fnum(get(state,counter,0))+1
+    end
+  end,d.runtime..'/telegram-control')
+  return state
+end
+
+-- Owner decision 07.11.2026: a HOLD or an automatic ADOPT of a change made outside the app is told. The pair records every
+-- decision when it is made in a bounded RAM ring (outside_push; the last OUTSIDE_KEEP, deduplicated by class, trigger and
+-- time), so a seconds-long ADOPT (ARMED) is not lost before this round. Gated exactly like the VENDOR-BUSY notice (only
+-- from deliver: Telegram on, valid chat and token; the usual backoff holds it). At most one message per class every
+-- OUTSIDE_INTERVAL s: decisions within the window are told together afterwards (the newest and how many before it).
+-- Older than OUTSIDE_MAX_AGE: marked, not sent. Text: class, trigger, reason and package NAMES only, EN then RU.
+-- Twins: telegram_state.outside_entry/outside_items/outside_push, telegram_report.outside_notice (same files, same text).
+M.OUTSIDE_FILE='telegram-outside-change.json'
+M.OUTSIDE_SEEN='telegram-outside-notice.json'
+M.OUTSIDE_KEEP=16
+M.OUTSIDE_CLASSES={'HOLD','ADOPT','RELEASE'}
+M.OUTSIDE_RELEASES={STOP=true,START=true}  -- RELEASE (owner decision 07.11.2026): the owner's Stop / Start ended an outside-change HOLD
+M.OUTSIDE_PACKAGES=12
+M.OUTSIDE_INTERVAL=600
+M.OUTSIDE_MAX_AGE=21600
+local function package_name(v) return type(v)=='string' and #v>=1 and #v<=32 and string.find(v,'^[a-z0-9][a-z0-9_%.%-]*$')~=nil end
+-- BH-05 (bug hunt 07.11.2026): 'mono' = monotonic seconds (/proc/uptime) when the decision was recorded; the RAM ring never
+-- crosses a boot, so the sender ages an item by it and a wall-clock step (boot before NTP) does not drop a fresh HOLD.
+local function mono_ok(v)
+  if type(v)=='boolean' then return nil end
+  local x=num(v)
+  if x==nil or not finite(x) or x<0 then return nil end
+  return x
+end
+M.outside_mono=mono_ok
+function M.outside_entry(verdict)
+  if not is_dict(verdict) then return nil end
+  local decision,trigger,why=verdict.decision,verdict.trigger,verdict.why
+  if (decision~='HOLD' and decision~='ADOPT' and decision~='RELEASE') or not codeword(trigger) then return nil end
+  local release=verdict.release
+  if decision=='RELEASE' and not (type(release)=='string' and M.OUTSIDE_RELEASES[release]) then return nil end
+  local stamp=num(verdict.time)
+  if not finite(stamp) or stamp<=0 then return nil end
+  if not codeword(why) then why='UNCLASSIFIED' end
+  local names={}
+  if is_list(verdict.packages) then
+    for _,x in ipairs(verdict.packages) do if #names<M.OUTSIDE_PACKAGES and package_name(x) then names[#names+1]=x end end
+  end
+  local item=canon.object({key=string.format('%s:%s:%.3f',decision,trigger,stamp),decision=decision,trigger=trigger,why=why,
+    packages=canon.array(names),time=canon.float(stamp)})
+  if decision=='RELEASE' then item.key=string.format('RELEASE-%s:%s:%.3f',release,trigger,stamp);item.release=release end
+  local mono=mono_ok(verdict.mono)
+  if mono~=nil then item.mono=canon.float(mono) end
+  return item
+end
+function M.outside_items(ring)
+  local rows=is_dict(ring) and ring.items or nil
+  local out,keys={},{}
+  if is_list(rows) then
+    for _,row in ipairs(rows) do
+      local item=M.outside_entry(row)
+      if item and not keys[item.key] then keys[item.key]=true;out[#out+1]=item end
+    end
+  end
+  local kept={}
+  for i=math.max(1,#out-M.OUTSIDE_KEEP+1),#out do kept[#kept+1]=out[i] end
+  return kept
+end
+function M.outside_push(ring,verdict,mono)
+  local items=M.outside_items(ring)
+  local item=M.outside_entry(verdict)
+  if item and item.mono==nil and mono_ok(mono)~=nil then item.mono=canon.float(mono_ok(mono)) end
+  if item then
+    local known=false
+    for _,x in ipairs(items) do if x.key==item.key then known=true end end
+    if not known then items[#items+1]=item end
+  end
+  local kept={}
+  for i=math.max(1,#items-M.OUTSIDE_KEEP+1),#items do kept[#kept+1]=items[i] end
+  return canon.object({items=canon.array(kept)})
+end
+M.OUTSIDE_HEAD={
+  HOLD={'Auto found a configuration change made outside the app and HOLDS it: the change was not adopted, Auto is blocked and makes no switch.',
+        'Auto обнаружил изменение настроек, сделанное вне приложения, и УДЕРЖИВАЕТ его: изменение не принято, Auto заблокирован и не переключает каналы.'},
+  ADOPT={'Auto found a configuration change made outside the app and adopted it by itself: only Wi-Fi, DHCP, the GL DNS page or the network interface class changed. Auto continues.',
+         'Auto обнаружил изменение настроек, сделанное вне приложения, и принял его сам: изменились только Wi-Fi, DHCP, страница GL DNS или класс сетевых интерфейсов. Auto продолжает работу.'},
+  -- owner decision 07.11.2026: the hold ended by the owner (class RELEASE; the variant is item.release, see outside_variant)
+  ['RELEASE_STOP']={'The outside-change hold ended: owner Stop. The change was not adopted and Auto is stopped.',
+        'Удержание изменения, сделанного вне приложения, завершено: «Стоп» владельца. Изменение не принято, Auto остановлен.'},
+  ['RELEASE_START']={'The outside-change hold ended: owner Start, new configuration accepted. Auto starts a new session with it, after the usual start checks.',
+        'Удержание изменения, сделанного вне приложения, завершено: «Старт» владельца, новая конфигурация принята. Auto начинает новую сессию с ней, после обычных проверок запуска.'}}
+M.OUTSIDE_TODO={
+  HOLD={'What to do: check the change. If it is yours, press Stop, then Start: Start adopts the current configuration. Until then Auto stays blocked.',
+        'Что сделать: проверьте изменение. Если оно ваше, нажмите «Стоп», затем «Старт»: «Старт» примет текущую конфигурацию. До этого Auto остаётся заблокированным.'},
+  ADOPT={'Nothing to do.','Ничего делать не нужно.'},
+  ['RELEASE_STOP']={'What to do: press Start when you want Auto to run again; Start takes the current configuration.',
+        'Что сделать: когда нужно снова запустить Auto, нажмите «Старт»: «Старт» примет текущую конфигурацию.'},
+  ['RELEASE_START']={'Nothing to do.','Ничего делать не нужно.'}}
+M.OUTSIDE_CODE={HOLD='PAIR-OUTSIDE-CHANGE-HELD',ADOPT='PAIR-OUTSIDE-CHANGE-ADOPTED',RELEASE='PAIR-OUTSIDE-CHANGE-RELEASED'}
+local function outside_variant(item) return item.decision=='RELEASE' and ('RELEASE_'..tostring(item.release)) or item.decision end
+function M.outside_text(item,more,since)
+  local code=M.OUTSIDE_CODE[item.decision]
+  local function stamp(t) return os.date('%d.%m.%Y %H:%M',math.floor(fnum(t))) end
+  local when=stamp(item.time)
+  local first=stamp(since~=nil and since or item.time)
+  local list={};for _,x in ipairs(item.packages) do list[#list+1]=x end
+  local names=#list>0 and table.concat(list,' ') or '-'
+  local head,todo=M.OUTSIDE_HEAD[outside_variant(item)],M.OUTSIDE_TODO[outside_variant(item)]
+  local en={'HomenSAI Auto VPN notice: '..code,head[1],'Time: '..when,'Trigger: '..item.trigger,'Changed packages: '..names,'Class: '..item.why,todo[1]}
+  local ru={'Уведомление HomenSAI Auto VPN: '..code,head[2],'Время: '..when,'Причина: '..item.trigger,'Изменённые пакеты: '..names,'Класс: '..item.why,todo[2]}
+  if more and more>0 then
+    en[#en+1]=string.format('%d earlier decision(s) of this class since %s were not sent separately (at most one message per class every 10 min).',more,first)
+    ru[#ru+1]=string.format('Ещё решений этого класса с %s, не отправленных отдельно: %d (не чаще одного сообщения на класс в 10 минут).',first,more)
+  end
+  return table.concat(en,'\n')..'\n\n'..table.concat(ru,'\n')
+end
+-- outside_notice(d, config, state, now) -> state
+function M.outside_notice(d,config,state,now)
+  local okr,ring=pcall(read_json,d,d.runtime..'/'..M.OUTSIDE_FILE,canon.object())
+  local items=M.outside_items(okr and ring or nil)
+  local seen_path=d.runtime..'/'..M.OUTSIDE_SEEN
+  local oks,seen=pcall(read_json,d,seen_path,canon.object())
+  if not oks or not is_dict(seen) then seen=canon.object() end
+  local keys={};for _,x in ipairs(items) do keys[x.key]=true end
+  local told=is_list(seen.done) and seen.done or {}
+  local old_done={};for _,k in ipairs(told) do if type(k)=='string' and keys[k] then old_done[#old_done+1]=k end end  -- bounded by the ring
+  local last=is_dict(seen.last) and seen.last or canon.object()
+  local old_last={}
+  for _,c in ipairs(M.OUTSIDE_CLASSES) do local v=last[c];if type(v)~='boolean' and finite(v) then old_last[c]=num(v) end end
+  local done,isdone={},{}
+  for _,k in ipairs(old_done) do done[#done+1]=k;isdone[k]=true end
+  local stamps={};for c,v in pairs(old_last) do stamps[c]=v end
+  local pending={}
+  for _,x in ipairs(items) do if not isdone[x.key] then pending[#pending+1]=x end end
+  -- BH-05: the age by the monotonic clock when the item has it (same boot: the ring is RAM), else by the wall clock
+  local okc,clock=pcall(function() return d.clock and d.clock() or nil end)
+  local mono_now=okc and mono_ok(clock) or nil
+  local function age(x)
+    local m=x.mono~=nil and num(x.mono) or nil
+    if mono_now~=nil and m~=nil and mono_now>=m then return mono_now-m end
+    return now-num(x.time)
+  end
+  for _,x in ipairs(pending) do if age(x)>M.OUTSIDE_MAX_AGE then done[#done+1]=x.key;isdone[x.key]=true end end
+  local function store()
+    local same=#done==#told
+    if same then for i,k in ipairs(done) do if told[i]~=k then same=false end end end
+    for _,c in ipairs(M.OUTSIDE_CLASSES) do if stamps[c]~=old_last[c] then same=false end end
+    if same then return end
+    local out=canon.object();for c,v in pairs(stamps) do out[c]=canon.float(v) end
+    pcall(d.write,seen_path,canon.encode(canon.object({done=canon.array(done),last=out})))
+  end
+  local sent,failed=false,nil
+  for _,cls in ipairs(M.OUTSIDE_CLASSES) do
+    if failed then break end
+    local group={}
+    local at={}
+    for i,x in ipairs(pending) do if x.decision==cls and not isdone[x.key] then group[#group+1]=x;at[x]=i end end
+    -- BH2-05: equal times keep the ring (insertion) order, like Python's stable sorted(): the last recorded is the newest
+    table.sort(group,function(a,b) if num(a.time)~=num(b.time) then return num(a.time)<num(b.time) end;return at[a]<at[b] end)
+    local previous=stamps[cls]
+    if #group>0 and not (previous~=nil and now-previous>=0 and now-previous<M.OUTSIDE_INTERVAL) then
+      if sent then d.sleep(1.05) end
+      d.lock(function()
+        local okm,err=pcall(d.send,config,M.limited_text(M.outside_text(group[#group],#group-1,group[1].time)))
+        if okm then
+          for _,x in ipairs(group) do done[#done+1]=x.key;isdone[x.key]=true end
+          stamps[cls]=now;sent=true
+          state=with(state,{last_code='TELEGRAM-DELIVERED'})
+        else
+          if not M.is_delivery_error(err) then err=delivery_error('TELEGRAM-DELIVERY-UNKNOWN',true) end
+          local counter=err.uncertain and 'unknown_deliveries' or 'known_failures'
+          state=with(state,{attempt=canon.float(now),last_code=err.code,retry_after=err.retry_after})
+          state[counter]=fnum(get(state,counter,0))+1
+          failed=true
+        end
+      end,d.runtime..'/telegram-control')
+    end
+  end
+  store()
+  return state
+end
+
 function M.deliver(d,status,saved,now)
   if not M.valid(saved) then return canon.object({enabled=true,code='TELEGRAM-STATE-CORRUPT'}),saved,false end
   local okc,config=pcall(d.config)
@@ -577,6 +859,8 @@ function M.deliver(d,status,saved,now)
   if remaining>0 and truthy(get(state,'attempt',0)) then
     return with(public,{code=get(state,'last_code','TELEGRAM-RETRY'),retry_in=math.ceil(remaining)}),state,false
   end
+  state=M.vendor_notice(d,config,status,state,now)
+  if num(get(state,'attempt',0))~=now then state=M.outside_notice(d,config,state,now) end  -- not right after a failed VENDOR-BUSY notice
   if #jobs==0 then
     if truthy(state.uncertain) then public.code='TELEGRAM-DELIVERY-UNKNOWN' end
     return public,state,false
@@ -739,6 +1023,7 @@ function M.router(options)
     return tonumber(string.match(text or '','^(%d+)')) or 255
   end
   d.send=options.send or function(config,text) return M.send_message(d,config,text) end
+  d.clock=options.clock or function() return require('runner').clock() end  -- BH-05: /proc/uptime
   function d.uuid() return require('auto_control').uuid_hex() end
   function d.allow(key,interval,now)
     return require('setup').allow({runner=mio,runtime=d.runtime},key,interval,now)

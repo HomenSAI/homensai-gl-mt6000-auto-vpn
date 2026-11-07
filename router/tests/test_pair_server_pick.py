@@ -209,5 +209,53 @@ class Tests(unittest.TestCase):
         self.assertEqual(metadata(renamed)['session_order'],value['order']);self.assertEqual(renamed['hash'],value['policy_hash'])
         self.assertEqual(renamed['after'],['r2_2016','r1']);self.assertTrue(state_order_matches(value,renamed,(['r1','r2_2016'],H2)))
 
+    def test_a_foreign_lan_edit_during_the_change_is_never_adopted_as_our_own(self):
+        # F-27: the whole network identity is compared; only the selected interface's config may name the from/to server
+        w=self.world();self.world_backend=w;sid=pair.intent()['id']
+        lan={'.name':'lan','ipaddr':'192.168.8.1'}
+        rows=lambda:[lan]+w.rows()
+        p=patch.object(pair,'network',side_effect=rows);p.start();self.addCleanup(p.stop)
+        whole=lambda rows,managed=None:sha(json.dumps([{k:v for k,v in r.items() if k!='disabled'} for r in rows],sort_keys=True))
+        p=patch.object(pair,'normalized_network',side_effect=whole);p.start();self.addCleanup(p.stop)
+        state=pair.read_state();state['network_identity']=whole(rows());pair.save(state)
+        self.assertTrue(pair.server_network_delta_only(state,rows(),state['interfaces'],'ovpnclient1','openvpn'))
+        # the own write alone is explainable
+        self.request(w);self.assertTrue(self.tick())
+        self.assertEqual(pair.read_state()['order'],['r1','r2_2016'],'rebound: only the selected interface changed')
+        self.assertEqual(pair.read_state()['network_identity'],whole(rows()))
+        # a second change with a LAN edit made meanwhile: not ours, the session keeps its baseline
+        w.healthy['openvpn:40354_2016']=True;self.clock[0]+=5;self.assertTrue(self.tick());self.clock[0]+=2;self.assertTrue(self.tick())
+        self.assertNotIn('server_change',pair.read_state())
+        before=pair.read_state();self.clock[0]+=3600
+        self.request(w,**{'from':'40354_2016','to':'40354_2011'},profile_id='2011')
+        original=w.run
+        def run(argv,seconds):
+            rc,out=original(argv,seconds)
+            if ' '.join(argv)=='uci commit network':lan['ipaddr']='192.168.9.1'  # the owner's edit lands with our commit
+            return rc,out
+        w.io['exec']=run
+        self.assertTrue(self.tick())
+        state=pair.read_state()
+        self.assertEqual(state['network_identity'],before['network_identity'],'the foreign LAN edit was not absorbed')
+        self.assertEqual(state['order'],before['order']);self.assertEqual(state['policy_hash'],before['policy_hash'])
+        self.assertEqual(json.loads(w.files['/run/'+S.EVENT])['tunnels'][0]['code'],'SERVER-PICK-FAILED')
+        self.assertFalse(pair.server_network_delta_only(state,rows(),state['interfaces'],'ovpnclient1','openvpn'))
+
+    def test_only_the_tunnels_rule_may_change_and_only_its_server_fields(self):
+        # F-27: a named rule keeps its id when its options change; the section comparison still sees a foreign edit
+        before=[{'.name':'global','.type':'policy','enabled':'1'},{'.name':'cfg0456cd','.type':'rule','via':'ovpnclient1','group_id':'40354','client_id':'2020'},
+                {'.name':'cfg0123ab','.type':'rule','via':'wgclient1','group_id':'10004','peer_id':'2002'}]
+        own=copy.deepcopy(before);own[1].update(client_id='2016');own[1].pop('peer_id',None)
+        self.assertTrue(S.policy_delta_only(before,own,'cfg0456cd'))
+        self.assertTrue(S.policy_delta_only(before,before,'cfg0456cd'))
+        other=copy.deepcopy(before);other[2]['peer_id']='2000'
+        self.assertFalse(S.policy_delta_only(before,other,'cfg0456cd'),'another profile changed')
+        option=copy.deepcopy(own);option[1]['killswitch']='0'
+        self.assertFalse(S.policy_delta_only(before,option,'cfg0456cd'),'a non-server option of our rule changed')
+        moved=copy.deepcopy(own);moved[1],moved[2]=moved[2],moved[1]
+        self.assertFalse(S.policy_delta_only(before,moved,'cfg0456cd'),'order changed')
+        self.assertFalse(S.policy_delta_only(before,own+[{'.name':'x','.type':'rule'}],'cfg0456cd'),'a rule added')
+        self.assertFalse(S.policy_delta_only(before,own,None))
+
 
 if __name__=='__main__':unittest.main()

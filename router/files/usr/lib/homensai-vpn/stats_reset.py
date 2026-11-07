@@ -34,13 +34,23 @@ def request(arguments,runtime=None,now=None):
     return {'queued':True,'scope':arguments['scope'],'nonce':nonce}
 
 
+CLAIMED='.'+REQUEST+'.claimed'
+
+
 def pending(runtime=None):
-    runtime=RUNTIME if runtime is None else Path(runtime);path=runtime/REQUEST
+    runtime=RUNTIME if runtime is None else Path(runtime);path=runtime/REQUEST;claimed=runtime/CLAIMED
+    # Review F-36 (06.11.2026): the request is claimed by one atomic rename before it is read, so a request queued
+    # between the read and the old unlink is never deleted unseen: it lands in REQUEST again and is the next claim.
     try:
-        if not path.exists() or path.is_symlink() or path.stat().st_size>4096:return None
-        value=json.loads(path.read_text(encoding='utf8'))
+        if not path.exists() or path.is_symlink():return None
+        import os
+        os.replace(str(path),str(claimed))
+    except OSError:return None
+    try:
+        if claimed.is_symlink() or claimed.stat().st_size>4096:value=None
+        else:value=json.loads(claimed.read_text(encoding='utf8'))
     except (OSError,ValueError):value=None
-    try:path.unlink()
+    try:claimed.unlink()
     except OSError:pass
     if (not isinstance(value,dict) or value.get('scope') not in SCOPES or not isinstance(value.get('nonce'),str)
             or not re.fullmatch(r'[a-f0-9]{32}',value['nonce'])):return None

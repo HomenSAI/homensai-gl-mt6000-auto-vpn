@@ -115,6 +115,57 @@ class LuaControlRequest(unittest.TestCase):
         stale = dict(arguments, control_revision='b'*32)
         self.assertEqual(self.lua('start', stale, policy), {'accepted': False, 'blockers': ['CONTROL-REVISION-STALE']})
 
+    def test_bh04_integrity_no_auto_refuses_start_in_both_twins(self):
+        import native_switch
+        import preparation_control
+        import speed_pause
+        policy = {'settings': {'pair_auto_mode': MODE, 'native_trial': TRIAL}, 'sections': {}}
+        arguments = {'control_revision': REV, 'request_source': 'manual'}
+        for mode in ('no-auto', 'stopped'):
+            self.both('run/auto-control-revision.json', {'revision': REV})
+            self.both('run/integrity.json', {'code': 'INTEGRITY-TOOL-MISSING', 'mode': mode, 'restored': 0,
+                                             'files': [], 'version': '', 'time': 1})
+            lua_reply = self.lua('start', arguments, policy)
+            backend = MagicMock()
+            backend.policy.return_value = policy
+            py_reply = self.python('native_start', arguments, [
+                patch.object(native_switch, 'Linux', return_value=backend),
+                patch.object(native_switch, 'journal_read', return_value={}),
+                patch.object(preparation_control, 'auto_blocker', return_value=None),
+                patch.object(preparation_control, 'auto_prepare', return_value={'repaired': [], 'code': None}),
+                patch.object(speed_pause, 'public', return_value={'active': False})])
+            self.assertEqual(lua_reply, {'accepted': False, 'blockers': ['INTEGRITY-AUTO-BLOCKED']}, mode)
+            self.assertEqual(lua_reply, py_reply, mode)
+            for base in (self.lua_dir, self.py_dir):
+                self.assertFalse((base/'run/pair-auto-control.json').exists(), mode)
+                self.assertFalse((base/'run/auto-control.json').exists(), mode)
+                self.assertFalse((base/'etc/auto-resume.json').exists(), mode)
+
+    def test_service_auto_off_refuses_start_in_both_twins(self):
+        """Owner decision 07.11.2026 15:10: enabled != 1 -> monitor only, run/service-auto.json SERVICE-AUTO-OFF."""
+        import native_switch
+        import preparation_control
+        import speed_pause
+        policy = {'settings': {'pair_auto_mode': MODE, 'native_trial': TRIAL}, 'sections': {}}
+        arguments = {'control_revision': REV, 'request_source': 'manual'}
+        self.both('run/auto-control-revision.json', {'revision': REV})
+        self.both('run/service-auto.json', {'code': 'SERVICE-AUTO-OFF', 'time': 1})
+        lua_reply = self.lua('start', arguments, policy)
+        backend = MagicMock()
+        backend.policy.return_value = policy
+        py_reply = self.python('native_start', arguments, [
+            patch.object(native_switch, 'Linux', return_value=backend),
+            patch.object(native_switch, 'journal_read', return_value={}),
+            patch.object(preparation_control, 'auto_blocker', return_value=None),
+            patch.object(preparation_control, 'auto_prepare', return_value={'repaired': [], 'code': None}),
+            patch.object(speed_pause, 'public', return_value={'active': False})])
+        self.assertEqual(lua_reply, {'accepted': False, 'blockers': ['SERVICE-AUTO-OFF']})
+        self.assertEqual(lua_reply, py_reply)
+        for base in (self.lua_dir, self.py_dir):
+            self.assertFalse((base/'run/pair-auto-control.json').exists())
+            self.assertFalse((base/'run/auto-control.json').exists())
+            self.assertFalse((base/'etc/auto-resume.json').exists())
+
     def test_held_by_an_outside_change_lua_hands_to_python_which_hands_over_prepares_and_starts(self):
         """MT3000 03.11.2026: HELD + PAIR-EXTERNAL-POLICY-CHANGE + a new ovpnclient1 + failing preparation checks.
         The Lua monitor answers FALLBACK without writing; agent.py on the same files hands the session over, prepares

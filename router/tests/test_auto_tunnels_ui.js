@@ -8,7 +8,7 @@ for(const language of ['en','ru']){
   const c={locale:language,bi:(en,ru)=>language==='ru'?ru:en,E:(...args)=>new N(...args),Date,localStorage:{getItem:()=>null},identityModel:()=>({}),identityLine:()=>'test',versionString:()=>'test',ownGet:(map,key)=>Object.prototype.hasOwnProperty.call(map,key)?map[key]:undefined};
   vm.createContext(c);for(const name of ['ui_logic','auto_panel','manual_panel','sidebar_status'])vm.runInContext(fs.readFileSync('router/'+name+'.inc.js','utf8'),c);
   c.statusNow=()=>now;c.routerWall=()=>now;
-  const icons=l=>c.renderAutoLight(l,'X').all().filter(n=>/\bhv-tn\b/.test(n.attrs.class||'')).map(n=>({cur:/hv-tc/.test(n.attrs.class),color:n.all().find(d=>/hv-dot-/.test(d.attrs.class||'')).attrs.class.match(/hv-dot-(green|red)/)[1],text:n.text()}));
+  const icons=l=>c.renderAutoLight(l,'X').all().filter(n=>/\bhv-tn\b/.test(n.attrs.class||'')).map(n=>({cur:/hv-tc/.test(n.attrs.class),color:n.all().find(d=>/hv-dot-/.test(d.attrs.class||'')).attrs.class.match(/hv-dot-(green|yellow|grey|red)/)[1],text:n.text()}));
   // On the reserve with the primary failed: primary red, reserve green and marked as the working one.
   let s=fixture(2000,'b');s.profiles[0].code='VPN-003';s.profiles[0].https_success=0;
   let l=c.autoLightModel(s,inventory,now);assert.equal(l.key,'reserve');
@@ -17,7 +17,7 @@ for(const language of ['en','ru']){
   assert.equal(i[0].text,language==='ru'?'Основной':'Primary');assert.equal(i[1].text,language==='ru'?'Резерв':'Reserve');
   // On the primary with both healthy: both green, the primary marked.
   l=c.autoLightModel(fixture(2000,'a'),inventory,now);assert.equal(l.key,'ok');
-  assert.deepStrictEqual(icons(l).map(x=>[x.color,x.cur]),[['green',true],['green',false]]);
+  assert.deepStrictEqual(icons(l).map(x=>[x.color,x.cur]),[['green',true],['yellow',false]]);
   // Auto off: no tunnel icons.
   s=fixture(2000,'a');s.auto_control={requested:'off',pair_phase:'STOPPED',requested_at:900};s.native_failover.state='STOPPED';
   assert.equal(icons(c.autoLightModel(s,inventory,now)).length,0);

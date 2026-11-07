@@ -1,5 +1,5 @@
 /* HomenS.AI Auto VPN page: additions to the approved mockup styles (router/ui/mockup/*.css, copied verbatim and scoped
-   to .hvx by the build). Only what the mockups had no need for: LuCI host neutralisation, the view switch, help/codes
+   to .hvx by the build). Only what the mockups had no need for: LuCI host neutralisation, help/codes
    content from the catalogue module, the live-data states. */
 .hvx{position:relative;text-align:left;letter-spacing:normal;text-transform:none;min-height:auto}  /* inside LuCI the page is not the whole window */
 .hvx h1,.hvx h2,.hvx h3,.hvx h4{color:inherit;font-family:inherit;background:none;border:0;padding:0;text-transform:none;letter-spacing:normal;font-weight:700}
@@ -9,12 +9,6 @@
 .hvx a:hover{text-decoration:underline}
 .hvx .btn:hover,.hvx .brand:hover{text-decoration:none}
 .hvx [hidden]{display:none!important}
-/* View switch: two icon buttons in the header, same style as the language button. */
-.hvx .viewsw{display:inline-flex;gap:0;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card2);padding:0}
-.hvx .viewsw .iconbtn{border:0;border-radius:8px;background:transparent;min-width:34px;height:32px;padding:0 8px;font-size:1rem;line-height:1}
-.hvx .viewsw .iconbtn[aria-pressed="true"]{background:var(--acc-soft);color:var(--acc)}
-.hvx .viewsw .vlabel{font-size:.72rem;font-weight:600;color:var(--mute);padding:0 4px 0 8px;white-space:nowrap}
-@media (max-width:560px){.hvx .viewsw .vlabel{display:none}}
 /* Live data states */
 .hvx .code{cursor:pointer}
 .hvx .ch .why{font-size:.78rem;color:var(--mute);margin-top:4px}
@@ -43,3 +37,158 @@
 .hvx .kv dd{overflow-wrap:anywhere}
 .hvx .ev-h .tx{overflow-wrap:anywhere}
 .hvx .tbl td.mono{overflow-wrap:anywhere}
+/* F1 «Золотая сетка»: live-data elements that the mockup did not have. */
+.hvx [data-b="manual"]:empty{display:none}  /* an empty slot must not add a gap to the column */
+@media (max-width:900px){.hvx .gold [data-b="manual"]{order:2}}
+.hvx .modal .mb button{position:relative;min-height:34px;padding:5px 13px;border-radius:8px;gap:8px}
+.hvx .modal .mb button::after{content:"";position:absolute;inset:-5px}
+.hvx [data-codes]{overflow-x:auto}
+/* The wizard header has no menu: the tools sit at the right (console rule of d-f1.css, same on a phone). */
+.hvx.v-wizard .hdr-in .hdr-tools{margin-left:auto}
+@media (max-width:760px){.hvx.v-wizard .hdr .wrap.hdr-in{grid-template-areas:"hb badge" "tools tools"}}
+/* 2.1.0-alpha9: auto-adaptation card and master slider (owner mockup private/math/master-slider), recovery P95, sensors. */
+.hvx .chip.vio{background:color-mix(in srgb,#8e5bd8 16%,transparent);color:#8e5bd8}
+.hvx .advcard .hline,.hvx .advhead{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.hvx .advcard .hline{justify-content:flex-start;flex-wrap:nowrap}
+.hvx .advcard .hline h2{margin:0;min-width:0;flex:1 1 auto;width:auto}
+.hvx .advchart{width:100%;height:auto;display:block;margin-top:8px}
+.hvx .advmini .advchart{max-width:420px}
+.hvx .advchart text{fill:var(--mute);font-size:10.5px;font-family:var(--font)}
+.hvx .advchart .ax{stroke:var(--line)}
+.hvx .advchart .curve{stroke:var(--acc);fill:none;stroke-width:2.5}
+.hvx .advchart .anc{fill:var(--card);stroke:var(--acc);stroke-width:1.5}
+.hvx .advchart .mk{stroke:var(--card);stroke-width:1.2}
+.hvx .advchart .mk.def{fill:var(--warn)}
+.hvx .advchart .mk.pro{fill:#8e5bd8}
+.hvx .advchart .lbl{fill:var(--ink);font-size:10px}
+.hvx .advchart .now{fill:none;stroke:var(--ok);stroke-width:3}
+.hvx .advchart .now.custom{stroke:#8e5bd8}
+.hvx .advchart .pt{fill:var(--acc);stroke:var(--card);stroke-width:2.5}
+.hvx .advchart .halo{fill:var(--acc);opacity:.18}
+.hvx .legend .lg-curve{border-top:2px solid var(--acc)}
+.hvx .legend .lg-now,.hvx .legend .lg-pt,.hvx .legend .lg-def,.hvx .legend .lg-pro{width:10px;height:10px;border:0;border-radius:50%}
+.hvx .legend .lg-now{box-shadow:inset 0 0 0 2px var(--ok)}
+.hvx .legend .lg-pt{background:var(--acc)}
+.hvx .legend .lg-def{background:var(--warn);border-radius:2px;transform:rotate(45deg)}
+.hvx .legend .lg-pro{background:#8e5bd8;border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.hvx .expect{font-size:.92rem;padding:8px 11px;border-radius:11px;background:var(--card2);border:1px solid var(--line);margin-top:8px}
+.hvx .expect b{font-variant-numeric:tabular-nums}
+.hvx .advseg{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.hvx .advseg .btn[aria-pressed="true"],.hvx .filters button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.hvx .filters button{min-height:34px;position:relative}
+.hvx .filters button::after{content:"";position:absolute;inset:-5px}
+.hvx .advslider{margin-top:8px}
+.hvx .advslider .ends{display:flex;justify-content:space-between;gap:10px;font-weight:700;font-size:.9rem}
+.hvx .advslider .ends span:last-child{text-align:right}
+.hvx .advslider .slider,.hvx .advfine .slider{min-height:44px}
+.hvx .advslider output{font:600 .9rem var(--mono)}
+.hvx .advtbl td.chg{background:var(--warn-soft);font-weight:700;color:var(--ink)}
+.hvx .advtbl .ar{color:var(--warn);margin-left:4px}
+.hvx .advtbl tr.sub td{color:var(--mute)}
+.hvx .advtbl tr.sub td.chg{color:var(--ink)}
+.hvx .advtbl th.num,.hvx .advtbl td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.hvx .advfine .fine{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:2px 12px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
+.hvx .advfine .fine label{font-weight:600}
+.hvx .advfine .fine output{font:600 .9rem var(--mono);text-align:right}
+.hvx .advfine .fine .slider,.hvx .advfine .fine .h{grid-column:1/-1}
+.hvx .advfine .fine .h{font-size:.78rem;color:var(--mute)}
+.hvx .tgl{display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;background:transparent;padding:0;font-weight:600;min-height:44px;color:var(--ink)}
+.hvx .tgl .trk{width:40px;height:22px;border-radius:999px;background:var(--off);position:relative;flex:none;transition:background .2s}
+.hvx .tgl .trk::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s}
+.hvx .tgl[aria-checked="true"] .trk{background:var(--acc)}
+.hvx .tgl[aria-checked="true"] .trk::after{left:21px}
+.hvx .tgl:disabled{opacity:.5;cursor:not-allowed}
+@media (prefers-reduced-motion:reduce){.hvx .tgl .trk,.hvx .tgl .trk::after{transition:none}}
+.hvx .advchart circle.anc.fast{fill:var(--acc);opacity:.7}
+/* fast end (positions t < 0, administrator switch, turbo): every control at least 44 px */
+.hvx .fastseg .btn,.hvx .fastadm .btn{min-height:44px;min-width:56px}
+.hvx .fastseg .btn.lock{opacity:.75;border-style:dashed}
+.hvx .fastadm{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.hvx .fastadm .tgl{max-width:100%;text-align:left}
+/* expert group Detector and sensors */
+.hvx .xdh{margin:16px 0 2px;font-size:1rem}
+.hvx .xdf .dm{margin-left:6px;font-size:.76rem;font-weight:500;color:var(--mute)}
+.hvx .xdf .dm.chg{color:var(--warn)}
+.hvx .xdf .tg::before{content:"";position:absolute;inset:-5px 0}
+.hvx .xdf .h b{color:var(--ink)}
+@media (max-width:520px){.hvx .xdf{grid-template-columns:minmax(0,1fr)}.hvx .xdf select{max-width:100%;width:100%}.hvx .xdf label{display:block}.hvx .xdf .dm{display:block;margin-left:0}}
+.hvx [data-secid="xdet"] .savebar .btn{min-height:44px}
+.hvx .keychg{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0;background:var(--card2);overflow-wrap:anywhere}
+.hvx .advtour .dots{display:flex;gap:6px;margin:10px 0 4px}
+.hvx .advtour .dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.hvx .advtour .dots i.on{background:var(--acc)}
+.hvx .scrollx{overflow-x:auto;max-width:100%}
+@media (max-width:520px){.hvx .advtbl td .tiny{display:none}.hvx .advtbl th,.hvx .advtbl td{padding:5px 3px;font-size:.8rem}.hvx .advtbl td:first-child{min-width:42%}}
+/* The wizard's exit: on every step, also on a phone (owner 04.11.2026). */
+.hvx .wz-exit{margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+.hvx .wz-exit p{margin:5px 0 0}
+/* Phone Home: the status stays first; the auto-adaptation card and the empty manual slot follow the channels (the mockup gave them no order). */
+@media (max-width:900px){.hvx .gold [data-b="manual"]{order:2}.hvx .gold .advcard{order:5}}
+/* A lamp row never leaves its lamp alone on a line: the text takes the rest and wraps; the sensors heading keeps a gap. */
+.hvx p.row:has(>.lamp:first-child){flex-wrap:nowrap;align-items:flex-start}
+.hvx p.row:has(>.lamp:first-child)>.lamp{margin-top:3px}
+.hvx p.row:has(>.lamp:first-child)>span{flex:1 1 0;min-width:0}
+.hvx #sensors{margin-top:20px}
+
+/* Complete code reference: readable cards and native keyboard controls. */
+.hvx .codes-list{list-style:none;margin:0;padding:0}.hvx .codes-list li{border-top:1px solid var(--line)}
+.hvx .code-entry{display:grid;grid-template-columns:minmax(0,38.2fr) minmax(0,61.8fr);gap:12px;width:100%;max-width:100%;min-height:44px;padding:10px 4px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;line-height:1.45;cursor:pointer}
+.hvx .code-entry:hover{text-decoration:underline}.hvx .code-entry:focus-visible{outline:2px solid currentColor;outline-offset:-2px}
+.hvx .code-entry span{min-width:0;overflow-wrap:anywhere}.hvx .code-search{display:block}.hvx .code-search input{width:100%;margin:4px 0}
+.hvx .code-pages{margin-top:12px}.hvx .code-pages select{display:inline-block;width:auto;min-width:0}.hvx .code-count{overflow-wrap:anywhere}
+.hvx .code-steps{padding-left:24px}.hvx .code-steps li{padding:6px 0;line-height:1.55}.hvx .code-guide p{line-height:1.55;overflow-wrap:anywhere}
+.hvx .code-tech p{white-space:pre-wrap;overflow-wrap:anywhere}.hvx .code-tech summary{cursor:pointer}
+.hvx .code-family{display:block;margin-top:2px}
+@media(max-width:520px){.hvx .code-entry{grid-template-columns:minmax(0,1fr);gap:3px}.hvx .code-pages{flex-wrap:wrap}}
+/* Owner rule 07.11.2026 (two indicators): the Auto switch track is the AUTO INDICATOR (autoIndicator()), not the internet light:
+   green = Auto is on, red = manual mode (Auto off) or Auto stuck (with ⚠ in the words), yellow = starting/stopping/paused,
+   grey = no fresh data or not confirmed (with ? in the words). The track takes no colour from "checked" or "busy" alone. */
+.hvx .aswitch[data-sig="g"] .trk{background:var(--ok)}
+.hvx .aswitch[data-sig="y"] .trk{background:var(--warn)}
+.hvx .aswitch[data-sig="r"] .trk{background:var(--bad)}
+.hvx .aswitch[data-sig="n"] .trk{background:var(--off)}
+.hvx .ovi{font-weight:700}
+/* Both indicators in the header on every page (owner 07.11.2026): "Internet" and "Auto" lamps with labels; not controls, no tap area.
+   On a phone they take their own full-width row under the brand, so the header never overflows. */
+.hvx .hdr-in .hlamps{order:1;display:flex;align-items:center;gap:12px;min-width:0;font-size:13px;font-weight:600;color:var(--ink)}
+.hvx .hlamp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+@media (max-width:760px){
+  .hvx .hdr .wrap.hdr-in{grid-template-areas:"hb badge" "lamps lamps" "nav tools"}
+  .hvx.v-console .hdr .wrap.hdr-in,.hvx.v-wizard .hdr .wrap.hdr-in{grid-template-areas:"hb badge" "lamps lamps" "tools tools"}
+  .hvx .hdr-in .hlamps{grid-area:lamps}
+}
+/* visually hidden text for assistive technology; the wizard keeps step names on narrow screens (the current one is visible) */
+.hvx .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:560px){.hvx .steps li span{display:inline;position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.hvx .steps li.cur span{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal}}
+
+/* Static layout that used to be inline style="" attributes (a CSP without style-src-attr 'unsafe-inline' blocks those). Doubled .hvx keeps the
+   weight of the old inline style over the component rules. */
+.hvx.hvx .cwan{color:#8e5bd8}
+.hvx.hvx .fb100{flex-basis:100%}
+.hvx.hvx .fs125{font-size:1.25rem}
+.hvx.hvx .fx1{flex:1}
+.hvx.hvx .fx1m0{flex:1;min-width:0}
+.hvx.hvx .gap0{gap:0}
+.hvx.hvx .h8{height:8px}
+.hvx.hvx .mb10{margin-bottom:10px}
+.hvx.hvx .mt10{margin-top:10px}
+.hvx.hvx .mt4{margin-top:4px}
+.hvx.hvx .mt6sb{margin-top:6px;justify-content:space-between}
+.hvx.hvx .mt8{margin-top:8px}
+.hvx.hvx .mv6{margin:6px 0}
+.hvx.hvx .mv8{margin:8px 0}
+.hvx.hvx .nwtop{flex-wrap:nowrap;align-items:flex-start}
+.hvx.hvx .prewrap{white-space:pre-wrap;font:inherit;font-size:.82rem}
+.hvx.hvx .rowtop10{margin-top:10px;align-items:flex-start;flex-wrap:nowrap}
+.hvx.hvx .sb{justify-content:space-between}
+.hvx.hvx .sbnw{justify-content:space-between;flex-wrap:nowrap}
+.hvx.hvx .tar{text-align:right}
+.hvx.hvx .ulsm{margin:8px 0 0;padding-left:18px}
+.hvx.hvx .btn[aria-disabled="true"]{opacity:.55}
+.hvx .prog i[data-pct]{width:0}
+.hvx.hvx .mw420{max-width:420px}
+/* Top button: fixed bottom-right, above the content (below modals, z 100) and clear of the phone tab bar */
+.hvx .totop{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:40;width:44px;height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:var(--r);background:var(--card);color:var(--acc);font-size:20px;line-height:1;cursor:pointer;box-shadow:var(--shadow)}
+.hvx .totop:hover{border-color:var(--acc);background:var(--acc-soft)}
+.hvx:has(.modal-bg) .totop{display:none}
+@media (max-width:760px){.hvx.v-console .totop{bottom:calc(64px + env(safe-area-inset-bottom))}}

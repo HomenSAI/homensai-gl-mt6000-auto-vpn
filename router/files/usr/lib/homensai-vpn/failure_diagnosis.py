@@ -171,6 +171,9 @@ def resolve_pair(status,settings,now,max_age=90,settle_seconds=60,source_window=
         coordination.update(state='READY',code=SOURCE_UNSTABLE);return result
     coordination.update(state='READY',code='CROSS-TUNNEL-READY');return result
 
+WAN_HOLD_ACTIONS={'WAN-DOWN':'The router itself has no Internet (WAN); switching VPN cannot help. Waiting for the WAN.',
+                  'WAN-RECOVERING':'The WAN came back; the primary is re-checked before any switch.'}
+
 def diagnose(status,source,now,settings=None):
     from observation_freshness import valid_for,cached
     age=valid_for(settings) if settings is not None else cached(status)
@@ -179,6 +182,12 @@ def diagnose(status,source,now,settings=None):
     uplink=status.get('uplink_observation',{})
     if isinstance(uplink,dict) and uplink.get('state')=='DOWN' and fresh(uplink.get('time'),now,age):
         return dict(result,code='UPLINK-LINK-DOWN',suppress_switch=True,next_action='Restore configured uplink; do not cycle VPN reserves.')
+    # GL-SENSORS-2026-11-04 item 1 (wan_diag.py): the WAN itself is proven down (or came back seconds ago and the
+    # primary has not been re-checked yet): switching to the other VPN cannot help; no budget, cooldown or dwell is used.
+    wan=status.get('wan_diagnosis')
+    if (isinstance(wan,dict) and wan.get('hold') is True and isinstance(wan.get('code'),str) and wan['code'] in WAN_HOLD_ACTIONS
+            and fresh(wan.get('time'),now,age)):
+        return dict(result,code=wan['code'],suppress_switch=True,next_action=WAN_HOLD_ACTIONS[wan['code']])
     profiles=status.get('profiles',[])
     if not isinstance(profiles,list):return result
     rows=[p for p in profiles if isinstance(p,dict) and p.get('id')==source]

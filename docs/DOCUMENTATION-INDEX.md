@@ -109,8 +109,8 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/HOW-IT-WORKS.en.md](HOW-IT-WORKS.en.md)|current|
 |[docs/HOW-IT-WORKS.ru.md](HOW-IT-WORKS.ru.md)|current|
 |[docs/INSTALL-WALKTHROUGH.md](INSTALL-WALKTHROUGH.md)|historical-reference|
-|[docs/INSTALL.en.md](INSTALL.en.md)|current|
-|[docs/INSTALL.ru.md](INSTALL.ru.md)|current|
+|[docs/INSTALL.en.md](INSTALL.en.md)|current-generated-install|
+|[docs/INSTALL.ru.md](INSTALL.ru.md)|current-generated-install|
 |[docs/LAN-HELPER.en.md](LAN-HELPER.en.md)|current|
 |[docs/LAN-HELPER.ru.md](LAN-HELPER.ru.md)|current|
 |[docs/LANGUAGE.md](LANGUAGE.md)|current|

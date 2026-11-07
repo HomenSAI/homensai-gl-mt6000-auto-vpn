@@ -169,5 +169,74 @@ class AtomicRequestTests(unittest.TestCase):
         self.assertEqual(control.manual_action_source(self.path,value,200),'unknown')
 
 
+
+
+class IntegrityGateStartTests(unittest.TestCase):
+    """BH-04: integrity mode no-auto/stopped -> Start refused with INTEGRITY-AUTO-BLOCKED, no intent queued."""
+    def setUp(self):
+        self.directory=tempfile.TemporaryDirectory();self.addCleanup(self.directory.cleanup)
+        self.path=Path(self.directory.name)
+        for name in ('RUNTIME','PERSIST'):
+            item=patch.object(control,name,self.path);item.start();self.addCleanup(item.stop)
+
+    def report(self,value):
+        import json
+        (self.path/'integrity.json').write_text(value if isinstance(value,str) else json.dumps(value))
+
+    def test_blocker_by_mode(self):
+        self.assertIsNone(control.integrity_blocker())
+        for mode in ('no-auto','stopped'):
+            self.report({'code':'INTEGRITY-TOOL-MISSING','mode':mode})
+            self.assertEqual(control.integrity_blocker(),'INTEGRITY-AUTO-BLOCKED')
+        for value in ({'mode':'normal'},{'mode':'no-c'},{'mode':'python'},'{bad',[1]):
+            self.report(value);self.assertIsNone(control.integrity_blocker(),value)
+
+    def test_start_refused_before_any_diagnostics_and_nothing_written(self):
+        self.report({'code':'INTEGRITY-TOOL-MISSING','mode':'no-auto'})
+        with control.control_lock(self.path):revision=control.revision_locked(self.path)
+        with patch('speed_pause.public',return_value={'active':False}),patch.object(native,'Linux') as linux:
+            reply=control.start(revision,request_source='manual')
+            linux.assert_not_called()
+        self.assertEqual(reply,{'accepted':False,'blockers':['INTEGRITY-AUTO-BLOCKED']})
+        self.assertFalse((self.path/'auto-control.json').exists())
+        self.assertFalse((self.path/'pair-auto-control.json').exists())
+
+
+class ServiceAutoGateStartTests(unittest.TestCase):
+    """Owner decision 07.11.2026 15:10: the init runs the monitor but no Auto supervisor with option enabled != 1 and
+    writes service-auto.json (SERVICE-AUTO-OFF): Start is refused with that code, nothing queued."""
+    setUp=IntegrityGateStartTests.setUp
+    report=IntegrityGateStartTests.report
+
+    def gate(self,value):
+        import json
+        (self.path/'service-auto.json').write_text(value if isinstance(value,str) else json.dumps(value))
+
+    def test_blocker_by_code(self):
+        self.assertIsNone(control.service_auto_blocker())
+        self.gate({'code':'SERVICE-AUTO-OFF','time':1})
+        self.assertEqual(control.service_auto_blocker(),'SERVICE-AUTO-OFF')
+        for value in ({'code':'OTHER'},{},'{bad',[1],'null'):
+            self.gate(value);self.assertIsNone(control.service_auto_blocker(),value)
+
+    def test_service_auto_off_refuses_start_and_writes_nothing(self):
+        self.gate({'code':'SERVICE-AUTO-OFF','time':1})
+        with control.control_lock(self.path):revision=control.revision_locked(self.path)
+        for source in ('manual','programmatic'):
+            with patch('speed_pause.public',return_value={'active':False}),patch.object(native,'Linux') as linux:
+                reply=control.start(revision,request_source=source)
+                linux.assert_not_called()
+            self.assertEqual(reply,{'accepted':False,'blockers':['SERVICE-AUTO-OFF']},source)
+        self.assertFalse((self.path/'auto-control.json').exists())
+        self.assertFalse((self.path/'pair-auto-control.json').exists())
+        self.assertFalse((self.path/'auto-resume.json').exists())
+
+    def test_integrity_code_is_reported_first(self):
+        self.gate({'code':'SERVICE-AUTO-OFF'});self.report({'mode':'no-auto'})
+        with control.control_lock(self.path):revision=control.revision_locked(self.path)
+        with patch('speed_pause.public',return_value={'active':False}):
+            self.assertEqual(control.start(revision,request_source='manual')['blockers'],['INTEGRITY-AUTO-BLOCKED'])
+
+
 if __name__ == '__main__':
     unittest.main()

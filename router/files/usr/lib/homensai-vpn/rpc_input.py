@@ -12,7 +12,9 @@ def decode_request(request):
         return result
     def constant(value):raise ValueError('RPC-NONFINITE-NUMBER')
     try:arguments=json.loads(request,object_pairs_hook=pairs,parse_constant=constant) if request.strip() else {}
-    except RecursionError:raise ValueError('RPC-INPUT-DEPTH') from None
+    # BH2-04 (bug hunt 07.11.2026): one code with lua/rpc.lua for every nesting refusal. canon refuses beyond 64 levels
+    # and the walker below too; a nesting the C scanner cannot even parse (~1000 levels) is the same refusal.
+    except RecursionError:raise ValueError('RPC-INPUT-COMPLEXITY') from None
     except ValueError as error:
         # Our own codes pass through; a library message (it can quote the request) becomes a fixed code.
         raise ValueError(str(error) if str(error).startswith('RPC-') else 'RPC-INPUT-INVALID') from None

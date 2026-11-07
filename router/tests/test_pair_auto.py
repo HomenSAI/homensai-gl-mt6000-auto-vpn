@@ -38,16 +38,16 @@ class Tests(unittest.TestCase):
         events=[100,200,300]
         kept,allowed=pair.budget(events,400)
         self.assertEqual(kept,events);self.assertFalse(allowed)
-        self.assertEqual(pair.budget(events,1000),([200,300],True))
+        self.assertEqual(pair.budget(events,1000),([100,200,300],True),'100 stops counting; the ledger keeps it for the flap damping')
         self.assertEqual(pair.budget([401],400)[0],[400],'a future attempt (clock stepped back) counts as now');
         for bad in ([True],[float('nan')],None,[-1]):
             with self.assertRaises(ValueError):pair.budget(bad,400)
 
     def test_custom_window_preserves_attempts_for_later_policy_changes(self):
         events=[100,400,850];retained,allowed=pair.budget(events,1000,window=300,limit=2)
-        self.assertEqual(retained,[400,850]);self.assertTrue(allowed)
+        self.assertEqual(retained,[100,400,850]);self.assertTrue(allowed)
         retained,allowed=pair.budget(retained,1000,window=900,limit=2)
-        self.assertEqual(retained,[400,850]);self.assertFalse(allowed)
+        self.assertEqual(retained,[100,400,850]);self.assertFalse(allowed)
         self.assertTrue(pair.budget(retained,1000,window=900,limit=3)[1])
         for window,limit in ((59,3),(901,3),(900,0),(900,11),(True,3)):
             with self.assertRaises(ValueError):pair.budget(events,1000,window=window,limit=limit)
@@ -57,7 +57,8 @@ class Tests(unittest.TestCase):
         selection={'source':{'id':'a'},'target':{'id':'b'},'vendor_identity':'d'*64}
         backend=Mock();backend.diagnostic.return_value=([],selection);backend.order.return_value=(self.state['order'],self.state['policy_hash'])
         agent.atomic_json(self.persist/'pair-auto-budget.json',{'events':[9800,9900]})
-        settings={'pair_auto_mode':pair.MODE,'recovery_attempt_limit':'2','recovery_attempt_window':'5','failure_model':'consecutive'}
+        settings={'pair_auto_mode':pair.MODE,'recovery_attempt_limit':'2','recovery_attempt_window':'5','failure_model':'consecutive',
+                  'recovery_flap_limit':'2','recovery_flap_window':'5'}
         with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt',side_effect=lambda *args,**kwargs:kwargs['on_dispatch']())as attempt,patch.object(pair,'configure_lease',return_value=20000):
             # The cooldown spacing still applies; the attempt count no longer blocks leaving a failed primary
             # (flap damping, test_flap_damping.py): it lengthens the hold before the return instead.
@@ -214,10 +215,11 @@ class Tests(unittest.TestCase):
             for stamp in (10000,10300,10600,10900,10901):
                 with patch.object(pair.time,'time',return_value=stamp):pair.tick(backend,{'pair_auto_mode':pair.MODE,'failure_model':'consecutive'},self.revision)
         # Every failover is made (the count no longer blocks it); the cooldown spacing still refuses 10901.
-        # At the exact window boundary the oldest attempt expires from the ledger.
+        # At the exact window boundary the oldest attempt stops counting; the ledger keeps it for the flap damping.
         self.assertEqual(attempt.call_count,4)
         ledger=json.loads((self.persist/'pair-auto-budget.json').read_text())
-        self.assertEqual(ledger['events'],[10300,10600,10900])
+        self.assertEqual(ledger['events'],[10000,10300,10600,10900])
+        self.assertTrue(pair.budget(ledger['events'],10900+1,900,4)[1],'10000 no longer counts against the rate limit')
 
     def test_daemon_cli_and_imported_helpers_share_refused_and_stop(self):
         import subprocess
@@ -325,6 +327,45 @@ else:raise AssertionError('CLI/helper exceptions diverged')
         self.assertNotEqual(pair.config_digest('firewall',base),pair.config_digest('firewall',base+b"\toption src 'lan'\n"))
         self.assertNotEqual(pair.config_digest('firewall',base),pair.config_digest('firewall',base.replace(b'wan',b'lan')))
         self.assertNotEqual(pair.config_digest('network',base),pair.config_digest('network',up))
+
+    def test_vendor_exit_options_count_outside_a_vpn_client_zone_or_with_a_foreign_value(self):
+        # F-34: the four stock options are ignored only on the zone of a VPN client and only with stock values
+        wan=b"config zone\n\toption name 'wan'\n\toption network 'wan wan6'\n\toption input 'REJECT'\n"
+        own=b"config zone 'ovpnclient2'\n\toption name 'ovpnclient2'\n\toption network 'ovpnclient2'\n"
+        exit_options=b"\toption gl_wan_like '1'\r\n\toption gl_bwa_managed '1'\n\toption gl_bwa_exit_id 'ovpnclient2'\n\toption gl_bwa_bridge_reject '0'\n"
+        lan=b"config zone\n\toption name 'lan'\n\tlist network 'lan'\n\tlist network 'wgclient1'\n"
+        base=wan+own+lan
+        digest=lambda data:pair.config_digest('firewall',data)
+        self.assertEqual(digest(base),digest(wan+own+exit_options+lan))
+        self.assertEqual(digest(base),digest(wan+own+lan+exit_options))  # a zone listing the client in `list network`
+        # the same option on the WAN zone is an external edit, whichever value it takes
+        self.assertNotEqual(digest(base),digest(wan+b"\toption gl_bwa_bridge_reject '1'\n"+own+lan))
+        self.assertNotEqual(digest(wan+b"\toption gl_bwa_bridge_reject '0'\n"+own+lan),digest(wan+b"\toption gl_bwa_bridge_reject '1'\n"+own+lan))
+        self.assertNotEqual(digest(base),digest(wan+b"\toption gl_wan_like '1'\n"+own+lan))
+        # a rule or forwarding section never carries them silently
+        self.assertNotEqual(digest(base),digest(base+b"config rule\n\toption name 'x'\n\toption gl_bwa_managed '1'\n"))
+        # R4-05 (night2 N3-regress 5): every valid header form ends the VPN zone - quoted type, a trailing comment, double
+        # quotes, bare name - so a later foreign edit of the LAN zone is seen; an unparsable header is a section of its own too
+        for header in (b"config 'zone' 'lan'\n",b"config zone 'lan' # LAN policy\n",b'config "zone" "lan"\n',b"config zone lan\n",
+                       b"config zone 'lan' extra words\n",b"config\tzone\t'lan'\t#x\n"):
+            with self.subTest(header=header):
+                foreign=own+header+b"\tlist network 'lan'\n\toption gl_bwa_bridge_reject '%s'\n"
+                self.assertNotEqual(digest(foreign%b'0'),digest(foreign%b'1'))
+                self.assertNotEqual(digest(own+header+b"\tlist network 'lan'\n"),digest(foreign%b'1'))
+        # the same forms still name the client's own zone
+        for header in (b"config 'zone' 'ovpnclient2'\n",b"config zone 'ovpnclient2' # exit\n",b'config "zone" "ovpnclient2"\n',b"config zone ovpnclient2\n"):
+            with self.subTest(header=header):
+                self.assertEqual(digest(wan+header+lan),digest(wan+header+exit_options+lan))
+        self.assertNotEqual(digest(base+b"config rule\n\toption name 'x'\n"),digest(base+b"config rule\n\toption name 'x'\n\toption gl_bwa_managed '1'\n"))
+        # a value the stock client never writes counts even on the client's zone
+        self.assertNotEqual(digest(base),digest(wan+own+b"\toption gl_bwa_managed 'yes'\n"+lan))
+        self.assertNotEqual(digest(base),digest(wan+own+b"\toption gl_bwa_exit_id 'lan'\n"+lan))
+        self.assertNotEqual(digest(base),digest(wan+own+b"\toption gl_bwa_exit_id ''\n"+lan))
+        # the one-line form without quotes or with a trailing comment is not the stock form
+        self.assertNotEqual(digest(base),digest(wan+own+b"\toption gl_wan_like 1\n"+lan))
+        # the client's zone is still protected for every other option
+        self.assertNotEqual(digest(base),digest(wan+own+b"\toption masq '1'\n"+lan))
+        self.assertNotEqual(digest(wan+own+exit_options+lan),digest(wan+own.replace(b"'ovpnclient2'",b"'ovpnclient3'")+exit_options+lan))
 
     def test_stop_lets_ifdown_undo_the_firewall_edit_but_not_other_config_drift(self):
         self.state.update(owned=['ovpnclient1'],protected={'firewall':'a'*64,'dhcp':'b'*64})

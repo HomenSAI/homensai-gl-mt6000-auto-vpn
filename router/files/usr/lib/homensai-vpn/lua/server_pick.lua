@@ -146,7 +146,9 @@ function M.tunnels(uci)
     local protocol,tunnel,path=s.via_type,digits(s.tunnel_id),s.profiles
     if IFACE[protocol] and tunnel and sized(path,1,64) and string.find(path,'^/etc/vpn_profiles%.d/profile[0-9]+$') and #string.match(path,'[0-9]+$')<=9 then
       rows[#rows+1]={section=name,tunnel_id=tonumber(tunnel),protocol=protocol,interface=iface_ok(protocol,s.via) and s.via or nil,
-        group_id=digits(s.group_id),current_id=digits(protocol=='openvpn' and s.client_id or s.peer_id),profiles=path,mark=M.parse_mark(s.mark)}
+        -- review F-47 (06.11.2026): OpenVPN reads client_id only, WireGuard peer_id only (server_pick.py): an OpenVPN
+        -- rule without client_id never borrows a peer_id
+        group_id=digits(s.group_id),current_id=digits(protocol=='openvpn' and s.client_id or protocol~='openvpn' and s.peer_id or nil),profiles=path,mark=M.parse_mark(s.mark)}
     end
   end
   table.sort(rows,function(a,b) if a.tunnel_id~=b.tunnel_id then return a.tunnel_id<b.tunnel_id end;return a.section<b.section end)
@@ -543,6 +545,28 @@ local function same_strings(a,b)
   return true
 end
 local RENAMED={'before','after','restored_order','restore_target_order','restore_before_order','restore_order_origin'}
+M.SERVER_FIELDS={client_id=true,peer_id=true,group_id=true}  -- the route_policy fields of one rule a switch_plan writes
+-- F-27 (server_pick.policy_delta_only): the route_policy sections after this supervisor's own server change differ
+-- from the ones before it only in the rule `section`, and there only in SERVER_FIELDS; every other section and option
+-- is identical, in the same order. A foreign edit made meanwhile is never adopted as our own.
+function M.policy_delta_only(before,after,section)
+  if not is_list(before) or not is_list(after) or #before~=#after or type(section)~='string' then return false end
+  local function without_server_fields(s)
+    local out={}
+    for k,v in pairs(s) do if not M.SERVER_FIELDS[k] then out[k]=v end end
+    return canon.object(out)
+  end
+  for i=1,#before do
+    local old,new=before[i],after[i]
+    if not is_dict(old) or not is_dict(new) then return false end
+    if old['.name']~=new['.name'] then return false end
+    if canon.encode(old)~=canon.encode(new) then
+      if old['.name']~=section then return false end
+      if canon.encode(without_server_fields(old))~=canon.encode(without_server_fields(new)) then return false end
+    end
+  end
+  return true
+end
 -- the session after its own server change of one idle tunnel: state, journal or nil (server_pick.rebind; see there).
 -- role 'target' (stage 2) compares the live order with the session order and renames a finished ROLLED-BACK journal;
 -- role 'source' (stage 3) compares it with the session order with the pair rules swapped (the COMMITTED journal's
@@ -747,10 +771,43 @@ function M.availability(state)
   return 100*(state.ok+1)/(state.ok+state.bad+2)
 end
 
--- which rows this round measures (index -> true): the current one, unknown and stale ones, and the plausible best
-function M.probe_plan(rows,states,now)
+M.ROUND_MAX=2147483647
+
+-- which rows (index -> true) the bounded probing may touch in round `round_` (R3-07, server_pick.py probe_window):
+-- all of them with at most MAX_MEASURED candidates; otherwise always the current server plus MAX_MEASURED-1 of the
+-- others, a window that moves by its own size every round. Round 0 is the old prefix when the current one is inside it.
+function M.probe_window(rows,round_)
+  round_=round_ or 0
+  local n,window=#rows,{}
+  if n<=M.MAX_MEASURED then for i=1,n do window[i]=true end;return window end
+  local cur=nil
+  for i,row in ipairs(rows) do if row.current==true then cur=i;break end end
+  local others={}
+  for i=1,n do if i~=cur then others[#others+1]=i end end
+  local k=M.MAX_MEASURED-(cur and 1 or 0)
+  local start=(round_*k)%#others
+  for i=1,n do window[i]=false end
+  if cur then window[cur]=true end
+  for j=0,k-1 do window[others[((start+j)%#others)+1]]=true end
+  return window
+end
+
+-- the round number of this job from the previous published block (its `round`), 0 without a sane one
+function M.next_round(previous)
+  if not is_dict(previous) then return 0 end
+  local v=previous.round
+  if type(v)=='boolean' or canon.is_float(v) then return 0 end
+  local x=canon.number(v)
+  if x==nil or x%1~=0 or x<0 or x>=M.ROUND_MAX then return 0 end
+  return x+1
+end
+
+-- which rows this round measures (index -> true): inside probe_window, the current one, unknown and stale ones, and
+-- the plausible best
+function M.probe_plan(rows,states,now,round_)
   local z=M.Z_PLAUSIBLE_E3/1000
   local posts,upper={},nil
+  local window=M.probe_window(rows,round_)
   for i=1,#rows do
     posts[i]=M.posterior(states[i])
     if posts[i] and states[i].alive then
@@ -761,7 +818,7 @@ function M.probe_plan(rows,states,now)
   local plan={}
   for i,row in ipairs(rows) do
     local p,s=posts[i],states[i]
-    plan[i]=i<=M.MAX_MEASURED and (row.current==true or p==nil or now-s.t>=M.STALE or upper==nil or p[1]-z*math.sqrt(p[2])<=upper)
+    plan[i]=window[i]==true and (row.current==true or p==nil or now-s.t>=M.STALE or upper==nil or p[1]-z*math.sqrt(p[2])<=upper)
   end
   return plan
 end
@@ -793,10 +850,10 @@ end
 
 -- measure the rows the bandit picks (all of them when the current server does not answer), update the model in
 -- place, give every row its published reading -> target or nil, the number of measured servers
-function M.bayes_round(tunnel,rows,model,io_,device,now)
+function M.bayes_round(tunnel,rows,model,io_,device,now,round_)
   local keys,states={},{}
   for i,row in ipairs(rows) do keys[i]=M.model_key(tunnel.tunnel_id,row.profile);states[i]=M.model_state(model[keys[i]],now) end
-  local plan=M.probe_plan(rows,states,now)
+  local plan,window=M.probe_plan(rows,states,now,round_),M.probe_window(rows,round_)
   local measured,count={},0
   local function run(i)
     local m=M.measure(tunnel.protocol,rows[i],io_,device)
@@ -809,7 +866,7 @@ function M.bayes_round(tunnel,rows,model,io_,device,now)
     if plan[i] then run(i);if row.current and row.alive~=true then dead=true end
     else row.alive,row.latency_ms,row.address=nil,nil,nil end
   end
-  if dead then for i=1,math.min(#rows,M.MAX_MEASURED) do if not measured[i] then run(i) end end end
+  if dead then for i=1,#rows do if window[i] and not measured[i] then run(i) end end end
   local target=M.decide_bayes(rows,states)
   for i,row in ipairs(rows) do
     local p=M.posterior(states[i])
@@ -852,7 +909,9 @@ function M.job(io,request,now)
   local device=nil
   if enabled and io.wan then device=io.wan() end
   local active,active_read=nil,false
-  local result=canon.object({time=now,enabled=enabled,tunnels=canon.array({})})
+  local okprev,previous=pcall(function() return canon.decode(io.read(io.runtime..'/'..M.RESULT) or '{}') end)
+  local round_=M.next_round(okprev and previous or nil)  -- R3-07: the probe window of a long list moves every round
+  local result=canon.object({time=now,round=round_,enabled=enabled,tunnels=canon.array({})})
   for _,tunnel in ipairs(M.tunnels(uci)) do
     local okp,profiles=pcall(io.read,tunnel.profiles)
     if not okp then profiles=nil end
@@ -860,10 +919,11 @@ function M.job(io,request,now)
     local current=nil
     for _,row in ipairs(rows) do if row.current then current=row.profile;break end end
     local code,ordered,target=nil,false,nil
-    if bayes then target=M.bayes_round(tunnel,rows,model,io,device,now)
+    if bayes then target=M.bayes_round(tunnel,rows,model,io,device,now,round_)
     else
+      local window=M.probe_window(rows,round_)
       for index,row in ipairs(rows) do
-        if enabled and index<=M.MAX_MEASURED then
+        if enabled and window[index] then
           local m=M.measure(tunnel.protocol,row,io,device)
           row.alive,row.latency_ms,row.address=m.alive,m.latency_ms,m.address
         else row.alive,row.latency_ms,row.address=nil,nil,nil end

@@ -165,7 +165,7 @@ function guardedAction(button,fn,opts){
   function finish(){foolPause(button,lock,opts);}
   return promise.then(function(value){finish();return value;},function(error){
     var code=error&&safeCode(error.code)?error.code:(opts.failCode||'UI-ACTION-FAILED');
-    ui.addNotification(null,E('p',{},[errorCodeLink(code),' · ',bi('The request did not finish. Wait a moment and try again.','Запрос не завершился. Подождите немного и повторите.')]));
+    ui.addNotification(null,E('p',{},[errorCodeLink(code),' · ',bi('The request did not finish and its result is not confirmed. Check the current state, then try again if needed.','Запрос не завершился, его результат не подтверждён. Проверьте текущее состояние и при необходимости повторите.')]));
     finish();
   });
 }

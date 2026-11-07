@@ -4,7 +4,7 @@ var LAZY_HELP={api:null,promise:null,failed:false,attempt:0,hosts:Object.create(
 var helpNode=null,learnNode=null,errorTable=null,ERROR_GROUP_OF={},ERROR_GROUPS=[],ERROR_TABLE_STATE={query:'',open:Object.create(null),selected:null};
 var ERROR_FAMILIES=ERROR_ROWS.filter(function(row){return row[0].endsWith('*');}).map(function(row){return [row[0].slice(0,-1)].concat(row.slice(1));});
 ERROR_ROWS.forEach(function(row){ERROR_GROUP_OF[row[0]]=row[1];if(!ERROR_GROUPS.some(function(g){return g[0]===row[1];}))ERROR_GROUPS.push([row[1],[row[1],row[1]]]);});
-function errorFamilyOf(code){return ERROR_FAMILIES.find(function(row){return code.indexOf(row[0])===0;})||null;}
+function errorFamilyOf(code){if(typeof code!=='string')return null;var row=ERROR_ROWS.find(function(r){return r[0].endsWith('*')&&code.indexOf(r[0].slice(0,-1))===0;});return row?[row[0].slice(0,-1)].concat(row.slice(1)):null;}
 function persistErrorTableState(){try{sessionStorage.setItem('homensai-vpn-error-table',JSON.stringify(ERROR_TABLE_STATE));}catch(error){}}
 function lazyHelpRoute(route){
   if(typeof route!=='string')return;
@@ -36,7 +36,7 @@ function mountLazyHelp(){
     while(item.node.firstChild)item.node.removeChild(item.node.firstChild);item.node.appendChild(node);item.ready=true;
   });
 }
-function lazyHelpContext(){return {E:E,bi:bi,locale:locale,richText:richText,helpCommand:helpCommand,
+function lazyHelpContext(){return {E:E,hvCss:hvCss,bi:bi,locale:locale,richText:richText,helpCommand:helpCommand,
   READINESS_GUIDES:READINESS_GUIDES,READINESS_CHECKS:READINESS_CHECKS,renderReadinessHelp:renderReadinessHelp,
   renderAutoRemedy:renderAutoRemedy,AUTO_BLOCKERS:AUTO_BLOCKERS,AUTO_REMEDIES:AUTO_REMEDIES,autoRemedyKey:autoRemedyKey,
   PLAN_BLOCKERS:PLAN_BLOCKERS,errorCodeLink:errorCodeLink,spanText:spanText,ensureJournalDictionary:ensureJournalDictionary,extraHelpTopics:HELP_TOPICS,
@@ -44,18 +44,13 @@ function lazyHelpContext(){return {E:E,bi:bi,locale:locale,richText:richText,hel
   // an explicit code clicked while loading is applied afterwards by lazyHelpDeepLink.
   installCatalogue:function(value){ERROR_ROWS=value.rows;ERROR_GROUPS=value.groups;ERROR_GROUP_OF=value.groupOf;ERROR_TABLE_STATE=value.state;persistErrorTableState=value.persist;}
 };}
-function lazyHelpRequire(retry){
-  if(!retry)return L.require(LAZY_HELP_NAME);
-  // LuCI 23.05 caches rejected require promises. Retry the same pinned class with its factory contract.
-  var path=LAZY_HELP_NAME.replace(/\./g,'/')+'.js';
-  return request.get(L.resource(path)+'?retry='+LAZY_HELP.attempt,{cache:false}).then(function(response){
-    if(!response.ok)throw new Error('UI-HELP-LOAD-FAILED');
-    var klass=new Function('window','document','L','baseclass',response.text())(window,document,L,baseclass);
-    if(!klass||typeof klass.instantiate!=='function')throw new Error('UI-HELP-LOAD-FAILED');
-    // The installed 4.11.0 Class.instantiate forwards an explicit arguments array.
-    return klass.instantiate([]);
-  });
+// Retry without eval (CSP, F-77): LuCI 23.05 caches a rejected L.require per name (luci.js classes[name]), so a retry asks
+// LuCI for the same pinned file under a fresh name: '/' for '.', then percent-encoded letters the web server decodes.
+function lazyHelpRetryName(attempt){
+  var at=LAZY_HELP_NAME.lastIndexOf('.'),file=LAZY_HELP_NAME.slice(at+1),bits=(attempt-2)%(1<<file.length);
+  return LAZY_HELP_NAME.slice(0,at)+'/'+file.replace(/./g,function(ch,i){return bits>>i&1?'%'+ch.charCodeAt(0).toString(16):ch;});
 }
+function lazyHelpRequire(retry){return L.require(retry?lazyHelpRetryName(LAZY_HELP.attempt):LAZY_HELP_NAME);}
 function loadLazyHelp(retry){
   if(LAZY_HELP.api){mountLazyHelp();return Promise.resolve(LAZY_HELP.api);}
   if(LAZY_HELP.promise)return LAZY_HELP.promise;

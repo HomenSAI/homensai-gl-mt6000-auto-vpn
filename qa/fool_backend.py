@@ -202,7 +202,9 @@ def v_confirm(a):
 
 
 def v_monitor_control(a):
-    return isinstance(a, dict) and set(a) == {'enabled'} and is_bool(a['enabled'])
+    # Owner rule 07.11.2026 (monitor always on): only a start is a valid request; {'enabled': False} is refused by design
+    # with MONITOR-ALWAYS-ON (monitor_control.py, router/tests/MONITOR-ALWAYS-NOTE.md).
+    return isinstance(a, dict) and set(a) == {'enabled'} and a['enabled'] is True
 
 
 def v_native_start(a):

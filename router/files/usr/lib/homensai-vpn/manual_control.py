@@ -137,7 +137,7 @@ def _preflight(direction, settings, blockers, selection, journal, state, auto,
 def request(direction, control_revision, request_source=None):
     from agent import RUNTIME, PERSIST, read_json, atomic_json
     from auto_control import control_lock, revision_locked, normalize_request_source, readiness, effective_intent
-    from native_switch import Linux, journal_read, deadline, Refused
+    from native_switch import Linux, journal_read, deadline, Refused, key_blockers
     invalid = validate_arguments(direction, control_revision)
     if invalid:
         return refusal(invalid)
@@ -157,6 +157,7 @@ def request(direction, control_revision, request_source=None):
         policy = backend.policy()
         settings = policy['settings']
         blockers, selection = backend.diagnostic()
+        blockers = key_blockers(blockers, selection)
         journal = journal_read()
         state = read_json(RUNTIME/'native-status.json', {})
         auto = read_json(RUNTIME/'auto-control.json', {})
@@ -293,6 +294,7 @@ def display_diagnostic(backend, now):
     """The page polls every few seconds and the full diagnostic costs about two seconds on the
     MT3000. The display reuses a result younger than 15 s; every action re-runs the diagnostic."""
     from agent import RUNTIME, read_json, atomic_json
+    from native_switch import key_blockers
     path = RUNTIME/'display-diagnostic.json'
     try:
         row = read_json(path, {})
@@ -302,6 +304,7 @@ def display_diagnostic(backend, now):
     except (OSError, ValueError):
         pass
     blockers, selection = backend.diagnostic()
+    blockers = key_blockers(blockers, selection)
     try:
         atomic_json(path, {'time': now, 'blockers': blockers, 'selection': selection})
     except (OSError, ValueError, TypeError):

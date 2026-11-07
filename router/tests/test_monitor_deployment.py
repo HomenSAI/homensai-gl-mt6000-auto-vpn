@@ -27,6 +27,7 @@ config_get() { if [ "$QA_ABSENT" = 1 ]; then eval "$1=\\${4}"; else eval "$1=\\$
 procd_open_instance() { printf 'OPEN %s\\n' "$1"; }
 procd_set_param() { printf 'PARAM %s\\n' "$*"; }
 procd_close_instance() { printf 'CLOSE\\n'; }
+integrity_gate() { echo normal; }  # the file self-check has its own tests (test_integrity_faults); here: a verified install
 ubus() { printf 'BOARD\\n'; }
 jsonfilter() { cat >/dev/null; printf '%s\\n' "$QA_BOARD"; }
 start_service
@@ -52,8 +53,11 @@ start_service
                 instances,diagnostic=self.instances(mode)
                 self.assertEqual(instances,['monitor']);self.assertIn('MONITOR-ONLY-INVALID',diagnostic)
 
-    def test_disabled_service_does_not_launch_either_instance(self):
-        self.assertEqual(self.instances('1',enabled='0')[0],[])
+    def test_disabled_flag_still_launches_the_monitor_but_never_native(self):
+        # owner decision 07.11.2026 15:10: the monitor always starts; enabled != 1 keeps only the Auto supervisor off
+        for mode in (None,'0','1'):
+            instances,diagnostic=self.instances(mode,enabled='0')
+            self.assertEqual(instances,['monitor']);self.assertIn('SERVICE-AUTO-OFF',diagnostic)
 
     def test_list_mode_cannot_masquerade_as_scalar_zero_or_one(self):
         for mode in ('0','1'):
@@ -117,11 +121,13 @@ dofile(arg[1])
         self.assertEqual(json.loads(result.stdout)['settings']['monitor_only'],'1')
         self.assertNotIn(b'PRIVATE_SENTINEL',result.stdout)
 
-    def postinst(self,board,mode,guard_failure=False):
+    def postinst(self,board,mode,guard_failure=False,integrity_rc=0):
         sys.path.insert(0,str(ROOT))
         from package_hooks import scripts
-        body=scripts()['postinst'].replace('/usr/bin/python3','python_guard').replace('/etc/init.d/homensai-vpn','service_test').replace('/etc/init.d/rpcd','rpcd_test')
+        body=(scripts()['postinst'].replace('/usr/bin/python3','python_guard').replace('/etc/init.d/homensai-vpn','service_test').replace('/etc/init.d/rpcd','rpcd_test')
+              .replace('/usr/sbin/homensai-vpn-integrity','integrity_test'))
         functions=r'''
+integrity_test() { printf 'integrity:%s\n' "$1" >> "$QA_CALLS"; return "$QA_INTEGRITY_RC"; }
 mkdir() { printf 'mkdir\n' >> "$QA_CALLS"; }
 chmod() { printf 'chmod\n' >> "$QA_CALLS"; }
 python_guard() { if [ "$1" = - ]; then cat >/dev/null; printf 'lifecycle\n' >> "$QA_CALLS"; [ "$QA_GUARD_FAIL" != 1 ]; else printf 'python-cache\n' >> "$QA_CALLS"; fi; }
@@ -134,7 +140,8 @@ rpcd_test() { printf 'rpcd:%s\n' "$1" >> "$QA_CALLS"; }
         with tempfile.TemporaryDirectory() as directory:
             trace=Path(directory)/'trace'
             result=subprocess.run(['sh','-s'],input=functions+'\n'+body,text=True,capture_output=True,timeout=5,
-                env=dict(os.environ,IPKG_INSTROOT='',QA_CALLS=str(trace),QA_BOARD=board,QA_MODE=mode,QA_GUARD_FAIL='1' if guard_failure else '0'))
+                env=dict(os.environ,IPKG_INSTROOT='',QA_CALLS=str(trace),QA_BOARD=board,QA_MODE=mode,QA_GUARD_FAIL='1' if guard_failure else '0',
+                         QA_INTEGRITY_RC=str(integrity_rc)))
             return result,trace.read_text().splitlines()
 
     def test_postinst_other_board_requires_marker_before_any_runtime_start(self):
@@ -153,6 +160,18 @@ rpcd_test() { printf 'rpcd:%s\n' "$1" >> "$QA_CALLS"; }
             self.assertLess(trace.index('lifecycle'),trace.index('board'))
             self.assertIn('service:enable',trace);self.assertIn('service:restart',trace)
             self.assertIn('rpcd:reload',trace)
+            self.assertLess(trace.index('integrity:snapshot'),trace.index('service:enable'),'the pristine copy is made before the service starts')
+
+    def test_postinst_integrity_helper_missing_or_damaged_payload_never_starts_the_service(self):
+        # round 4 (R4-07b): only exit 0 (snapshot made) and 7 (copy refused, a warning) let the service start
+        for rc,code in ((127,'INTEGRITY-HELPER-FAILED'),(126,'INTEGRITY-HELPER-FAILED'),(2,'INTEGRITY-HELPER-FAILED'),(8,'INTEGRITY-PAYLOAD-DAMAGED')):
+            result,trace=self.postinst('glinet,mt3000-snand','1',integrity_rc=rc)
+            self.assertNotEqual(result.returncode,0,rc);self.assertIn(code,result.stderr)
+            self.assertIn('integrity:snapshot',trace)
+            self.assertFalse(any(line.startswith(('service:','rpcd:')) for line in trace),rc)
+        result,trace=self.postinst('glinet,mt3000-snand','1',integrity_rc=7)
+        self.assertEqual(result.returncode,0,result.stderr);self.assertIn('INTEGRITY-SNAPSHOT-REFUSED',result.stderr)
+        self.assertIn('service:restart',trace)
 
     def test_lifecycle_refusal_precedes_even_model_mode_read(self):
         result,trace=self.postinst('glinet,mt3000-snand','1',guard_failure=True)

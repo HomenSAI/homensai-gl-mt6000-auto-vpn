@@ -6,10 +6,16 @@
 #   verify   [ROOT]               every file of ROOT/usr/lib/homensai-vpn/integrity.sha256 (sha256 + mode, written by
 #                                 build_ipk.py); one "CODE /path" line per problem; exit 0 clean, 3 damaged, 4 no manifest
 #   snapshot                      postinst: the freshly unpacked files, verified against the manifest, become the pristine
-#                                 copy PERSIST/pristine/payload.tar.gz (+ .sha256); exit 0 made, 7 refused
+#                                 copy PERSIST/pristine/payload.tar.gz (+ .sha256); exit 0 made, 7 refused (no space,
+#                                 permissions only, tar or publication failed: the payload itself is fine), 8 the unpacked
+#                                 payload is damaged, missing files or has no usable manifest (postinst must not start it)
 #   boot                          init start_service, before the instances: verify; on damage restore from the pristine
 #                                 copy (limits below), verify again, write RUNTIME/integrity.json, log the code; the last
-#                                 stdout line is mode=normal|no-c|python|stopped (what the init may start)
+#                                 stdout line is mode=normal|no-c|python|stopped (what the init may start); while opkg
+#                                 holds its lock the check is deferred and `recheck` is launched detached
+#   recheck                       after a deferred boot (safety review F-02): waits for the opkg lock to go (every
+#                                 RECHECK_EVERY s, at most RECHECK_LIMIT s), verifies read-only and writes the real result;
+#                                 damaged files restart a running service, so the boot path above restores and decides
 #   restore  SOURCE SHAFILE [ROOT]  manual restore from a payload.tar.gz or an .ipk whose sha256 is SHAFILE's first word;
 #                                 exit 0 restored+verified, 5 refused, 6 did not verify
 #
@@ -23,6 +29,13 @@ ROOT=${HOMENSAI_INTEGRITY_ROOT:-}
 RUNTIME=${HOMENSAI_INTEGRITY_RUNTIME:-/var/run/homensai-vpn}
 PERSIST=${HOMENSAI_INTEGRITY_PERSIST:-/etc/homensai-vpn}
 OPKG_LOCK=${HOMENSAI_INTEGRITY_OPKG_LOCK:-/var/lock/opkg.lock}
+INIT=${HOMENSAI_INTEGRITY_INIT:-/etc/init.d/homensai-vpn}
+RECHECK_EVERY=${HOMENSAI_INTEGRITY_RECHECK_EVERY:-10}
+RECHECK_LIMIT=${HOMENSAI_INTEGRITY_RECHECK_LIMIT:-600}
+case "$RECHECK_EVERY" in ''|0|*[!0-9]*) RECHECK_EVERY=10 ;; esac
+case "$RECHECK_LIMIT" in ''|*[!0-9]*) RECHECK_LIMIT=600 ;; esac
+RECHECK_LOCK=$RUNTIME/integrity-recheck.pid
+SELF=$0
 MANIFEST_REL=usr/lib/homensai-vpn/integrity.sha256
 PRISTINE_DIR=$PERSIST/pristine
 PRISTINE=$PRISTINE_DIR/payload.tar.gz
@@ -164,13 +177,43 @@ report() {
         "$1" "$2" "$3" "$files" "$version" "$(date +%s)" > "$RUNTIME/.integrity.json.new" && mv -f "$RUNTIME/.integrity.json.new" "$RUNTIME/integrity.json"
 }
 
+# content_damage PROBLEMS -> 0 when a file's content is damaged or missing or the manifest is unusable (not a mode only)
+content_damage() { printf '%s\n' "$1" | grep -qE '^INTEGRITY-(FILE-DAMAGED|FILE-MISSING|MANIFEST-)'; }
+
+# deferred -> 0 while integrity.json still holds the deferred boot answer (no later service start wrote a real result)
+deferred() { grep -q '"code":"INTEGRITY-DEFERRED"' "$RUNTIME/integrity.json" 2>/dev/null; }
+
+# recheck_lock -> 0 when this process now holds the single recheck lock: a symlink whose target is the pid (created
+# atomically with its content); a live holder keeps it (one waiting recheck checks whatever is installed when opkg
+# ends), a dead holder's lock is taken over. RAM only: a reboot clears it.
+recheck_lock() {
+    local holder
+    mkdir -p "$RUNTIME" || return 1
+    ln -s "$$" "$RECHECK_LOCK" 2>/dev/null && return 0
+    holder=$(readlink "$RECHECK_LOCK" 2>/dev/null)
+    case "$holder" in ''|*[!0-9]*) ;; *) kill -0 "$holder" 2>/dev/null && return 1 ;; esac
+    rm -f "$RECHECK_LOCK"
+    ln -s "$$" "$RECHECK_LOCK" 2>/dev/null
+}
+
+# service_running -> 0 when procd reports a running instance of the service
+service_running() {
+    ubus -t 5 call service list '{"name":"homensai-vpn"}' 2>/dev/null | grep -q '"running": *true'
+}
+
 case "${1:-}" in
 verify)
     check "${2:-$ROOT}" "${2:-$ROOT}/$MANIFEST_REL"
     ;;
 snapshot)
     problems=$(check "$ROOT" "$ROOT/$MANIFEST_REL"); rc=$?
-    [ "$rc" = 0 ] || { log "INTEGRITY-SNAPSHOT-REFUSED $(printf '%s' "$problems" | head -n 1)"; exit 7; }
+    if [ "$rc" != 0 ]; then
+        log "INTEGRITY-SNAPSHOT-REFUSED $(printf '%s' "$problems" | head -n 1)"
+        if [ "$rc" = 4 ] || printf '%s\n' "$problems" | grep -qE '^INTEGRITY-(FILE-DAMAGED|FILE-MISSING|MANIFEST-)'; then
+            log "INTEGRITY-PAYLOAD-DAMAGED"; exit 8
+        fi
+        exit 7
+    fi
     mkdir -p "$PRISTINE_DIR" && chmod 0700 "$PRISTINE_DIR"
     free=$(df -k "$PRISTINE_DIR" 2>/dev/null | awk 'NR==2 {print $4}')
     case "$free" in ''|*[!0-9]*) free=0 ;; esac
@@ -180,19 +223,27 @@ snapshot)
     if tar -czf "$PRISTINE.new" -C "${ROOT:-/}" ./$MANIFEST_REL $list 2>/dev/null; then
         sha256sum "$PRISTINE.new" | sed 's|  .*|  payload.tar.gz|' > "$PRISTINE.sha256.new"
         sync
-        mv -f "$PRISTINE.new" "$PRISTINE" && mv -f "$PRISTINE.sha256.new" "$PRISTINE.sha256" && sync
-        log "INTEGRITY-SNAPSHOT-MADE $(version_of "$ROOT/$MANIFEST_REL")"; exit 0
+        # Publication must succeed as a whole: a failed rename is a refused snapshot, never "made".
+        if [ -s "$PRISTINE.sha256.new" ] && mv -f "$PRISTINE.new" "$PRISTINE" && mv -f "$PRISTINE.sha256.new" "$PRISTINE.sha256" && sync; then
+            log "INTEGRITY-SNAPSHOT-MADE $(version_of "$ROOT/$MANIFEST_REL")"; exit 0
+        fi
+        rm -f "$PRISTINE.new" "$PRISTINE.sha256.new"; log "INTEGRITY-SNAPSHOT-REFUSED publish"; exit 7
     fi
     rm -f "$PRISTINE.new" "$PRISTINE.sha256.new"; log "INTEGRITY-SNAPSHOT-REFUSED tar"; exit 7
     ;;
 boot)
     if [ -e "$OPKG_LOCK" ]; then
-        log "INTEGRITY-DEFERRED opkg is running"; report INTEGRITY-DEFERRED normal 0 ''; echo mode=normal; exit 0
+        log "INTEGRITY-DEFERRED opkg is running"; report INTEGRITY-DEFERRED normal 0 ''
+        # F-02 (safety review 07.11.2026): postinst restarts the service while opkg still holds its lock, and nothing
+        # else checks later; the recheck waits for opkg to end. Detached with every stream on /dev/null: the init's
+        # $(sh tool boot | sed) and opkg must not wait for it.
+        sh "$SELF" recheck </dev/null >/dev/null 2>&1 &
+        echo mode=normal; exit 0
     fi
     problems=$(check "$ROOT" "$ROOT/$MANIFEST_REL"); rc=$?
     if [ "$rc" = 0 ]; then report INTEGRITY-OK normal 0 ''; echo mode=normal; exit 0; fi
     printf '%s\n' "$problems" | head -n 20 | while read -r line; do log "$line"; done
-    if ! printf '%s\n' "$problems" | grep -qE '^INTEGRITY-(FILE-DAMAGED|FILE-MISSING|MANIFEST-)'; then
+    if ! content_damage "$problems"; then
         # permissions differ but every file's content is right: start as usual, nothing to restore
         report INTEGRITY-MODE-DIFFERS normal 0 "$problems"; echo mode=normal; exit 0
     fi
@@ -215,8 +266,53 @@ boot)
     esac
     report "$code" "$mode" 0 "$left"; echo "mode=$mode"; exit 0
     ;;
+recheck)
+    # Read-only: it never restores while the service runs and never starts Auto. Clean, permissions only and nothing to
+    # compare with are written as `boot` writes them (mode normal, the monitor keeps running); damaged content restarts
+    # a running, enabled service through the init (the same restart postinst does), so the boot path restores the files
+    # while the instances are stopped and decides normal / no-c / python / stopped / no-auto. Auto resumes only from an
+    # owner-started intent on disk. A service that is not running is not started: the record names the damage and the
+    # mode it implies (Start is refused for stopped), the next start restores and decides.
+    recheck_lock || exit 0
+    trap 'rm -f "$RECHECK_LOCK"' EXIT
+    trap 'exit 1' HUP INT TERM
+    waited=0
+    while :; do
+        while [ -e "$OPKG_LOCK" ]; do
+            if [ "$waited" -ge "$RECHECK_LIMIT" ]; then
+                deferred || exit 0
+                log "INTEGRITY-RECHECK-TIMEOUT: opkg still holds its lock after ${RECHECK_LIMIT} s; the files were not checked"
+                report INTEGRITY-RECHECK-TIMEOUT normal 0 ''; exit 0
+            fi
+            sleep "$RECHECK_EVERY"; waited=$((waited+RECHECK_EVERY))
+        done
+        deferred || exit 0
+        problems=$(check "$ROOT" "$ROOT/$MANIFEST_REL"); rc=$?
+        # a package operation that began during the check may have read half-written files: wait for it as well
+        [ -e "$OPKG_LOCK" ] || break
+    done
+    deferred || exit 0
+    if [ "$rc" = 0 ]; then report INTEGRITY-OK normal 0 ''; log "INTEGRITY-RECHECKED INTEGRITY-OK"; exit 0; fi
+    printf '%s\n' "$problems" | head -n 20 | while read -r line; do log "$line"; done
+    if ! content_damage "$problems"; then
+        report INTEGRITY-MODE-DIFFERS normal 0 "$problems"; log "INTEGRITY-RECHECKED INTEGRITY-MODE-DIFFERS"; exit 0
+    fi
+    if [ ! -f "$PRISTINE" ] && [ "$rc" = 4 ]; then
+        report INTEGRITY-UNVERIFIED normal 0 ''; log "INTEGRITY-RECHECKED INTEGRITY-UNVERIFIED"; exit 0
+    fi
+    if command -v "$INIT" >/dev/null 2>&1 && $INIT enabled >/dev/null 2>&1 && service_running; then
+        log "INTEGRITY-RECHECK-DAMAGED: files damaged after the installation; the service restarts so the self-check restores them"
+        # a start that defers again (another opkg run) must be able to launch its own recheck
+        rm -f "$RECHECK_LOCK"; trap - EXIT
+        $INIT restart >/dev/null 2>&1 || log "INTEGRITY-RECHECK-DAMAGED: the service restart failed"
+        exit 0
+    fi
+    mode=$(mode_of "$problems")
+    log "INTEGRITY-RECHECK-DAMAGED: files damaged after the installation; the service is not running and is not started, the next start restores them"
+    report INTEGRITY-RECHECK-DAMAGED "$mode" 0 "$problems"; exit 0
+    ;;
 restore)
     restore_from "${2:-}" "${3:-}" "${4:-$ROOT}"
     ;;
-*) echo "usage: homensai-vpn-integrity verify [ROOT] | snapshot | boot | restore SOURCE SHAFILE [ROOT]"; exit 2 ;;
+*) echo "usage: homensai-vpn-integrity verify [ROOT] | snapshot | boot | recheck | restore SOURCE SHAFILE [ROOT]"; exit 2 ;;
 esac

@@ -1,0 +1,485 @@
+{
+ "killed": 49,
+ "total": 49,
+ "rows": [
+  {
+   "mutation": "real-store-reads-lab",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=4, skipped=1)"
+  },
+  {
+   "mutation": "real-store-no-marker-check",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2, skipped=1)"
+  },
+  {
+   "mutation": "real-store-no-name-check",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "lab-store-anywhere",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "lab-takes-real-store",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "lab-takes-store-parent",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "lab-takes-store-child",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "lab-takes-a-checkout",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2, skipped=1)"
+  },
+  {
+   "mutation": "lab-takes-used-folder",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2, skipped=1)"
+  },
+  {
+   "mutation": "lab-takes-home",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "reset-without-marker",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "reset-no-recheck",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2, skipped=1)"
+  },
+  {
+   "mutation": "lab-key-accepted-as-real",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2, skipped=1)"
+  },
+  {
+   "mutation": "real-key-accepted-in-lab",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=4, skipped=1)"
+  },
+  {
+   "mutation": "trust-list-unchecked",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=3, skipped=1)"
+  },
+  {
+   "mutation": "sign-unchecked",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2, skipped=1)"
+  },
+  {
+   "mutation": "import-unchecked",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "tag-unchecked",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "pair-unchecked",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "lab-keys-unprefixed",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=5, skipped=1)"
+  },
+  {
+   "mutation": "real-keys-may-get-prefix",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "same-entropy",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "lab-otpauth-looks-real",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "auto-answers-for-real-store",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "mask-keeps-key-line",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "mask-keeps-recovery",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "mask-keeps-age",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "publish-takes-lab-key",
+   "tests": [
+    "test_publication_record"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "publish-code-swallowed",
+   "tests": [
+    "test_publication_record"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "publish-in-lab-env",
+   "tests": [
+    "test_publication_record"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "publish-chain-ids-unseen",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  },
+  {
+   "mutation": "web-binds-everywhere",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=20)"
+  },
+  {
+   "mutation": "web-any-host-header",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "web-no-csrf",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "web-any-origin",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "web-cross-site-fetch",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "web-any-content-type",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "web-post-without-session",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "web-get-without-session",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "web-token-reusable",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "web-token-never-expires",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "web-cookie-readable-by-script",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "web-secret-stays",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=2)"
+  },
+  {
+   "mutation": "web-logs",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, errors=1)"
+  },
+  {
+   "mutation": "web-reset-without-word",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "web-two-drills-at-once",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "web-no-csp",
+   "tests": [
+    "test_signing_lab_web"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (errors=1)"
+  },
+  {
+   "mutation": "drill-refusal-ignored",
+   "tests": [
+    "test_signing_lab.AllDrills"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1)"
+  },
+  {
+   "mutation": "drill-check-ignored",
+   "tests": [
+    "test_signing_lab.RealRefusesLab",
+    "test_signing_lab.LabRefusesReal",
+    "test_signing_lab.ResetTests",
+    "test_signing_lab.MaskTests"
+   ],
+   "result": "KILLED",
+   "summary": "FAILED (failures=1, skipped=1)"
+  }
+ ]
+}

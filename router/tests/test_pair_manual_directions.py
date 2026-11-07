@@ -91,6 +91,25 @@ class PairManualDirections(unittest.TestCase):
     def allow_next(self):
         (self.persist/'pair-auto-budget.json').unlink(missing_ok=True)
 
+    def test_a_key_refuses_only_the_click_towards_its_channel(self):
+        # review 04.11.2026 (finding 2): leaving the channel with the unaccepted key is free, the real transaction runs
+        from test_key_gate import CODE,enforce
+        enforce(self,self.runtime,fixture.TARGET)
+        first=self.request('primary')
+        self.assertEqual((first['before'],first['after']),(['t','s'],['s','t']))
+        self.allow_next()
+        answer=manual.request('reserve',self.revision)
+        self.assertFalse(answer['accepted']);self.assertIn(CODE,answer['blockers'])
+        # the click was queued before the monitor saw the key: refused where the supervisor takes it, before the lease and the budget
+        enforce(self,self.runtime)
+        self.assertTrue(manual.request('reserve',self.revision)['accepted'])
+        enforce(self,self.runtime,fixture.TARGET)
+        pair.configure_lease.reset_mock()
+        manual.consume(self.backend,pair.read_state(),self.settings,self.revision)
+        self.assertEqual((manual.public()['state'],manual.public()['code']),('REFUSED',CODE))
+        pair.configure_lease.assert_not_called();self.assertFalse((self.persist/'pair-auto-budget.json').exists())
+        self.assertEqual(self.current,['s','t'],'nothing moved')
+
     def test_initial_reserve_first_primary_then_reserve_uses_actual_before_after(self):
         first=self.request('primary')
         self.assertEqual(first['before'],['t','s']);self.assertEqual(first['after'],['s','t'])

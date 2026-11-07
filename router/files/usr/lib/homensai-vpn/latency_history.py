@@ -110,6 +110,9 @@ class LatencyHistory:
         # Large nested arrays exceed rpcd/ubus transport bounds. Keep the old
         # daily tail for old clients and carry the complete week as one string.
         if len(rows)>1441:result['rows_json']=json.dumps(rows[-PUBLIC_ROWS:],separators=(',',':'),allow_nan=False)
+        # retained on flash versus carried in this reply (review F-54, same rule as website_response_history)
+        result['retained_rows_count']=len(rows)
+        result['served_rows_count']=min(len(rows),PUBLIC_ROWS) if len(rows)>1441 else len(rows)
         return result
 
     def save(self,path,writer,now):

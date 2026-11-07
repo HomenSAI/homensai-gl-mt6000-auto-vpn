@@ -697,6 +697,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -717,7 +718,7 @@
         {
          "alive": true,
          "latency_ms": 60,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -757,7 +758,7 @@
     },
     "writes": {
      "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[100000,3000,40943,6,1000,0,1],\"4192:40354_2016\":[100000,2000,30900,41,1000,0,1],\"4192:40354_2020\":[100000,1000,38712,0,1000,0,1],\"5841:10004_2000\":[100000,1000,30910,0,1000,0,1],\"5841:10004_2002\":[100000,1000,34012,0,1000,0,1]},\"version\":1}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":60,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":60,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -796,7 +797,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -903,6 +904,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -923,7 +925,7 @@
         {
          "alive": true,
          "latency_ms": 120,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -964,7 +966,7 @@
     "writes": {
      "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":48,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":22,\"tunnel_id\":4192}",
      "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[100000,28727,30909,10732,8127,0,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -1004,7 +1006,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -1111,6 +1113,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -1131,7 +1134,7 @@
         {
          "alive": true,
          "latency_ms": 120,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -1171,7 +1174,7 @@
     },
     "writes": {
      "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[100000,28727,38396,14525,8127,0,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":47,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":47,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -1211,7 +1214,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -1336,6 +1339,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -1356,7 +1360,7 @@
         {
          "alive": true,
          "latency_ms": 59,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -1396,7 +1400,7 @@
     },
     "writes": {
      "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":48,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":30,\"tunnel_id\":4192}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":59,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":59,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -1436,7 +1440,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -1561,6 +1565,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -1581,7 +1586,7 @@
         {
          "alive": true,
          "latency_ms": 112,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -1622,7 +1627,7 @@
     "writes": {
      "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":null,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":38,\"tunnel_id\":4192}",
      "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[100000,29727,47175,23659,8127,0,1],\"4192:40354_2016\":[100000,28727,36472,17406,8127,0,1],\"4192:40354_2020\":[100000,26727,38712,10691,7127,1000,0],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":false,\"latency_ms\":null,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":38,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":112,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":false,\"latency_ms\":null,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":38,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":112,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -1661,7 +1666,7 @@
     "185.1.1.20:1234": null
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -1696,6 +1701,7 @@
     "logs": [],
     "result": {
      "enabled": false,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -1716,7 +1722,7 @@
         {
          "alive": null,
          "latency_ms": null,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -1755,7 +1761,7 @@
      ]
     },
     "writes": {
-     "/run/server-pick.json": "{\"enabled\":false,\"time\":100000,\"tunnels\":[{\"best\":null,\"candidates\":[{\"alive\":null,\"latency_ms\":null,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":null,\"candidates\":[{\"alive\":null,\"latency_ms\":null,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":false,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":null,\"candidates\":[{\"alive\":null,\"latency_ms\":null,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":null,\"candidates\":[{\"alive\":null,\"latency_ms\":null,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -1795,7 +1801,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -1920,6 +1926,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -1940,7 +1947,7 @@
         {
          "alive": true,
          "latency_ms": 60,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -1980,7 +1987,7 @@
     },
     "writes": {
      "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[100000,3000,40943,6,1000,0,1],\"4192:40354_2016\":[100000,2000,30900,41,1000,0,1],\"4192:40354_2020\":[100000,1000,38712,0,1000,0,1],\"5841:10004_2000\":[100000,1000,30910,0,1000,0,1],\"5841:10004_2002\":[100000,1000,34012,0,1000,0,1]},\"version\":1}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":60,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":60,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -2020,7 +2027,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -2145,6 +2152,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -2165,7 +2173,7 @@
         {
          "alive": true,
          "latency_ms": 107,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -2206,7 +2214,7 @@
     "writes": {
      "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":48,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":22,\"tunnel_id\":4192}",
      "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[100000,17714,46701,17867,4924,0,1],\"4192:40354_2016\":[100000,28727,30909,10732,8127,0,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":107,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":107,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -2246,7 +2254,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -2353,6 +2361,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -2373,7 +2382,7 @@
         {
          "alive": true,
          "latency_ms": 120,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -2413,7 +2422,7 @@
     },
     "writes": {
      "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[100000,28727,30909,10732,1891,2673,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -2453,7 +2462,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -2578,6 +2587,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -2598,7 +2608,7 @@
         {
          "alive": true,
          "latency_ms": 59,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -2638,7 +2648,7 @@
     },
     "writes": {
      "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":48,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":21,\"tunnel_id\":4192}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":59,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":59,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -2677,7 +2687,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },
@@ -2784,6 +2794,7 @@
     "logs": [],
     "result": {
      "enabled": true,
+     "round": 0,
      "time": 100000,
      "tunnels": [
       {
@@ -2804,7 +2815,7 @@
         {
          "alive": true,
          "latency_ms": 120,
-         "location": "Варшава",
+         "location": "\u0412\u0430\u0440\u0448\u0430\u0432\u0430",
          "profile": "40354_2011"
         }
        ],
@@ -2845,7 +2856,7 @@
     "writes": {
      "/run/server-pick-change.json": "{\"from\":\"10004_2002\",\"from_location\":\"Berlin\",\"from_ms\":30,\"group_id\":\"10004\",\"interface\":\"wgclient1\",\"profile_id\":\"2000\",\"protocol\":\"wireguard\",\"section\":\"cfg0123ab\",\"time\":100000,\"to\":\"10004_2000\",\"to_location\":\"Frankfurt\",\"to_ms\":21,\"tunnel_id\":5841}",
      "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[100000,28727,30909,10732,8127,0,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
-     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+     "/run/server-pick.json": "{\"enabled\":true,\"round\":0,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
     }
    },
    "files": {
@@ -2885,7 +2896,7 @@
     ]
    },
    "uci": {
-    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='\u0412\u0430\u0440\u0448\u0430\u0432\u0430'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
     "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
     "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
    },

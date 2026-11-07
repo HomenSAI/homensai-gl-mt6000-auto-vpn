@@ -14,6 +14,19 @@ import tempfile
 import time
 import uuid
 
+def load_scanner():
+    """scripts/secret_scan.py of the checkout this tool runs from; without it nothing is committed or published."""
+    import importlib.util
+    path = Path(__file__).resolve().parents[1] / 'scripts' / 'secret_scan.py'
+    if not path.is_file():
+        raise FlowError('SECRET-SCANNER-MISSING')
+    spec = importlib.util.spec_from_file_location('secret_scan', path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault('secret_scan', module)
+    spec.loader.exec_module(module)
+    return module
+
+
 class FlowError(Exception):
     def __init__(self,code):self.code=code;super().__init__(code)
 
@@ -117,6 +130,10 @@ class Repo:
             if any(part.lower() in ('output','private','backups','.ssh','.env') for part in PurePosixPath(name).parts) or name.lower().endswith(('.key','.p12','.pfx')):raise FlowError('PRIVATE-PATH-STAGED')
             blob=self.git('show',':'+name,check=False).stdout
             if b'\0' not in blob and any(re.search(pattern,blob) for pattern in patterns):raise FlowError('SECRET-PATTERN-STAGED')
+        scanner=load_scanner()
+        entries=scanner.staged_entries(str(self.path),None)
+        _,found=scanner.scan_entries(entries,str(self.path),None,scanner.Allowlist.load())
+        if found:raise FlowError('SECRET-PATTERN-STAGED')
     def save_primary(self,branch=None):
         branch=branch or self.branch();self.git('check-ref-format','refs/heads/'+branch)
         name,url=self.remote('primary');head=self.git('rev-parse','refs/heads/'+branch)
@@ -224,6 +241,11 @@ class Repo:
                 relevant={ref:sha for ref,sha in latest.items() if ref.startswith('refs/tags/') or re.fullmatch(r'refs/heads/(main|(?:feature|fix|hotfix|backup)/.+)',ref)}
                 if relevant!=desired:raise FlowError('PRIMARY-CHANGED-DURING-PLAN')
                 if updates:
+                    scanner=load_scanner()
+                    held=[sha for sha in second.values()]
+                    entries=scanner.range_entries([item['sha'] for item in updates]+(['--not']+held if held else []),None,bare)
+                    _,found=scanner.scan_entries(entries,None,bare,scanner.Allowlist.load())
+                    if found:raise FlowError('SECRET-PATTERN-IN-PUBLICATION')
                     result=self.run(['git','--git-dir',str(bare),'push','--atomic',secondary,*[item['sha']+':'+item['ref'] for item in updates]],check=False)
                     if result.returncode:raise FlowError('SECONDARY-PUSH-REJECTED')
                     actual=self.remote_refs(secondary)

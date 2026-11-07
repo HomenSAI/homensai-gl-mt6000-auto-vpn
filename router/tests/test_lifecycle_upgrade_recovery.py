@@ -28,7 +28,7 @@ class UpgradeOverInterruptedJournal(unittest.TestCase):
         for path in (self.runtime,self.persist,self.root/'proc'):path.mkdir(parents=True)
         self.process(1,b'/sbin/procd\0');self.process(9082,b'/usr/bin/python3\0/usr/lib/homensai-vpn/native_switch.py\0')
         self.journal({'phase':'APPLYING','tx':TX,'pid':2392,'rtp_dispatched':True})
-        self.write(self.persist/'pair-auto-state.json',{'data':{'phase':'HELD','recovery_error':'PAIR-RECOVERY-REQUIRED'},'sha256':'x'})
+        self.pair({'phase':'HELD','recovery_error':'PAIR-RECOVERY-REQUIRED'})
         self.write(self.runtime/'pair-auto-control.json',{'mode':'off','revision':'c'*32})
         self.write(self.runtime/'native-status.json',{'state':'BLOCKED','blockers':['PAIR-RECOVERY-REQUIRED'],'time':100})
 
@@ -37,8 +37,16 @@ class UpgradeOverInterruptedJournal(unittest.TestCase):
     def process(self,pid,command):
         directory=self.root/'proc'/str(pid);directory.mkdir(exist_ok=True);(directory/'cmdline').write_bytes(command)
 
+    def pair(self,extra,checksum=None):
+        # A record pair_auto.read_state accepts: id, owned clients, flags before the session, network identity, checksum.
+        data=dict({'id':'a'*32,'owned':['wgclient1'],'before_flags':{'wgclient1':'0','ovpnclient1':'1'},'network_identity':'e'*64},**extra)
+        digest=hashlib.sha256(json.dumps(data,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+        self.write(self.persist/'pair-auto-state.json',{'data':data,'sha256':checksum or digest})
+
     def journal(self,extra):
-        data=dict({'before':['a','b','c'],'after':['b','a','c'],'hash':'f'*64},**extra)
+        # A journal native_switch.validate_journal accepts for an unfinished phase.
+        data=dict({'before':['a','b','c'],'after':['b','a','c'],'hash':'f'*64,'source':'wireguard:1','target':'openvpn:2',
+                   'trial_nonce':'n'*16,'started':90,'deadline':200},**extra)
         digest=hashlib.sha256(json.dumps(data,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
         self.write(self.persist/'native-transaction.json',{'schema':1,'data':data,'sha256':digest})
 
@@ -47,7 +55,14 @@ class UpgradeOverInterruptedJournal(unittest.TestCase):
         except ValueError as error:return str(error)
 
     def files(self):
-        return {str(p):p.read_bytes() for p in sorted(self.root.rglob('*')) if p.is_file()}
+        # Plan item 54 (F-16/F-17): every guard run writes the maintenance marker PERSIST/maintenance.json by design;
+        # marker() checks it, every other file must stay byte-identical.
+        marker=self.persist/lifecycle.MAINTENANCE_MARKER
+        return {str(p):p.read_bytes() for p in sorted(self.root.rglob('*')) if p.is_file() and p!=marker}
+
+    def marker(self):
+        path=self.persist/lifecycle.MAINTENANCE_MARKER
+        return json.loads(path.read_text())['action'] if path.exists() else None
 
     def test_dead_incident_journal_allows_upgrade_and_writes_only_the_auto_options(self):
         self.assertIsNone(self.outcome())
@@ -56,9 +71,11 @@ class UpgradeOverInterruptedJournal(unittest.TestCase):
             calls.append((args,kwargs.get('input')))
             return type('Reply',(),{'returncode':0,'stdout':b''})()
         real=lifecycle.snapshot
-        with patch.object(lifecycle,'control_lock',nullcontext),patch.object(lifecycle.subprocess,'run',side_effect=run),\
+        with patch.object(lifecycle,'ROOT',self.root),patch.object(lifecycle,'control_lock',nullcontext),\
+                patch.object(lifecycle.subprocess,'run',side_effect=run),\
                 patch.object(lifecycle,'snapshot',side_effect=lambda upgrade=False:real(self.root,upgrade=upgrade)):
             lifecycle.main('prepare')
+        self.assertEqual(self.marker(),'install')
         self.assertEqual(self.files(),before,'journal, pair record and status stay byte-identical')
         self.assertEqual(len(calls),1);self.assertEqual(calls[0][0],['/sbin/uci','-q','batch'])
         self.assertEqual(calls[0][1],b"set homensai_vpn.main.native_enabled='0'\nset homensai_vpn.main.native_until='0'\nset homensai_vpn.main.native_trial=''\ncommit homensai_vpn\n")
@@ -112,8 +129,10 @@ class UpgradeOverInterruptedJournal(unittest.TestCase):
             with self.subTest(phase=phase):self.assertIsNotNone(self.outcome())
 
     def test_starting_pair_session_refuses(self):
-        self.write(self.persist/'pair-auto-state.json',{'data':{'phase':'STARTING'}})
+        self.pair({'phase':'STARTING'})
         self.assertEqual(self.outcome(),'LIFECYCLE-STOP-AUTO-FIRST')
+        self.write(self.persist/'pair-auto-state.json',{'data':{'phase':'STARTING'}})
+        self.assertEqual(self.outcome(),'LIFECYCLE-PAIR-UNVERIFIED')
 
     def test_removal_check_keeps_refusing_the_same_incident(self):
         self.assertIsNone(self.outcome())
@@ -144,20 +163,25 @@ class UpgradeOverInterruptedJournal(unittest.TestCase):
         body=scripts()['prerm'].replace('/usr/bin/python3','sh '+shlex.quote(str(guard))).replace('/etc/init.d/homensai-vpn','sh '+shlex.quote(str(service)))
         for argument,expected in ((['upgrade','0.9.1-alpha61-1'],'upgrade'),(['remove'],'check'),([],'check'),(['upgradex'],'check')):
             subprocess.run(['sh','-s','--']+argument,input=body,text=True,check=True,env=dict(os.environ,IPKG_INSTROOT=''),timeout=5)
-            with self.subTest(argument=argument):self.assertEqual(trace.read_text().splitlines()[-1],expected)
+            # plan item 54 (F-17): the guard after the stop runs as '<action>-stopped' (waits for the service processes)
+            with self.subTest(argument=argument):self.assertEqual(trace.read_text().splitlines()[-2:],[expected,expected+'-stopped'])
 
     def test_upgrade_action_accepts_the_incident_without_any_write(self):
+        # ROOT is the guard's configurable base (as in test_lifecycle_guard): the marker lands in the fixture, never in the
+        # real /etc/homensai-vpn (the CI root file system is read-only).
         before=self.files();real=lifecycle.snapshot
-        with patch.object(lifecycle,'control_lock',nullcontext),patch.object(lifecycle.subprocess,'run') as run,\
+        with patch.object(lifecycle,'ROOT',self.root),patch.object(lifecycle,'control_lock',nullcontext),\
+                patch.object(lifecycle.subprocess,'run') as run,\
                 patch.object(lifecycle,'snapshot',side_effect=lambda upgrade=False:real(self.root,upgrade=upgrade)):
             lifecycle.main('upgrade')
-        run.assert_not_called();self.assertEqual(self.files(),before)
+        run.assert_not_called();self.assertEqual(self.files(),before);self.assertEqual(self.marker(),'upgrade')
         self.process(2392,APPLY)
-        with patch.object(lifecycle,'control_lock',nullcontext),patch.object(lifecycle.subprocess,'run') as run,\
+        with patch.object(lifecycle,'ROOT',self.root),patch.object(lifecycle,'control_lock',nullcontext),\
+                patch.object(lifecycle.subprocess,'run') as run,\
                 patch.object(lifecycle,'snapshot',side_effect=lambda upgrade=False:real(self.root,upgrade=upgrade)),\
                 self.assertRaises(SystemExit):
             lifecycle.main('upgrade')
-        run.assert_not_called()
+        run.assert_not_called();self.assertIsNone(self.marker(),'a refusal removes the marker at once')
 
 
 if __name__=='__main__':unittest.main()

@@ -262,8 +262,12 @@ function M.switch(run,request,direction,env)
     local moves=M.reorder_moves(req.before,req.after)
     local bindings=bindings_of(value)
     run.fenced(req.revision,function()
-      if M.uci_apply(run,cursor,moves,req.names)>0 then wrote=true end
-      if M.synchronize_process(run,cursor,bindings) then wrote=true end
+      -- review F-21 (06.11.2026): marked before each write, as Python's write_command marks before its dispatch:
+      -- a UCI session that fails half-way reports rollback_required, never FAILED-BEFORE-APPLY
+      if #moves>0 then wrote=true end
+      M.uci_apply(run,cursor,moves,req.names)
+      if bindings~=nil and cursor and not M.applied(sections_of(cursor),bindings) then wrote=true end
+      M.synchronize_process(run,cursor,bindings)
     end)
     -- read back by content: anonymous section names are not stable across a reload
     local fresh=run.uci_cursor()

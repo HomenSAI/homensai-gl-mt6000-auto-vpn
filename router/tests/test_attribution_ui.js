@@ -30,9 +30,19 @@ for(const lang of ['en','ru']){
     assert(footer.includes(part),lang+' footer: '+part);
   assert(brand.includes('HomenS .AI Auto VPN')&&brand.includes('GL.iNet GL-MT6000 · Flint 2')&&brand.includes('v'+app.version),'header: name, model, version badge');
   assert(/<a href="https:\/\/homensai\.com"[^>]*>(Developer|Разработчик) · Serhii Khomenko<\/a>/.test(T.footerHTML()),'developer link to homensai.com');
-  assert(T.footerHTML().includes((lang==='en'?'page ':'страница ')+app.ui_module),'page build in the footer');
+  // owner 04.11.2026 and 05.11.2026: «пакет …» and «страница dashboardNNN» mean nothing to a person: nowhere on the page,
+  // the diagnostics of the System tab included; only the program and the style in the footer and in «О программе»
+  assert(!footer.includes(app.ui_module)&&!/пакет|страница|package|page /.test(strip(T.buildLine())),'no build identity in the footer');
+  assert(strip(T.buildLine())===(lang==='en'?'Program ':'Программа ')+app.version,'the footer line is the program version');
+  assert(!strip(T.settingsA().slice(T.settingsA().indexOf('id="sec-about"'))).includes(app.ui_module),'not in About either');
+  for(const [name,html] of [['footer',T.footerHTML()],['brand',T.brandHTML()],['system tab',T.tabs.sys()],['settings',T.settingsA()]]){
+    assert(!html.includes('data-diag-build'),name+': no build line');
+    assert(!html.includes(app.ui_module)&&!html.includes(app.package_version),name+': neither the page module nor the package version');
+    assert(!/Сборка: |Build: |страница dashboard/.test(strip(html)),name+': no build words');
+  }
+  assert(!('pkg' in T.VER())&&!('page' in T.VER()),'the page keeps no build values it does not use');
 }
-assert(dashboard.includes("HV.root.innerHTML=hdr+main+footerHTML();"),'every view and the wizard end with the footer');
+assert(dashboard.includes("HV.root.innerHTML=hdr+main+footerHTML()+topHTML();"),'every view and the wizard end with the footer');
 assert(dashboard.includes('class="badge-ver hv-version"'),'version badge');
 const css=fs.readFileSync(CSS,'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
 const rules=[...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
@@ -42,4 +52,4 @@ for(const [,selector,body] of rules){
   for(const one of selector.split(','))if(!/\.hdr \.devline$/.test(one.trim()))assert(!/\.attr|hv-attribution|\.badge-ver|hv-version|\.brand/.test(one),'hidden: '+one.trim());
 }
 assert(/\.hvx \.attr \.wrap\{display:flex/.test(css)&&/\.hvx \.attr\{border-top/.test(css),'the footer strip lays out its attributes');
-console.log('PASS: owner identity in the header and footer of every view (RU/EN): name, model, developer link, program/package/page, Style, version badge');
+console.log('PASS: owner identity in the header and footer of every view (RU/EN): name, model, developer link, program version, Style, version badge');

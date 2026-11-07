@@ -105,4 +105,75 @@ t.test('valid_for and fast_switch_enabled follow the Python rules',function()
   t.eq(M.fast_switch_enabled("\toption fast_switch 0\n"),false)
 end)
 
+-- F-35: caller-supplied request id (pair_manual.request with client_request_id)
+local CID='reserve-click-0002'
+t.test('request id: a retry gets the stored acceptance back, never a second row or BUSY',function()
+  local d=world()
+  local first=M.request(d,args('reserve',{client_request_id=CID}))
+  t.eq(first.accepted,true)
+  local row=d.files['/run/pair-manual-control.json']
+  d.files['/proc/sys/kernel/random/uuid']='ffffffff-0123-4567-89ab-0123456789ab\n'
+  local again=M.request(d,args('reserve',{client_request_id=CID}))
+  t.eq(again.accepted,true);t.eq(again.replayed,true);t.eq(again.request_id,first.request_id)
+  t.eq(d.files['/run/pair-manual-control.json'],row)
+  -- even after the row completed and a newer hold exists the retry is only a replay
+  d.files['/run/pair-manual-control.json']='{"state":"COMPLETED"}'
+  t.eq(M.request(d,args('reserve',{client_request_id=CID})).replayed,true)
+  t.eq(d.files['/run/pair-manual-control.json'],'{"state":"COMPLETED"}')
+end)
+
+t.test('request id: a refusal is stored and replayed; a held lock leaves it to agent.py',function()
+  local d=world({uci={pair_auto_mode='off'}})
+  t.eq(code(M.request(d,args('reserve',{client_request_id=CID}))),'PAIR-MODE-NOT-CONFIGURED')
+  local entries=canon.decode(d.files['/run/pair-manual-requests.json']).entries
+  t.eq(#entries,1);t.eq(entries[1].client,CID)
+  local locked=world({uci={pair_auto_mode='off'},locked=true})
+  t.eq(M.request(locked,args('reserve',{client_request_id=CID})),M.FALLBACK)
+end)
+
+t.test('BH-07: a transient refusal is not kept; an older kept one is ignored; the retry decides afresh',function()
+  local d=world({files={['/run/pair-manual-control.json']=canon.encode(canon.object({state='QUEUED',id=string.rep('9',32)}))}})
+  t.eq(code(M.request(d,args('reserve',{client_request_id=CID}))),'PAIR-MANUAL-BUSY')
+  t.eq(d.files['/run/pair-manual-requests.json'],nil,'PAIR-MANUAL-BUSY is not kept for the id')
+  d.files['/run/pair-manual-control.json']='{"state":"COMPLETED"}'  -- the other operation ended
+  local retry=M.request(d,args('reserve',{client_request_id=CID}))
+  t.eq(retry.accepted,true);t.eq(retry.replayed,nil)
+  local again=M.request(d,args('reserve',{client_request_id=CID}))
+  t.eq(again.replayed,true);t.eq(again.request_id,retry.request_id,'no second row: no double switch')
+  local stale=canon.object({accepted=false,queued=false,completed=false,blockers=canon.array({'SPEED-BUSY'})})
+  local old=world({files={['/run/pair-manual-requests.json']=canon.encode(canon.object({entries=canon.array({canon.object({client=CID,reply=stale})})}))}})
+  local fresh=M.request(old,args('reserve',{client_request_id=CID}))
+  t.eq(fresh.accepted,true);t.eq(fresh.replayed,nil)
+  local entries=canon.decode(old.files['/run/pair-manual-requests.json']).entries
+  t.eq(#entries,1);t.eq(entries[1].reply.accepted,true)
+  t.eq(M.transient_refusal(canon.object({accepted=false,blockers=canon.array({'PAIR-MANUAL-REQUEST-UNCONFIRMED'})})),true)
+  t.eq(M.transient_refusal(canon.object({accepted=false,blockers=canon.array({'PAIR-MODE-NOT-CONFIGURED'})})),false)
+  t.eq(M.transient_refusal(canon.object({accepted=true,blockers=canon.array({'SPEED-BUSY'})})),false)
+end)
+
+t.test('request id: a resume id seen before is replayed even though resume itself goes to agent.py',function()
+  local reply=canon.object({accepted=true,queued=true,completed=false,request_id=string.rep('e',32),control_revision=REV})
+  local ledger=canon.encode(canon.object({entries=canon.array({canon.object({client='resume-click-0001',reply=reply})})}))
+  local d=world({files={['/run/pair-manual-requests.json']=ledger}})
+  local again=M.request(d,args('resume',{client_request_id='resume-click-0001'}))
+  t.eq(again.replayed,true);t.eq(again.request_id,string.rep('e',32))
+  t.eq(M.request(d,args('resume',{client_request_id='resume-click-0009'})),M.FALLBACK)
+end)
+
+t.test('request id: invalid ids, a damaged ledger, the bound, and no id at all',function()
+  for _,bad in ipairs({'short',string.rep('x',65),'with space id',7}) do
+    t.eq(code(M.request(world(),args('reserve',{client_request_id=bad}))),'PAIR-MANUAL-FIELDS')
+  end
+  local broken=world({files={['/run/pair-manual-requests.json']='{"entries":"nope"}'}})
+  t.eq(code(M.request(broken,args('reserve',{client_request_id=CID}))),'PAIR-MANUAL-STATE-UNVERIFIED')
+  t.eq(broken.files['/run/pair-manual-control.json'],nil)
+  local d=world({uci={pair_auto_mode='off'}})
+  for i=1,M.LEDGER_LIMIT+5 do M.request(d,args('reserve',{client_request_id=string.format('bounded-%04d',i)})) end
+  local entries=canon.decode(d.files['/run/pair-manual-requests.json']).entries
+  t.eq(#entries,M.LEDGER_LIMIT);t.eq(entries[#entries].client,string.format('bounded-%04d',M.LEDGER_LIMIT+5))
+  local plain=world()
+  local reply=M.request(plain,args('reserve'))
+  t.eq(reply.accepted,true);t.eq(reply.replayed,nil);t.eq(plain.files['/run/pair-manual-requests.json'],nil)
+end)
+
 t.run()

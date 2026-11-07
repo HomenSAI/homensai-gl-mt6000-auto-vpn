@@ -36,6 +36,7 @@ M.POST_RTP_SECONDS=30
 M.RTP_DISPATCH_RESERVE=M.RTP_TIMEOUT+M.POST_RTP_SECONDS
 M.RETURN_PAUSE=10
 M.VERIFY_VENDOR_WAIT=20
+M.POST_APPLY_RESERVE=10  -- review F-30 (06.11.2026): seconds of the transaction kept for the final diagnostic and attestation
 M.VERIFY_TRANSIENT={['VENDOR-WORKER-BUSY']=true,['VENDOR-SETTLING']=true,['VENDOR-WORKER-QUIET-UNVERIFIED']=true}
 M.RECOVERY_PHASES={ARMED=true,APPLYING=true,['WAIT-CLIENT']=true,RESTORING=true,['RELEASE-PENDING']=true}
 M.PROOF_SCOPE='external-lan'
@@ -119,14 +120,31 @@ local function days_from_civil(y,m,d)
   local doe=yoe*365+math.floor(yoe/4)-math.floor(yoe/100)+doy
   return era*146097+doe-719468
 end
+-- F-42: one grammar with native_switch.deadline. A numeric string is decimal only (Python float(): no hex, Lua's
+-- tonumber('0x10') must not widen it); 'inf'/'nan' fall through to the ISO branch and are refused like Python's
+-- non-finite result. The calendar date must exist (2026-02-30 is refused); the offset is +HH:MM, +HHMM or +HH
+-- (Python writes +HHMM/+HH as +HH:MM before fromisoformat) and strictly below 24 h in total (+23:60 is refused,
+-- +00:60 is one hour, as datetime.timezone has it).
+local function decimal_text(value)
+  return string.find(value,'^%s*[+-]?%d+%.?%d*%s*$')~=nil or string.find(value,'^%s*[+-]?%d*%.%d+%s*$')~=nil
+      or string.find(value,'^%s*[+-]?%d+%.?%d*[eE][+-]?%d+%s*$')~=nil or string.find(value,'^%s*[+-]?%d*%.%d+[eE][+-]?%d+%s*$')~=nil
+end
+local function days_in_month(y,m)
+  if m==2 then return ((y%4==0 and y%100~=0) or y%400==0) and 29 or 28 end
+  if m==4 or m==6 or m==9 or m==11 then return 30 end
+  return 31
+end
+M.days_in_month=days_in_month
 function M.deadline(value)
   if isnone(value) or value=='' then return 0 end
   local result=num(value)
   if result==nil then
     if type(value)~='string' then refuse('BOUNDED-DEADLINE-REQUIRED') end
-    result=tonumber(value)
+    result=decimal_text(value) and tonumber(value) or nil
     if result==nil then
       local text=string.gsub(value,'Z$','+00:00')
+      text=string.gsub(text,'([+-]%d%d)(%d%d)$','%1:%2')  -- +HHMM -> +HH:MM
+      text=string.gsub(text,'([+-]%d%d)$','%1:00')        -- +HH   -> +HH:00
       local y,mo,d,h,mi,s,frac,sign,oh,om=string.match(text,'^(%d%d%d%d)%-(%d%d)%-(%d%d)[T ](%d%d):(%d%d):?(%d?%d?)%.?(%d*)([+-])(%d%d):(%d%d)$')
       if not y then
         if string.match(text,'^%d%d%d%d%-%d%d%-%d%d[T ]%d%d:%d%d') then refuse('DEADLINE-TIMEZONE-REQUIRED') end
@@ -134,8 +152,9 @@ function M.deadline(value)
       end
       y,mo,d,h,mi=tonumber(y),tonumber(mo),tonumber(d),tonumber(h),tonumber(mi)
       s=tonumber(s) or 0
-      if mo<1 or mo>12 or d<1 or d>31 or h>23 or mi>59 or s>59 then refuse('BOUNDED-DEADLINE-REQUIRED') end
+      if y<1 or mo<1 or mo>12 or d<1 or d>days_in_month(y,mo) or h>23 or mi>59 or s>59 then refuse('BOUNDED-DEADLINE-REQUIRED') end
       local offset=(tonumber(oh)*3600+tonumber(om)*60)*(sign=='-' and -1 or 1)
+      if math.abs(offset)>=86400 then refuse('BOUNDED-DEADLINE-REQUIRED') end  -- datetime.timezone: strictly below 24 h
       result=days_from_civil(y,mo,d)*86400+h*3600+mi*60+s-offset
       if frac~='' then result=result+tonumber('0.'..string.sub(frac,1,6)) end
     end
@@ -352,6 +371,29 @@ end
 ------------------------------------------------------------------------------------------------------
 -- selection proofs
 ------------------------------------------------------------------------------------------------------
+-- The gate of a move onto a channel (review 04.11.2026, findings 1, 2; the reasons: native_switch.key_unaccepted).
+function M.key_unaccepted(env,...)
+  local check=env.backend.key_unaccepted
+  if not check then return nil end
+  local profiles={}
+  for i=1,select('#',...) do
+    local identifier=select(i,...)
+    if type(identifier)=='string' then profiles[#profiles+1]=identifier end
+  end
+  return check(profiles)
+end
+-- The rule of a Start (owner 05.11.2026; the reasons: native_switch.carrying_unaccepted): only the channel the live policy order
+-- names must be clean, an order that proves no role counts both channels.
+function M.carrying_unaccepted(env,selection)
+  local policy=require('pair').policy
+  local ok,carrying=pcall(function()
+    local order=env.backend.order()
+    return selection[policy.role(policy.proof(selection),order)].id
+  end)
+  if ok then return M.key_unaccepted(env,carrying) end
+  return M.key_unaccepted(env,selection.source and selection.source.id,selection.target and selection.target.id)
+end
+
 function M.assert_selection(env,selection)
   local blockers,current=env.backend.diagnostic()
   if #blockers>0 then refuse(blockers[1]) end
@@ -433,7 +475,12 @@ function M.apply_steps(env,value,selection,tx)
   if pair then
     M.apply_progress(env,tx,'verify-diagnostic')
     blockers,current=env.backend.diagnostic()
-    local waited_until=mono(env)+M.VERIFY_VENDOR_WAIT
+    -- review F-30 (06.11.2026): the transient wait ends inside the journal's monotonic deadline, leaving
+    -- POST_APPLY_RESERVE for the final diagnostic and attestation (native_switch.stage_budget)
+    local md=value.monotonic_deadline
+    local budget=M.VERIFY_VENDOR_WAIT
+    if not isnone(md) and finite(md) then budget=math.max(0,math.min(budget,num(md)-M.POST_APPLY_RESERVE-mono(env))) end
+    local waited_until=mono(env)+budget
     local function transient(list)
       if #list==0 then return false end
       for _,b in ipairs(list) do if not M.VERIFY_TRANSIENT[b] then return false end end
@@ -467,6 +514,10 @@ function M.attempt(env,selection,until_,trial,opts)
   if pair_destination~=nil and ((manual_request_id==nil and not pair_reapply and not pair_return)
      or (pair_destination~='source' and pair_destination~='target') or scope~='router-probed-ipv4') then refuse('MANUAL-REQUEST-INVALID') end
   if pair_session_order~=nil and (trial or scope~='router-probed-ipv4') then refuse('MANUAL-REQUEST-INVALID') end
+  if not pair_reapply then  -- a repair of the rules of the carrying channel moves nothing
+    local pinned=M.key_unaccepted(env,selection[pair_destination or 'target'].id)
+    if pinned then refuse(pinned) end
+  end
   local control_revision=opts.control_revision or ctl.current_revision(env)
   M.bind_policy_context(env,selection)
   M.require_control_revision(env,control_revision)
@@ -680,7 +731,12 @@ function M.attempt(env,selection,until_,trial,opts)
     if sok and saved.tx==tx then value=saved end
     value.failure_code=failure_code;value.failure_detail=failure_detail;M.journal_write(env,value)
   end
-  if not released and order_is(env,before,selection.hash) then
+  if type(err)=='table' and err.unresolved==true then
+    -- R2-01: a dispatched writer whose exit could not be established may still run: no rollback now. The journal
+    -- stays APPLYING with the guard in place; the supervisor's recovery rolls back once backend.writer_unresolved()
+    -- sees the writer gone (rollback.rollback refuses WRITER-UNRESOLVED until then).
+    pcall(require('durable').log,'WRITER-UNRESOLVED: a policy writer did not confirm its exit; the transaction stays APPLYING, no rollback')
+  elseif not released and order_is(env,before,selection.hash) then
     value.phase='ROLLED-BACK';value.reason='FAILED-BEFORE-APPLY';M.journal_write(env,value)
   else
     rollback.rollback_counted(env,value,'TRANSACTION-FAILED')
@@ -730,6 +786,11 @@ end
 function M.operator_return(env,value,reason,control_revision)
   reason=reason or 'OPERATOR-RETURN'
   if value.phase~='HELD-ON-RESERVE' and value.phase~='COMMITTED' then return 'RETURN-NOT-APPLICABLE' end
+  -- the owner's request to move; not the 'PRIMARY-RECOVERED' end of a Stop that waited on the reserve (M.key_unaccepted)
+  if reason=='OPERATOR-RETURN' then
+    local pinned=M.key_unaccepted(env,value.source)
+    if pinned then return pinned end
+  end
   if env.backend.health(value.source)~=true then return 'SOURCE-NOT-HEALTHY' end
   if control_revision~=nil then M.require_control_revision(env,control_revision) end
   local context=require('pair').policy.metadata(value)
@@ -765,6 +826,35 @@ function M.handle_return(env,value,request,last_time,control_revision)
   return true,stamp
 end
 
+-- finish_committed of a pair journal: the reason to stay on the reserve, or nil for the return. Python: pair_hold_reason.
+local function pair_hold_reason(env,value,order,context,reason,desired,settings,recovery)
+  local policy=require('pair').policy
+  if not in_orders(desired,value.before,context.primary_order,context.session_order) then refuse('POLICY-IDENTITY-CHANGED') end
+  local wanted=policy.role(context,desired)
+  local ready
+  if wanted=='source' then ready=M.source_ready(env,value,settings,reason) else ready=env.backend.recovery_ready(value[wanted],settings)==true end
+  -- Owner decision 07.11.2026 (F-80): hold_reserve keeps a WORKING reserve only. The rescue from a reserve that
+  -- committed_recovery_decision proved failed (RESCUE_REASON, a fresh negative probe) goes through under any policy.
+  if not same_list(order,desired) and (not ready or (wanted=='source' and recovery.return_policy=='hold_reserve' and reason~=require('pair').RESCUE_REASON)) then
+    return wanted=='source' and 'SOURCE-NOT-VERIFIED' or 'RESERVE-NOT-CONNECTED'
+  end
+  return nil
+end
+
+-- T4 (trace conformance 04.11.2026), read-only: true when finish_committed would only write the same HELD-ON-RESERVE again
+-- (pair.reserve_waits). Any doubt is false: finish_committed then decides as before. Python: hold_unchanged.
+function M.hold_unchanged(env,value,reason,restore_order,hold)
+  local context=require('pair').policy.metadata(value)
+  if context==nil or value.phase~='HELD-ON-RESERVE' then return false end
+  local order,fingerprint=env.backend.order()
+  if fingerprint~=value.hash or not in_orders(order,value.before,value.after,value.restore_target_order,value.restored_order) then return false end
+  local settings=env.backend.policy().settings
+  local recovery=require('pair').recovery_normalized(settings)
+  if hold~=nil then settings=merge(settings,{recovery_primary_stable=hold}) end
+  local held=pair_hold_reason(env,value,order,context,reason,restore_order or context.primary_order,settings,recovery)
+  return held~=nil and held==value.reason
+end
+
 -- hold (K2, pair.cleanup_hold): seconds of primary stability required for the return instead of primary_stable
 function M.finish_committed(env,value,reason,restore_order,hold)
   local policy=require('pair').policy
@@ -781,28 +871,34 @@ function M.finish_committed(env,value,reason,restore_order,hold)
   local context=policy.metadata(value)
   if context~=nil then
     local desired=restore_order or context.primary_order
-    if not in_orders(desired,value.before,context.primary_order,context.session_order) then refuse('POLICY-IDENTITY-CHANGED') end
-    local wanted=policy.role(context,desired)
-    local ready
-    if wanted=='source' then ready=M.source_ready(env,value,settings,reason) else ready=env.backend.recovery_ready(value[wanted],settings)==true end
-    if not same_list(order,desired) and (not ready or (wanted=='source' and recovery.return_policy=='hold_reserve')) then
+    local held=pair_hold_reason(env,value,order,context,reason,desired,settings,recovery)
+    if held~=nil then
       env.backend.guard(env.backend.devices())
-      value.phase='HELD-ON-RESERVE';value.reason=wanted=='source' and 'SOURCE-NOT-VERIFIED' or 'RESERVE-NOT-CONNECTED';value.finished=fwall(env)
+      value.phase='HELD-ON-RESERVE';value.reason=held;value.finished=fwall(env)
       M.journal_write(env,value)
       return false
     end
     rollback.rollback(env,value,reason,desired)
     return true
   end
-  if same_list(order,value.after) and (recovery.return_policy=='hold_reserve' or not M.source_ready(env,value,settings,reason)) then
-    local healthy=env.backend.health(value.target)==true
-    env.backend.guard(env.backend.devices())
-    value.phase='HELD-ON-RESERVE';value.reason=recovery.return_policy=='hold_reserve' and 'OPERATOR-HOLD-RESERVE' or 'SOURCE-NOT-VERIFIED'
-    value.finished=fwall(env);value.reserve_healthy=healthy
-    M.journal_write(env,value)
-    M.publish(env,{state='STOPPED-ON-RESERVE',reason=value.reason,source=value.source,target=value.target,expected_exit=getd(value,'expected_exit',NULL),
-      reserve_healthy=healthy,original_restored=false,trial=getd(value,'trial',false)})
-    return false
+  if same_list(order,value.after) then
+    -- Owner decision 07.11.2026 (F-80): hold_reserve holds a WORKING reserve (or one whose fresh probe is unknown);
+    -- a reserve a fresh probe proves failed is rescued to a verified primary (source_ready) like under healthy_primary.
+    local hold_policy=recovery.return_policy=='hold_reserve'
+    local healthy=nil
+    if hold_policy then healthy=env.backend.health(value.target) end
+    local pinned=hold_policy and healthy~=false
+    if pinned or not M.source_ready(env,value,settings,reason) then
+      if not hold_policy then healthy=env.backend.health(value.target) end
+      healthy=healthy==true
+      env.backend.guard(env.backend.devices())
+      value.phase='HELD-ON-RESERVE';value.reason=pinned and 'OPERATOR-HOLD-RESERVE' or 'SOURCE-NOT-VERIFIED'
+      value.finished=fwall(env);value.reserve_healthy=healthy
+      M.journal_write(env,value)
+      M.publish(env,{state='STOPPED-ON-RESERVE',reason=value.reason,source=value.source,target=value.target,expected_exit=getd(value,'expected_exit',NULL),
+        reserve_healthy=healthy,original_restored=false,trial=getd(value,'trial',false)})
+      return false
+    end
   end
   value.phase='RESTORING';M.journal_write(env,value)
   rollback.rollback(env,value,reason)
@@ -814,10 +910,12 @@ end
 -- the planned return then also waits max(cooldown, min_dwell), so the next failover is never inside the cooldown.
 -- A failing reserve is left without the damped hold, after rescue_stable seconds of primary stability
 -- (pair.rescue_settings; rescue_stable 0 = the full primary_stable, the rule before 03.11.2026).
+M.RESERVE_STABLE={'id','protocol','interface','vendor_tunnel_id'}  -- the identity of a reserve without the monitor's epoch
 function M.committed_recovery_decision(env,value,settings,samples,now,status,hold)
   local pair=require('pair')
   local recovery=pair.recovery_normalized(settings)
   local age=pair.valid_for(settings)
+  local pinned=M.key_unaccepted(env,value.source)  -- no return onto a primary with an unaccepted key; the decision to leave a failed reserve waits for the owner
   local selection_settings=merge(settings)
   for _,role in ipairs({'source','target'}) do
     if isnone(selection_settings['plan_'..role]) or selection_settings['plan_'..role]=='' then selection_settings['plan_'..role]=value[role] end
@@ -827,18 +925,54 @@ function M.committed_recovery_decision(env,value,settings,samples,now,status,hol
   local proofs=getd(value,'vendor_profiles',canon.object({}))
   local target=resolved.target
   local expected=canon.is_object(proofs) and getd(proofs,'target',nil) or nil
-  if resolved.coordination.state~='READY' or isnone(target) or target.id~=value.target
-     or (expected~=nil and canon.encode(require('pair').profile_identity(env,target) or NULL)~=canon.encode(expected)) then
+  -- Finding 7 (MT3000, 04.11.2026 14:06-15:33): the vendor rebuilt the reserve while it carried the traffic. Only its
+  -- vendor_generation (the monitor's observation epoch) changed; every pass held RESERVE-IDENTITY-UNKNOWN for over an hour
+  -- with both tunnels healthy, until the owner's Stop + Start. The vendor is quiet (READY: settled, stable samples) and
+  -- the rule is now: the same id, protocol, interface and tunnel with a healthy streak OF THE NEW GENERATION is the same
+  -- reserve (the decision goes on, the pair tick rebinds the journal proof: rebind). Anything else stays unknown, but
+  -- an unknown reserve is no reason to stay on it: with the planned rule (min_dwell, max(primary_stable, hold), the
+  -- model gate, the guarded finish_committed) the traffic returns to a stably healthy primary. Python: native_switch.
+  local CM=require('channel_model')
+  local ready=resolved.coordination.state=='READY'
+  local known=ready and not isnone(target) and target.id==value.target
+  local live=nil
+  if known and expected~=nil then live=pair.profile_identity(env,target) end
+  local differs=expected~=nil and canon.encode(live or NULL)~=canon.encode(expected)
+  local proven=false
+  if live~=nil and differs then
+    proven=true
+    for _,key in ipairs(M.RESERVE_STABLE) do if canon.encode(getd(live,key,NULL))~=canon.encode(getd(expected,key,NULL)) then proven=false end end
+    proven=proven and pair.streak(samples,target.id,recovery.successes,now,age,true,target,env)==true
+  end
+  local dwell=now-(num(value.confirmed) or num(value.started) or now)
+  local need=hold==nil and recovery.min_dwell or math.max(recovery.cooldown,recovery.min_dwell)
+  if not known or (differs and not proven) then
+    if ready and recovery.return_policy=='healthy_primary' and dwell>=need and not pinned then
+      local ready_settings,model_gate=pair.return_rule(settings,'planned',hold)
+      local source_row=resolved.source;if isnone(source_row) then source_row=nil end
+      if (not model_gate or CM.return_ready(samples,value.source,recovery.primary_successes,now,age,settings,source_row,env))
+         and env.backend.recovery_ready(value.source,ready_settings)==true then
+        return {action='RESTORE-PRIMARY',reason='PRIMARY-STABLY-RECOVERED'}
+      end
+    end
     return {action='HOLD',reason='RESERVE-IDENTITY-UNKNOWN',reserve_healthy=NULL}
   end
+  local rebind=proven or nil
   -- The reserve carrying traffic failed: the owner's failure model (channel_model.lua, 'consecutive' = the streak).
-  local CM=require('channel_model')
   local failed=CM.channel_failed(samples,target.id,recovery.failures,now,age,settings,target,env)
   local fault_test=failed and env.deps.testing_profile and env.deps.testing_profile(value.target) or false
   local damped=hold~=nil and not failed and hold>recovery.primary_stable
-  if recovery.return_policy=='healthy_primary' or fault_test then
-    local dwell=now-(num(value.confirmed) or num(value.started) or now)
-    local need=hold==nil and recovery.min_dwell or math.max(recovery.cooldown,recovery.min_dwell)
+  local refused=nil
+  local health,probed=nil,false  -- the one fresh probe of a reserve the detector calls failed
+  local deciding=recovery.return_policy=='healthy_primary' or fault_test
+  if failed and not deciding then
+    -- Owner decision 07.11.2026 (F-80): hold_reserve means "do not return from a WORKING reserve". A reserve the
+    -- detector calls failed AND a fresh negative probe confirms is rescued to a verified primary (rescue_stable, no
+    -- model gate) under any return policy; an unknown or stale probe (RESERVE-HEALTH-UNKNOWN) stays a hold.
+    health=env.backend.health(value.target);probed=true
+    deciding=health==false
+  end
+  if deciding then
     -- The one return rule of both deciders (pair.return_rule; Python recovery_settings.return_rule): from a FAILED
     -- reserve the rescue stability min(primary_stable, rescue_stable) and no model gate (the HMM return gate never
     -- delays leaving a dead reserve); a planned return wants max(primary_stable, hold) AND, in the HMM modes,
@@ -848,15 +982,16 @@ function M.committed_recovery_decision(env,value,settings,samples,now,status,hol
     if (failed or dwell>=need)
        and (not model_gate or CM.return_ready(samples,value.source,recovery.primary_successes,now,age,settings,source_row,env))
        and env.backend.recovery_ready(value.source,ready_settings)==true then
-      return {action='RESTORE-PRIMARY',reason=failed and 'RESERVE-FAILED-PRIMARY-VERIFIED' or 'PRIMARY-STABLY-RECOVERED'}
+      if not pinned then return {action='RESTORE-PRIMARY',reason=failed and 'RESERVE-FAILED-PRIMARY-VERIFIED' or 'PRIMARY-STABLY-RECOVERED'} end
+      refused=pinned  -- the return was due: the page names what it waits for
     end
   end
   if failed then
-    local health=env.backend.health(value.target)
-    if health==false then return {action='HOLD',reason='RESERVE-FAILED',reserve_healthy=false} end
-    if health==nil then return {action='HOLD',reason='RESERVE-HEALTH-UNKNOWN',reserve_healthy=NULL} end
+    if not probed then health=env.backend.health(value.target) end
+    if health==false then return {action='HOLD',reason=refused or 'RESERVE-FAILED',reserve_healthy=false,rebind=rebind} end
+    if health==nil then return {action='HOLD',reason=refused or 'RESERVE-HEALTH-UNKNOWN',reserve_healthy=NULL,rebind=rebind} end
   end
-  return {action='OBSERVE',reason=(damped and recovery.return_policy=='healthy_primary') and 'PAIR-RATE-LIMIT' or 'CLIENT-CONFIRMED'}
+  return {action='OBSERVE',reason=refused or ((damped and recovery.return_policy=='healthy_primary') and 'PAIR-RATE-LIMIT' or 'CLIENT-CONFIRMED'),rebind=rebind}
 end
 
 return M

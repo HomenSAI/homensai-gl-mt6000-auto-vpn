@@ -1,0 +1,1568 @@
+{
+ "cert_digests": [
+  [
+   "@CA1@",
+   [
+    "013df5e67e3b22919c965872d16f2d1f9554402fa6d5efa8f4c39cca0a65d680"
+   ]
+  ],
+  [
+   "junk\n@CA2@\nmore @CA1@",
+   [
+    "013df5e67e3b22919c965872d16f2d1f9554402fa6d5efa8f4c39cca0a65d680",
+    "54fd0d11ce8540c8fad520904c47ce6c72185ceb2941e3122f04c46cfb3bb704"
+   ]
+  ],
+  [
+   "@CA1@@CA1@",
+   [
+    "013df5e67e3b22919c965872d16f2d1f9554402fa6d5efa8f4c39cca0a65d680"
+   ]
+  ],
+  [
+   "no certificate here",
+   null
+  ],
+  [
+   null,
+   null
+  ],
+  [
+   "-----BEGIN CERTIFICATE-----\nAAAA\n",
+   null
+  ],
+  [
+   "@CA1@\n-----BEGIN CERTIFICATE-----\nAAAA\n",
+   null
+  ],
+  [
+   "-----BEGIN CERTIFICATE-----\nA*AA\n-----END CERTIFICATE-----",
+   null
+  ],
+  [
+   "-----BEGIN CERTIFICATE-----\nAAA\n-----END CERTIFICATE-----",
+   null
+  ],
+  [
+   "-----BEGIN CERTIFICATE-----\n\n-----END CERTIFICATE-----",
+   null
+  ],
+  [
+   "-----BEGIN CERTIFICATE-----\nAA==AA==\n-----END CERTIFICATE-----",
+   null
+  ],
+  [
+   "-----BEGIN CERTIFICATE-----\r\nAAEC\r\n-----END CERTIFICATE-----",
+   [
+    "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"
+   ]
+  ]
+ ],
+ "certs": {
+  "@CA1@": "-----BEGIN CERTIFICATE-----\nMIIBjjCCATWgAwIBAgIUSkSJPe2MR1rA9rZx2+bz8ULSsUYwCgYIKoZIzj0EAwIw\nHTEbMBkGA1UEAwwSSG9tZW5TLkFJIHRlc3QgY2ExMB4XDTI2MTEwNDA1NDg0MVoX\nDTM2MTEwMTA1NDg0MVowHTEbMBkGA1UEAwwSSG9tZW5TLkFJIHRlc3QgY2ExMFkw\nEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMghqZxrVP1nv+sO5vOwxWBMQJQmsp0dH\nl48hYA1MzIpz4YPPlymJ7eYZ/Bcy1zMHMG9KrzcufDT7odhC/7lfJKNTMFEwHQYD\nVR0OBBYEFGAjyTmZOy1IaihWU/Q5XVauDdFTMB8GA1UdIwQYMBaAFGAjyTmZOy1I\naihWU/Q5XVauDdFTMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDRwAwRAIg\nT46cfiGQ3xVen8pbQgYKAN3qwQNEFxn23jiJ0DWjcBICIBFDMFO2IKsYVwkkBGLN\nNJL6leb1YNRL9CHcm1chJRNu\n-----END CERTIFICATE-----\n",
+  "@CA2@": "-----BEGIN CERTIFICATE-----\nMIIBkDCCATWgAwIBAgIUKoZ7IR/RvkjlX9HIbCJzJMfR5AswCgYIKoZIzj0EAwIw\nHTEbMBkGA1UEAwwSSG9tZW5TLkFJIHRlc3QgY2EyMB4XDTI2MTEwNDA1NDg0M1oX\nDTM2MTEwMTA1NDg0M1owHTEbMBkGA1UEAwwSSG9tZW5TLkFJIHRlc3QgY2EyMFkw\nEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhuI3pl6Hq2qe28YFFAlNa9livUE0z/Nn\nkUbXHerVe7DP+DVE8I14I4eRtWfoAiHYxCV0ML5rx3sEK4VMILPsI6NTMFEwHQYD\nVR0OBBYEFC83wHk0/30VOZwKGOQaa0vY+3zaMB8GA1UdIwQYMBaAFC83wHk0/30V\nOZwKGOQaa0vY+3zaMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIh\nANRAKyyf6jNYxZEA3AkeXM2A5Ugp3DAMZ+GpX6mW75bHAiEAh4kMtipA78OIVR2h\nyW78jVNYq+pgILiS13MnyosLqok=\n-----END CERTIFICATE-----\n"
+ },
+ "comment": "Shared by router/tests/test_server_pin.py and router/tests/lua/test_server_pin.lua. @CA1@/@CA2@ are the two test CA certificates; digests from openssl x509 -fingerprint -sha256.",
+ "digests": {
+  "ca1": "013df5e67e3b22919c965872d16f2d1f9554402fa6d5efa8f4c39cca0a65d680",
+  "ca2": "54fd0d11ce8540c8fad520904c47ce6c72185ceb2941e3122f04c46cfb3bb704"
+ },
+ "evict": {
+  "expect": [
+   "openvpn:40354_2016|vpn.example.com",
+   "wireguard:peer_1|a.example"
+  ],
+  "max": 2,
+  "note": "the changed record is the oldest seen and still stays: only pinned records are evicted",
+  "steps": [
+   [
+    {
+     "fingerprint": "wg:A",
+     "host": "a.example",
+     "identity": "wireguard:peer_1|a.example",
+     "profile": "wireguard:peer_1",
+     "protocol": "wireguard"
+    },
+    10
+   ],
+   [
+    {
+     "fingerprint": "wg:X",
+     "host": "a.example",
+     "identity": "wireguard:peer_1|a.example",
+     "profile": "wireguard:peer_1",
+     "protocol": "wireguard"
+    },
+    15
+   ],
+   [
+    {
+     "fingerprint": "wg:B",
+     "host": "b.example",
+     "identity": "wireguard:peer_1|b.example",
+     "profile": "wireguard:peer_1",
+     "protocol": "wireguard"
+    },
+    20
+   ],
+   [
+    {
+     "fingerprint": "ovpn-ca:54fd0d11ce8540c8fad520904c47ce6c72185ceb2941e3122f04c46cfb3bb704",
+     "host": "vpn.example.com",
+     "identity": "openvpn:40354_2016|vpn.example.com",
+     "profile": "openvpn:40354_2016",
+     "protocol": "openvpn"
+    },
+    40
+   ]
+  ]
+ },
+ "gate": [
+  {
+   "config": "\toption server_key_pin 'enforce'\n",
+   "expect": "SERVER-KEY-UNACCEPTED",
+   "flash": "{\"schema\": 1, \"records\": {\"wireguard:peer_1|h\": {\"profile\": \"wireguard:peer_1\", \"host\": \"h\", \"protocol\": \"wireguard\", \"fingerprint\": \"wg:A\", \"observed\": \"wg:A\", \"state\": \"pinned\", \"first_seen\": 1, \"last_seen\": 1, \"changed_at\": null, \"accepted_at\": null}}}",
+   "name": "RAM (newest) decides over flash",
+   "profiles": [
+    "wireguard:peer_1"
+   ],
+   "ram": "{\"schema\": 1, \"records\": {\"wireguard:peer_1|h\": {\"profile\": \"wireguard:peer_1\", \"host\": \"h\", \"protocol\": \"wireguard\", \"fingerprint\": \"wg:A\", \"observed\": \"wg:B\", \"state\": \"changed\", \"first_seen\": 1, \"last_seen\": 1, \"changed_at\": 2, \"accepted_at\": null}}}"
+  },
+  {
+   "config": "\toption server_key_pin 'enforce'\n",
+   "expect": null,
+   "flash": "{\"schema\": 1, \"records\": {\"wireguard:peer_1|h\": {\"profile\": \"wireguard:peer_1\", \"host\": \"h\", \"protocol\": \"wireguard\", \"fingerprint\": \"wg:A\", \"observed\": \"wg:B\", \"state\": \"changed\", \"first_seen\": 1, \"last_seen\": 1, \"changed_at\": 2, \"accepted_at\": null}}}",
+   "name": "RAM accepted, flash still old",
+   "profiles": [
+    "wireguard:peer_1"
+   ],
+   "ram": "{\"schema\": 1, \"records\": {\"wireguard:peer_1|h\": {\"profile\": \"wireguard:peer_1\", \"host\": \"h\", \"protocol\": \"wireguard\", \"fingerprint\": \"wg:A\", \"observed\": \"wg:A\", \"state\": \"pinned\", \"first_seen\": 1, \"last_seen\": 1, \"changed_at\": null, \"accepted_at\": null}}}"
+  },
+  {
+   "config": "\toption server_key_pin 'enforce'\n",
+   "expect": "SERVER-KEY-UNACCEPTED",
+   "flash": "{\"schema\": 1, \"records\": {\"wireguard:peer_1|h\": {\"profile\": \"wireguard:peer_1\", \"host\": \"h\", \"protocol\": \"wireguard\", \"fingerprint\": \"wg:A\", \"observed\": \"wg:B\", \"state\": \"changed\", \"first_seen\": 1, \"last_seen\": 1, \"changed_at\": 2, \"accepted_at\": null}}}",
+   "name": "after a reboot the flash copy decides",
+   "profiles": [
+    "wireguard:peer_1"
+   ],
+   "ram": null
+  },
+  {
+   "config": "\toption server_key_pin 'warn'\n",
+   "expect": null,
+   "flash": null,
+   "name": "warn never blocks",
+   "profiles": [
+    "wireguard:peer_1"
+   ],
+   "ram": "{\"schema\": 1, \"records\": {\"wireguard:peer_1|h\": {\"profile\": \"wireguard:peer_1\", \"host\": \"h\", \"protocol\": \"wireguard\", \"fingerprint\": \"wg:A\", \"observed\": \"wg:B\", \"state\": \"changed\", \"first_seen\": 1, \"last_seen\": 1, \"changed_at\": 2, \"accepted_at\": null}}}"
+  },
+  {
+   "config": null,
+   "expect": null,
+   "flash": null,
+   "name": "no option: warn",
+   "profiles": [
+    "wireguard:peer_1"
+   ],
+   "ram": "{\"schema\": 1, \"records\": {\"wireguard:peer_1|h\": {\"profile\": \"wireguard:peer_1\", \"host\": \"h\", \"protocol\": \"wireguard\", \"fingerprint\": \"wg:A\", \"observed\": \"wg:B\", \"state\": \"changed\", \"first_seen\": 1, \"last_seen\": 1, \"changed_at\": 2, \"accepted_at\": null}}}"
+  },
+  {
+   "config": "\toption server_key_pin 'enforce'\n",
+   "expect": null,
+   "flash": "{\"schema\": 1, \"records\": {\"wireguard:peer_1|h\": {\"profile\": \"wireguard:peer_1\", \"host\": \"h\", \"protocol\": \"wireguard\", \"fingerprint\": \"wg:A\", \"observed\": \"wg:B\", \"state\": \"changed\", \"first_seen\": 1, \"last_seen\": 1, \"changed_at\": 2, \"accepted_at\": null}}}",
+   "name": "damaged RAM file: nothing to block",
+   "profiles": [
+    "wireguard:peer_1"
+   ],
+   "ram": "{"
+  }
+ ],
+ "live": [
+  {
+   "expect": {
+    "fingerprint": "wg:q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=",
+    "host": "de1001.nordvpn.com",
+    "identity": "wireguard:peer_2000|de1001.nordvpn.com",
+    "profile": "wireguard:peer_2000",
+    "protocol": "wireguard"
+   },
+   "files": {},
+   "name": "nord provider peer",
+   "profile": {
+    "code": null,
+    "id": "wireguard:peer_2000",
+    "interface": "wgclient1",
+    "server_endpoint": {
+     "host": "185.1.1.1",
+     "port": 51820
+    }
+   },
+   "run": {
+    "uci -q get network.wgclient1.config": "peer_2000\n",
+    "uci -q show wireguard.peer_2000": "wireguard.peer_2000=peers\nwireguard.peer_2000.name='de1001.nordvpn.com'\n",
+    "wg show wgclient1 endpoints": "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t185.1.1.1:51820\n"
+   }
+  },
+  {
+   "expect": {
+    "fingerprint": "wg:q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=",
+    "host": "-",
+    "identity": "wireguard:peer_2000|-",
+    "profile": "wireguard:peer_2000",
+    "protocol": "wireguard"
+   },
+   "files": {},
+   "name": "uci unreadable: host unknown",
+   "profile": {
+    "code": null,
+    "id": "wireguard:peer_2000",
+    "interface": "wgclient1",
+    "server_endpoint": {
+     "host": "185.1.1.1",
+     "port": 51820
+    }
+   },
+   "run": {
+    "uci -q get network.wgclient1.config": "peer_2000\n",
+    "wg show wgclient1 endpoints": "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t185.1.1.1:51820\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {},
+   "name": "interface bound to another profile",
+   "profile": {
+    "code": null,
+    "id": "wireguard:peer_2000",
+    "interface": "wgclient1",
+    "server_endpoint": {
+     "host": "185.1.1.1",
+     "port": 51820
+    }
+   },
+   "run": {
+    "uci -q get network.wgclient1.config": "peer_9\n",
+    "uci -q show wireguard.peer_2000": "wireguard.peer_2000=peers\nwireguard.peer_2000.name='de1001.nordvpn.com'\n",
+    "wg show wgclient1 endpoints": "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t185.1.1.1:51820\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {},
+   "name": "profile replaced between the reads (second binding read differs)",
+   "profile": {
+    "code": null,
+    "id": "wireguard:peer_2000",
+    "interface": "wgclient1",
+    "server_endpoint": {
+     "host": "185.1.1.1",
+     "port": 51820
+    }
+   },
+   "run": {
+    "uci -q get network.wgclient1.config": [
+     "peer_2000\n",
+     "peer_9\n"
+    ],
+    "uci -q show wireguard.peer_2000": "wireguard.peer_2000=peers\nwireguard.peer_2000.name='de1001.nordvpn.com'\n",
+    "wg show wgclient1 endpoints": "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t185.1.1.1:51820\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {},
+   "name": "two peers",
+   "profile": {
+    "code": null,
+    "id": "wireguard:peer_2000",
+    "interface": "wgclient1",
+    "server_endpoint": {
+     "host": "185.1.1.1",
+     "port": 51820
+    }
+   },
+   "run": {
+    "uci -q get network.wgclient1.config": "peer_2000\n",
+    "uci -q show wireguard.peer_2000": "wireguard.peer_2000=peers\nwireguard.peer_2000.name='de1001.nordvpn.com'\n",
+    "wg show wgclient1 endpoints": "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t185.1.1.1:51820\nBz7Q0mYk4sV8pT2xR6wN1cL5dH9fJ3gA0eU7iO4yK2w=\t1.1.1.1:1\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {},
+   "name": "protocol and interface disagree",
+   "profile": {
+    "code": null,
+    "id": "wireguard:peer_2000",
+    "interface": "ovpnclient1",
+    "server_endpoint": {
+     "host": "185.1.1.1",
+     "port": 51820
+    }
+   },
+   "run": {}
+  },
+  {
+   "expect": null,
+   "files": {},
+   "name": "bad profile id",
+   "profile": {
+    "code": null,
+    "id": "wireguard:peer 1",
+    "interface": "wgclient1",
+    "server_endpoint": {
+     "host": "185.1.1.1",
+     "port": 51820
+    }
+   },
+   "run": {}
+  },
+  {
+   "expect": null,
+   "files": {},
+   "name": "bad interface",
+   "profile": {
+    "code": null,
+    "id": "wireguard:peer_2000",
+    "interface": "wgclient12345",
+    "server_endpoint": {
+     "host": "185.1.1.1",
+     "port": 51820
+    }
+   },
+   "run": {}
+  },
+  {
+   "expect": {
+    "fingerprint": "ovpn-ca:013df5e67e3b22919c965872d16f2d1f9554402fa6d5efa8f4c39cca0a65d680",
+    "host": "vpn.example.com",
+    "identity": "openvpn:40354_2016|vpn.example.com",
+    "profile": "openvpn:40354_2016",
+    "protocol": "openvpn"
+   },
+   "files": {
+    "/etc/openvpn/ovpn/x.ovpn": "client\nremote vpn.example.com 1194 udp\n<ca>\n@CA1@</ca>\n",
+    "/proc/1234/cmdline": "openvpn\u0000--cd\u0000/etc/openvpn\u0000--dev\u0000ovpnclient1\u0000--config\u0000ovpn/x.ovpn\u0000",
+    "/proc/1234/comm": "openvpn\n",
+    "/var/run/ovpnclient-ovpnclient1.pid": "1234\n"
+   },
+   "name": "openvpn inline ca relative config",
+   "profile": {
+    "code": null,
+    "id": "openvpn:40354_2016",
+    "interface": "ovpnclient1",
+    "server_endpoint": {
+     "host": "198.51.100.7",
+     "port": 1194
+    }
+   },
+   "run": {
+    "uci -q get network.ovpnclient1.config": "40354_2016\n"
+   }
+  },
+  {
+   "expect": {
+    "fingerprint": "ovpn-ca:013df5e67e3b22919c965872d16f2d1f9554402fa6d5efa8f4c39cca0a65d680,54fd0d11ce8540c8fad520904c47ce6c72185ceb2941e3122f04c46cfb3bb704",
+    "host": "vpn.example.com",
+    "identity": "openvpn:40354_2016|vpn.example.com",
+    "profile": "openvpn:40354_2016",
+    "protocol": "openvpn"
+   },
+   "files": {
+    "/etc/openvpn/keys/ca.crt": "@CA2@@CA1@",
+    "/etc/openvpn/ovpn/x.ovpn": "remote vpn.example.com\nca keys/ca.crt\n",
+    "/proc/1234/cmdline": "openvpn\u0000--cd\u0000/etc/openvpn\u0000--dev\u0000ovpnclient1\u0000--config\u0000ovpn/x.ovpn\u0000",
+    "/proc/1234/comm": "openvpn\n",
+    "/var/run/ovpnclient-ovpnclient1.pid": "1234\n"
+   },
+   "name": "openvpn ca file",
+   "profile": {
+    "code": null,
+    "id": "openvpn:40354_2016",
+    "interface": "ovpnclient1",
+    "server_endpoint": {
+     "host": "198.51.100.7",
+     "port": 1194
+    }
+   },
+   "run": {
+    "uci -q get network.ovpnclient1.config": "40354_2016\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {
+    "/etc/openvpn/ovpn/x.ovpn": "client\nremote vpn.example.com 1194 udp\n<ca>\n@CA1@</ca>\n",
+    "/proc/1234/cmdline": "openvpn\u0000--cd\u0000/etc/openvpn\u0000--dev\u0000ovpnclient1\u0000--config\u0000ovpn/x.ovpn\u0000",
+    "/proc/1234/comm": "sh\n",
+    "/var/run/ovpnclient-ovpnclient1.pid": "1234\n"
+   },
+   "name": "openvpn not openvpn process",
+   "profile": {
+    "code": null,
+    "id": "openvpn:40354_2016",
+    "interface": "ovpnclient1",
+    "server_endpoint": {
+     "host": "198.51.100.7",
+     "port": 1194
+    }
+   },
+   "run": {
+    "uci -q get network.ovpnclient1.config": "40354_2016\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {
+    "/etc/openvpn/ovpn/x.ovpn": "client\nremote vpn.example.com 1194 udp\n<ca>\n@CA1@</ca>\n",
+    "/proc/1234/cmdline": "openvpn\u0000--dev\u0000ovpnclient2\u0000--config\u0000/x.ovpn\u0000",
+    "/proc/1234/comm": "openvpn\n",
+    "/var/run/ovpnclient-ovpnclient1.pid": "1234\n"
+   },
+   "name": "openvpn other device",
+   "profile": {
+    "code": null,
+    "id": "openvpn:40354_2016",
+    "interface": "ovpnclient1",
+    "server_endpoint": {
+     "host": "198.51.100.7",
+     "port": 1194
+    }
+   },
+   "run": {
+    "uci -q get network.ovpnclient1.config": "40354_2016\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {
+    "/etc/openvpn/ovpn/x.ovpn": "client\nremote vpn.example.com 1194 udp\n<ca>\n@CA1@</ca>\n",
+    "/proc/1234/cmdline": "openvpn\u0000--dev\u0000ovpnclient1\u0000--config\u0000x.ovpn\u0000",
+    "/proc/1234/comm": "openvpn\n",
+    "/var/run/ovpnclient-ovpnclient1.pid": "1234\n"
+   },
+   "name": "openvpn relative config without cd",
+   "profile": {
+    "code": null,
+    "id": "openvpn:40354_2016",
+    "interface": "ovpnclient1",
+    "server_endpoint": {
+     "host": "198.51.100.7",
+     "port": 1194
+    }
+   },
+   "run": {
+    "uci -q get network.ovpnclient1.config": "40354_2016\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {
+    "/etc/openvpn/ovpn/x.ovpn": "client\nremote vpn.example.com 1194 udp\n<ca>\n@CA1@</ca>\n",
+    "/proc/1234/cmdline": "openvpn\u0000--cd\u0000/etc/openvpn\u0000--dev\u0000ovpnclient1\u0000--config\u0000ovpn/x.ovpn\u0000",
+    "/proc/1234/comm": "openvpn\n",
+    "/var/run/ovpnclient-ovpnclient1.pid": "12a\n"
+   },
+   "name": "openvpn pid not a number",
+   "profile": {
+    "code": null,
+    "id": "openvpn:40354_2016",
+    "interface": "ovpnclient1",
+    "server_endpoint": {
+     "host": "198.51.100.7",
+     "port": 1194
+    }
+   },
+   "run": {
+    "uci -q get network.ovpnclient1.config": "40354_2016\n"
+   }
+  },
+  {
+   "expect": null,
+   "files": {
+    "/etc/openvpn/ovpn/x.ovpn": "remote vpn.example.com\n",
+    "/proc/1234/cmdline": "openvpn\u0000--cd\u0000/etc/openvpn\u0000--dev\u0000ovpnclient1\u0000--config\u0000ovpn/x.ovpn\u0000",
+    "/proc/1234/comm": "openvpn\n",
+    "/var/run/ovpnclient-ovpnclient1.pid": "1234\n"
+   },
+   "name": "openvpn without ca",
+   "profile": {
+    "code": null,
+    "id": "openvpn:40354_2016",
+    "interface": "ovpnclient1",
+    "server_endpoint": {
+     "host": "198.51.100.7",
+     "port": 1194
+    }
+   },
+   "run": {
+    "uci -q get network.ovpnclient1.config": "40354_2016\n"
+   }
+  }
+ ],
+ "load": [
+  [
+   null,
+   false,
+   0
+  ],
+  [
+   "",
+   true,
+   0
+  ],
+  [
+   "{",
+   true,
+   0
+  ],
+  [
+   "[]",
+   true,
+   0
+  ],
+  [
+   "{\"schema\":2,\"records\":{}}",
+   true,
+   0
+  ],
+  [
+   "{\"schema\":true,\"records\":{}}",
+   true,
+   0
+  ],
+  [
+   "{\"schema\":1,\"records\":[]}",
+   true,
+   0
+  ],
+  [
+   "{\"schema\":1,\"records\":{}}",
+   false,
+   0
+  ],
+  [
+   "{\"schema\":1.0,\"records\":{}}",
+   false,
+   0
+  ],
+  [
+   "{\"schema\":1,\"records\":{\"a\":{\"profile\":\"wireguard:peer_1\",\"host\":\"h\",\"protocol\":\"wireguard\",\"fingerprint\":\"wg:x\",\"observed\":\"wg:x\",\"state\":\"pinned\",\"first_seen\":1,\"last_seen\":2,\"changed_at\":null}}}",
+   false,
+   1
+  ],
+  [
+   "{\"schema\":1,\"records\":{\"a\":{\"profile\":\"wireguard:peer_1\",\"host\":\"h\",\"protocol\":\"wireguard\",\"fingerprint\":\"wg:x\",\"observed\":\"wg:x\",\"state\":\"weird\",\"first_seen\":1,\"last_seen\":2}}}",
+   true,
+   0
+  ],
+  [
+   "{\"schema\":1,\"records\":{\"a\":{\"profile\":\"wireguard:peer_1\",\"host\":\"\",\"protocol\":\"wireguard\",\"fingerprint\":\"wg:x\",\"observed\":\"wg:x\",\"state\":\"pinned\",\"first_seen\":1,\"last_seen\":2}}}",
+   true,
+   0
+  ],
+  [
+   "{\"schema\":1,\"records\":{\"a\":{\"profile\":\"wireguard:peer_1\",\"host\":\"h\",\"protocol\":\"wireguard\",\"fingerprint\":\"wg:x\",\"observed\":\"wg:x\",\"state\":\"pinned\",\"first_seen\":\"1\",\"last_seen\":2}}}",
+   true,
+   0
+  ],
+  [
+   "{\"schema\":1,\"records\":{\"a\":{\"profile\":\"wireguard:peer_1\",\"host\":\"h\",\"protocol\":\"wireguard\",\"fingerprint\":\"wg:x\",\"observed\":\"wg:x\",\"state\":\"changed\",\"first_seen\":1,\"last_seen\":2,\"changed_at\":true}}}",
+   true,
+   0
+  ]
+ ],
+ "mode": [
+  [
+   null,
+   "warn"
+  ],
+  [
+   "",
+   "warn"
+  ],
+  [
+   "config main 'main'\n\toption server_key_pin 'enforce'\n",
+   "enforce"
+  ],
+  [
+   "\toption server_key_pin off\n",
+   "off"
+  ],
+  [
+   "\toption server_key_pin 'warn'\n",
+   "warn"
+  ],
+  [
+   "\toption server_key_pin 'strict'\n",
+   "warn"
+  ],
+  [
+   "\toption server_key_pin 'enforce'\r\n",
+   "warn"
+  ],
+  [
+   "#\toption server_key_pin 'enforce'\n",
+   "warn"
+  ],
+  [
+   "\toption server_key_pin 'off'\n\toption server_key_pin 'enforce'\n",
+   "enforce"
+  ],
+  [
+   "\toption server_key_pinned 'enforce'\n",
+   "warn"
+  ],
+  [
+   "option server_key_pin 'ENFORCE'\n",
+   "warn"
+  ]
+ ],
+ "ovpn_parts": [
+  [
+   "client\nremote VPN.Example.com 1194 udp\nremote second.example.com 443\n<ca>\nX\n</ca>\n",
+   true,
+   null,
+   "vpn.example.com"
+  ],
+  [
+   "client\nca \"/etc/openvpn/ca one.crt\"\n",
+   false,
+   "/etc/openvpn/ca",
+   null
+  ],
+  [
+   "ca 'keys/ca.crt'\nremote 10.0.0.1\n",
+   false,
+   "keys/ca.crt",
+   "10.0.0.1"
+  ],
+  [
+   "remote bad_host! 1194\nremote ok.example 1\n",
+   false,
+   null,
+   "ok.example"
+  ],
+  [
+   "# remote commented.example\n;ca x\nremote\n",
+   false,
+   null,
+   null
+  ],
+  [
+   null,
+   false,
+   null,
+   null
+  ],
+  [
+   "<ca>\nunterminated",
+   false,
+   null,
+   null
+  ]
+ ],
+ "pins": [
+  {
+   "files": {
+    "/etc/config/homensai_vpn": "config main 'main'\n",
+    "/var/run/homensai-vpn/x": null
+   },
+   "name": "NordVPN pool rotation is first use, same server new key is a change",
+   "note": "step 9 applies the accept request and observes the accepted key KC again: no event besides ACCEPTED",
+   "run": {
+    "uci -q get network.wgclient1.config": "peer_2000\n",
+    "uci -q show wireguard.peer_2000": "wireguard.peer_2000=peers\nwireguard.peer_2000.name='de1001.nordvpn.com'\n",
+    "wg show wgclient1 endpoints": "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t185.1.1.1:51820\n"
+   },
+   "steps": [
+    {
+     "events": [
+      "SERVER-KEY-PINNED"
+     ],
+     "flash": 1,
+     "mode": "warn",
+     "now": 1000,
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "185.1.1.1",
+        "port": 51820
+       }
+      }
+     ]
+    },
+    {
+     "events": [],
+     "flash": 1,
+     "mode": "warn",
+     "now": 1100,
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "185.1.1.1",
+        "port": 51820
+       }
+      }
+     ],
+     "set_run": {
+      "wg show wgclient1 endpoints": "Zm9vYmFyYmF6cXV4cXV1eGNvcmdlZ3JhdWx0Z2FycGg=\t185.1.1.1:51820\n"
+     }
+    },
+    {
+     "events": [],
+     "flash": 1,
+     "mode": "warn",
+     "now": 1150,
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "185.1.1.2",
+        "port": 51820
+       }
+      }
+     ],
+     "set_run": {
+      "wg show wgclient1 endpoints": "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t185.1.1.2:51820\n"
+     }
+    },
+    {
+     "events": [
+      "SERVER-KEY-PINNED"
+     ],
+     "flash": 1,
+     "mode": "warn",
+     "now": 1300,
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "185.2.2.2",
+        "port": 51820
+       }
+      }
+     ],
+     "set_run": {
+      "uci -q show wireguard.peer_2000": "wireguard.peer_2000=peers\nwireguard.peer_2000.name='de1002.nordvpn.com'\n",
+      "wg show wgclient1 endpoints": "Bz7Q0mYk4sV8pT2xR6wN1cL5dH9fJ3gA0eU7iO4yK2w=\t185.2.2.2:51820\n"
+     }
+    },
+    {
+     "events": [],
+     "flash": 2,
+     "mode": "warn",
+     "now": 1700,
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "185.2.2.2",
+        "port": 51820
+       }
+      }
+     ]
+    },
+    {
+     "events": [
+      "SERVER-KEY-CHANGED"
+     ],
+     "flash": 3,
+     "gate": [
+      [
+       "\toption server_key_pin 'enforce'\n",
+       [
+        "wireguard:peer_2000",
+        "openvpn:1_2"
+       ],
+       "SERVER-KEY-UNACCEPTED"
+      ],
+      [
+       "\toption server_key_pin 'warn'\n",
+       [
+        "wireguard:peer_2000"
+       ],
+       null
+      ],
+      [
+       "\toption server_key_pin 'enforce'\n",
+       [
+        "openvpn:1_2"
+       ],
+       null
+      ]
+     ],
+     "mode": "warn",
+     "now": 2400,
+     "public": {
+      "changed": [
+       {
+        "changed_at": 2400,
+        "host": "de1002.nordvpn.com",
+        "observed": "wg:hT8kR3mN6pQ1sV4xZ7cB0fG2jL5wY9aD3eH6iK8nM1A=",
+        "pinned": "wg:Bz7Q0mYk4sV8pT2xR6wN1cL5dH9fJ3gA0eU7iO4yK2w=",
+        "profile": "wireguard:peer_2000"
+       }
+      ],
+      "code": "SERVER-KEY-CHANGED",
+      "mode": "warn",
+      "pinned": 1
+     },
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "185.2.2.2",
+        "port": 51820
+       }
+      }
+     ],
+     "set_run": {
+      "wg show wgclient1 endpoints": "hT8kR3mN6pQ1sV4xZ7cB0fG2jL5wY9aD3eH6iK8nM1A=\t185.2.2.2:51820\n"
+     }
+    },
+    {
+     "events": [],
+     "flash": 3,
+     "mode": "warn",
+     "now": 2500,
+     "rows": [
+      {
+       "code": "VPN-003",
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "9.9.9.9",
+        "port": 1
+       }
+      }
+     ],
+     "set_run": {
+      "wg show wgclient1 endpoints": "Zm9vYmFyYmF6cXV4cXV1eGNvcmdlZ3JhdWx0Z2FycGg=\t9.9.9.9:1\n"
+     }
+    },
+    {
+     "events": [],
+     "flash": 3,
+     "mode": "warn",
+     "now": 2600,
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "9.9.9.9",
+        "port": 1
+       }
+      }
+     ],
+     "set_run": {
+      "uci -q get network.wgclient1.config": "peer_9\n"
+     }
+    },
+    {
+     "absent": [
+      "/var/run/homensai-vpn/server-keys-accept.json"
+     ],
+     "events": [
+      "SERVER-KEY-ACCEPTED"
+     ],
+     "flash": 4,
+     "mode": "warn",
+     "now": 2700,
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "9.9.9.8",
+        "port": 1
+       }
+      }
+     ],
+     "set_files": {
+      "/var/run/homensai-vpn/server-keys-accept.json": "{\"action\":\"accept\",\"profile\":\"wireguard:peer_2000\",\"time\":1}"
+     },
+     "set_run": {
+      "uci -q get network.wgclient1.config": "peer_2000\n",
+      "wg show wgclient1 endpoints": "hT8kR3mN6pQ1sV4xZ7cB0fG2jL5wY9aD3eH6iK8nM1A=\t9.9.9.8:1\n"
+     }
+    }
+   ]
+  },
+  {
+   "files": {
+    "/etc/openvpn/ovpn/x.ovpn": "client\nremote vpn.example.com 1194 udp\n<ca>\n@CA1@</ca>\n",
+    "/proc/1234/cmdline": "openvpn\u0000--cd\u0000/etc/openvpn\u0000--dev\u0000ovpnclient1\u0000--config\u0000ovpn/x.ovpn\u0000",
+    "/proc/1234/comm": "openvpn\n",
+    "/var/run/ovpnclient-ovpnclient1.pid": "1234\n"
+   },
+   "name": "OpenVPN CA change, forget, re-pin; off mode observes nothing",
+   "run": {
+    "uci -q get network.ovpnclient1.config": "40354_2016\n"
+   },
+   "steps": [
+    {
+     "events": [],
+     "flash": 0,
+     "mode": "off",
+     "now": 50,
+     "public": {
+      "mode": "off"
+     },
+     "rows": [
+      {
+       "code": null,
+       "id": "openvpn:40354_2016",
+       "interface": "ovpnclient1",
+       "server_endpoint": {
+        "host": "198.51.100.7",
+        "port": 1194
+       }
+      }
+     ]
+    },
+    {
+     "events": [
+      "SERVER-KEY-PINNED"
+     ],
+     "flash": 1,
+     "mode": "enforce",
+     "now": 100,
+     "rows": [
+      {
+       "code": null,
+       "id": "openvpn:40354_2016",
+       "interface": "ovpnclient1",
+       "server_endpoint": {
+        "host": "198.51.100.7",
+        "port": 1194
+       }
+      }
+     ]
+    },
+    {
+     "events": [
+      "SERVER-KEY-CHANGED"
+     ],
+     "flash": 2,
+     "mode": "enforce",
+     "now": 800,
+     "rows": [
+      {
+       "code": null,
+       "id": "openvpn:40354_2016",
+       "interface": "ovpnclient1",
+       "server_endpoint": {
+        "host": "198.51.100.7",
+        "port": 1194
+       }
+      }
+     ],
+     "set_files": {
+      "/etc/openvpn/ovpn/x.ovpn": "client\nremote vpn.example.com 1194 udp\n<ca>\n@CA2@</ca>\n"
+     }
+    },
+    {
+     "events": [
+      "SERVER-KEY-FORGOTTEN"
+     ],
+     "flash": 3,
+     "mode": "enforce",
+     "now": 900,
+     "rows": [
+      {
+       "code": null,
+       "id": "openvpn:40354_2016",
+       "interface": "ovpnclient1",
+       "server_endpoint": {
+        "host": "198.51.100.7",
+        "port": 1194
+       }
+      }
+     ],
+     "set_files": {
+      "/var/run/homensai-vpn/server-keys-accept.json": "{\"action\":\"forget\",\"profile\":\"*\",\"time\":1}"
+     }
+    },
+    {
+     "events": [
+      "SERVER-KEY-PINNED"
+     ],
+     "flash": 4,
+     "mode": "enforce",
+     "now": 1600,
+     "public": {
+      "changed": [],
+      "code": null,
+      "mode": "enforce",
+      "pinned": 1
+     },
+     "rows": [
+      {
+       "code": null,
+       "id": "openvpn:40354_2016",
+       "interface": "ovpnclient1",
+       "server_endpoint": {
+        "host": "198.51.100.7",
+        "port": 1194
+       }
+      }
+     ]
+    },
+    {
+     "events": [],
+     "flash": 4,
+     "mode": "enforce",
+     "now": 2300,
+     "rows": [
+      {
+       "code": null,
+       "id": "openvpn:40354_2016",
+       "interface": "ovpnclient1",
+       "server_endpoint": {
+        "host": "198.51.100.7",
+        "port": 1194
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "files": {
+    "/etc/homensai-vpn/server-keys.json": "{\"schema\":1,\"records\":{}}",
+    "/var/run/homensai-vpn/server-keys.json": "{\"schema\":1,\"records\":[]}"
+   },
+   "name": "damaged RAM state is reported once and kept for diagnosis",
+   "run": {},
+   "steps": [
+    {
+     "events": [
+      "SERVER-KEY-STATE-CORRUPT"
+     ],
+     "file": [
+      "/var/run/homensai-vpn/server-keys.corrupt.json",
+      "{\"schema\":1,\"records\":[]}"
+     ],
+     "flash": 1,
+     "mode": "warn",
+     "now": 10,
+     "rows": []
+    },
+    {
+     "events": [],
+     "flash": 1,
+     "mode": "warn",
+     "now": 20,
+     "rows": []
+    }
+   ]
+  },
+  {
+   "files": {
+    "/etc/homensai-vpn/server-keys.json": "{\"schema\":1,\"records\":{\"wireguard:peer_2000|de1001.nordvpn.com\":{\"profile\":\"wireguard:peer_2000\",\"host\":\"de1001.nordvpn.com\",\"protocol\":\"wireguard\",\"fingerprint\":\"wg:q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\",\"observed\":\"wg:q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\",\"state\":\"pinned\",\"first_seen\":1,\"last_seen\":1,\"changed_at\":null,\"accepted_at\":null}}}"
+   },
+   "name": "flash state is used when RAM has none (after a reboot)",
+   "run": {
+    "uci -q get network.wgclient1.config": "peer_2000\n",
+    "uci -q show wireguard.peer_2000": "wireguard.peer_2000=peers\nwireguard.peer_2000.name='de1001.nordvpn.com'\n",
+    "wg show wgclient1 endpoints": "Bz7Q0mYk4sV8pT2xR6wN1cL5dH9fJ3gA0eU7iO4yK2w=\t185.1.1.1:51820\n"
+   },
+   "steps": [
+    {
+     "events": [
+      "SERVER-KEY-CHANGED"
+     ],
+     "flash": 1,
+     "mode": "warn",
+     "now": 5000,
+     "rows": [
+      {
+       "code": null,
+       "id": "wireguard:peer_2000",
+       "interface": "wgclient1",
+       "server_endpoint": {
+        "host": "185.1.1.1",
+        "port": 51820
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "sequence": [
+  {
+   "events": [
+    "SERVER-KEY-PINNED"
+   ],
+   "live": {
+    "fingerprint": "wg:A",
+    "host": "a.example",
+    "identity": "wireguard:peer_1|a.example",
+    "profile": "wireguard:peer_1",
+    "protocol": "wireguard"
+   },
+   "now": 100,
+   "op": "observe",
+   "record": [
+    "wireguard:peer_1|a.example",
+    "pinned",
+    "wg:A",
+    "wg:A"
+   ],
+   "urgency": "new"
+  },
+  {
+   "events": [],
+   "live": {
+    "fingerprint": "wg:A",
+    "host": "a.example",
+    "identity": "wireguard:peer_1|a.example",
+    "profile": "wireguard:peer_1",
+    "protocol": "wireguard"
+   },
+   "now": 200,
+   "op": "observe",
+   "record": [
+    "wireguard:peer_1|a.example",
+    "pinned",
+    "wg:A",
+    "wg:A"
+   ],
+   "urgency": null
+  },
+  {
+   "events": [
+    "SERVER-KEY-PINNED"
+   ],
+   "live": {
+    "fingerprint": "wg:B",
+    "host": "b.example",
+    "identity": "wireguard:peer_1|b.example",
+    "profile": "wireguard:peer_1",
+    "protocol": "wireguard"
+   },
+   "now": 300,
+   "op": "observe",
+   "record": [
+    "wireguard:peer_1|b.example",
+    "pinned",
+    "wg:B",
+    "wg:B"
+   ],
+   "urgency": "new"
+  },
+  {
+   "expect": null,
+   "mode": "enforce",
+   "op": "blocker",
+   "profiles": [
+    "wireguard:peer_1"
+   ]
+  },
+  {
+   "events": [
+    "SERVER-KEY-CHANGED"
+   ],
+   "live": {
+    "fingerprint": "wg:C",
+    "host": "a.example",
+    "identity": "wireguard:peer_1|a.example",
+    "profile": "wireguard:peer_1",
+    "protocol": "wireguard"
+   },
+   "now": 400,
+   "op": "observe",
+   "record": [
+    "wireguard:peer_1|a.example",
+    "changed",
+    "wg:A",
+    "wg:C"
+   ],
+   "urgency": "urgent"
+  },
+  {
+   "events": [],
+   "live": {
+    "fingerprint": "wg:C",
+    "host": "a.example",
+    "identity": "wireguard:peer_1|a.example",
+    "profile": "wireguard:peer_1",
+    "protocol": "wireguard"
+   },
+   "now": 450,
+   "op": "observe",
+   "record": [
+    "wireguard:peer_1|a.example",
+    "changed",
+    "wg:A",
+    "wg:C"
+   ],
+   "urgency": null
+  },
+  {
+   "events": [
+    "SERVER-KEY-CHANGED"
+   ],
+   "live": {
+    "fingerprint": "wg:D",
+    "host": "a.example",
+    "identity": "wireguard:peer_1|a.example",
+    "profile": "wireguard:peer_1",
+    "protocol": "wireguard"
+   },
+   "now": 460,
+   "op": "observe",
+   "record": [
+    "wireguard:peer_1|a.example",
+    "changed",
+    "wg:A",
+    "wg:D"
+   ],
+   "urgency": "urgent"
+  },
+  {
+   "events": [],
+   "live": {
+    "fingerprint": "wg:A",
+    "host": "a.example",
+    "identity": "wireguard:peer_1|a.example",
+    "profile": "wireguard:peer_1",
+    "protocol": "wireguard"
+   },
+   "now": 470,
+   "op": "observe",
+   "record": [
+    "wireguard:peer_1|a.example",
+    "changed",
+    "wg:A",
+    "wg:A"
+   ],
+   "urgency": null
+  },
+  {
+   "events": [
+    "SERVER-KEY-CHANGED"
+   ],
+   "live": {
+    "fingerprint": "wg:D",
+    "host": "a.example",
+    "identity": "wireguard:peer_1|a.example",
+    "profile": "wireguard:peer_1",
+    "protocol": "wireguard"
+   },
+   "now": 480,
+   "op": "observe",
+   "record": [
+    "wireguard:peer_1|a.example",
+    "changed",
+    "wg:A",
+    "wg:D"
+   ],
+   "urgency": "urgent"
+  },
+  {
+   "expect": "SERVER-KEY-UNACCEPTED",
+   "mode": "enforce",
+   "op": "blocker",
+   "profiles": [
+    "openvpn:40354_2016",
+    "wireguard:peer_1"
+   ]
+  },
+  {
+   "expect": null,
+   "mode": "enforce",
+   "op": "blocker",
+   "profiles": [
+    "openvpn:40354_2016"
+   ]
+  },
+  {
+   "expect": null,
+   "mode": "warn",
+   "op": "blocker",
+   "profiles": [
+    "wireguard:peer_1"
+   ]
+  },
+  {
+   "expect": null,
+   "mode": "off",
+   "op": "blocker",
+   "profiles": [
+    "wireguard:peer_1"
+   ]
+  },
+  {
+   "expect": {
+    "changed": [
+     {
+      "changed_at": 400,
+      "host": "a.example",
+      "observed": "wg:D",
+      "pinned": "wg:A",
+      "profile": "wireguard:peer_1"
+     }
+    ],
+    "code": "SERVER-KEY-CHANGED",
+    "mode": "warn",
+    "pinned": 1
+   },
+   "mode": "warn",
+   "op": "public"
+  },
+  {
+   "expect": {
+    "mode": "off"
+   },
+   "mode": "off",
+   "op": "public"
+  },
+  {
+   "events": [],
+   "now": 500,
+   "op": "request",
+   "request": {
+    "action": "accept",
+    "profile": "openvpn:40354_2016"
+   },
+   "urgency": null
+  },
+  {
+   "events": [],
+   "now": 500,
+   "op": "request",
+   "request": {
+    "action": "accept",
+    "profile": "wireguard:peer_1;rm"
+   },
+   "urgency": null
+  },
+  {
+   "events": [],
+   "now": 500,
+   "op": "request",
+   "request": {
+    "action": "delete",
+    "profile": "*"
+   },
+   "urgency": null
+  },
+  {
+   "events": [],
+   "now": 500,
+   "op": "request",
+   "request": [
+    "accept"
+   ],
+   "urgency": null
+  },
+  {
+   "events": [],
+   "now": 505,
+   "op": "request",
+   "request": {
+    "action": "accept",
+    "observed": "wg:C",
+    "profile": "wireguard:peer_1"
+   },
+   "urgency": null
+  },
+  {
+   "events": [],
+   "now": 506,
+   "op": "request",
+   "request": {
+    "action": "accept",
+    "observed": 7,
+    "profile": "wireguard:peer_1"
+   },
+   "urgency": null
+  },
+  {
+   "events": [],
+   "now": 507,
+   "op": "request",
+   "request": {
+    "action": "accept",
+    "observed": "",
+    "profile": "wireguard:peer_1"
+   },
+   "urgency": null
+  },
+  {
+   "events": [
+    "SERVER-KEY-ACCEPTED"
+   ],
+   "now": 510,
+   "op": "request",
+   "record": [
+    "wireguard:peer_1|a.example",
+    "pinned",
+    "wg:D",
+    "wg:D"
+   ],
+   "request": {
+    "action": "accept",
+    "observed": "wg:D",
+    "profile": "wireguard:peer_1"
+   },
+   "urgency": "urgent"
+  },
+  {
+   "events": [],
+   "now": 520,
+   "op": "request",
+   "request": {
+    "action": "accept",
+    "profile": "*"
+   },
+   "urgency": null
+  },
+  {
+   "expect": null,
+   "mode": "enforce",
+   "op": "blocker",
+   "profiles": [
+    "wireguard:peer_1"
+   ]
+  },
+  {
+   "events": [
+    "SERVER-KEY-PINNED"
+   ],
+   "live": {
+    "fingerprint": "ovpn-ca:013df5e67e3b22919c965872d16f2d1f9554402fa6d5efa8f4c39cca0a65d680",
+    "host": "vpn.example.com",
+    "identity": "openvpn:40354_2016|vpn.example.com",
+    "profile": "openvpn:40354_2016",
+    "protocol": "openvpn"
+   },
+   "now": 600,
+   "op": "observe",
+   "urgency": "new"
+  },
+  {
+   "events": [
+    "SERVER-KEY-FORGOTTEN",
+    "SERVER-KEY-FORGOTTEN"
+   ],
+   "now": 700,
+   "op": "request",
+   "request": {
+    "action": "forget",
+    "profile": "wireguard:peer_1"
+   },
+   "urgency": "urgent"
+  },
+  {
+   "expect": {
+    "changed": [],
+    "code": null,
+    "mode": "enforce",
+    "pinned": 1
+   },
+   "mode": "enforce",
+   "op": "public"
+  }
+ ],
+ "wg": [
+  [
+   "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t1.2.3.4:51820\n",
+   "wg:q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E="
+  ],
+  [
+   "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t(none)\n",
+   "wg:q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E="
+  ],
+  [
+   "\n  q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=  [2001:db8::1]:51820  \n\n",
+   "wg:q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E="
+  ],
+  [
+   "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t1.2.3.4:51820\nBz7Q0mYk4sV8pT2xR6wN1cL5dH9fJ3gA0eU7iO4yK2w=\t5.6.7.8:51820\n",
+   null
+  ],
+  [
+   "",
+   null
+  ],
+  [
+   null,
+   null
+  ],
+  [
+   "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0B=\t1.2.3.4:51820\n",
+   null
+  ],
+  [
+   "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\n",
+   null
+  ],
+  [
+   "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t1.2.3.4:51820\textra\n",
+   null
+  ],
+  [
+   "-3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\t1.2.3.4:1\n",
+   null
+  ],
+  [
+   "q3Yp1E6rM2u1Lr0m8X4h6c8w2T5fW1kJ9Zx0bVnAs0E=\u001c\t1.2.3.4:1\n",
+   null
+  ]
+ ],
+ "wg_host": [
+  [
+   "wireguard.peer_2000=peers\nwireguard.peer_2000.name='DE1001.nordvpn.com'\n",
+   "peer_2000",
+   "de1001.nordvpn.com"
+  ],
+  [
+   "wireguard.peer_7=peers\nwireguard.peer_7.end_point='Server.Example.net:51820'\nwireguard.peer_7.name='my home'\n",
+   "peer_7",
+   "server.example.net"
+  ],
+  [
+   "wireguard.peer_7=peers\nwireguard.peer_7.end_point='203.0.113.9:51820'\n",
+   "peer_7",
+   "203.0.113.9"
+  ],
+  [
+   "wireguard.peer_7=peers\nwireguard.peer_7.name='not a host'\n",
+   "peer_7",
+   null
+  ],
+  [
+   "wireguard.peer_8=peers\nwireguard.peer_8.name='x.example.com'\n",
+   "peer_7",
+   null
+  ],
+  [
+   null,
+   "peer_7",
+   null
+  ]
+ ]
+}

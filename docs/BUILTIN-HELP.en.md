@@ -22,6 +22,333 @@ Do not request secrets in chat or print full configs. This is diagnosis only: no
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
 ```
 
+<a id="install-guide"></a>
+## Install, upgrade, roll back or remove: step-by-step guide
+
+You want to install the program, upgrade it, go back to the previous version or remove it yourself, with commands you can copy. Reading it changes nothing.
+
+### Before you start
+
+HomenS.AI Auto VPN is an application for a GL.iNet router. It watches two VPN connections that are already set up on the router and, only after you switch Auto on, moves traffic to the reserve when the primary fails. The `.ipk` file is an application package, not router firmware.
+
+There are two ways. Do it yourself with the numbered steps below, or let an AI agent with a terminal on your computer (Codex, Claude Code) do the steps for you: the last section and the Help topic «Prompt for your AI agent» contain a ready prompt with strict safety rules.
+
+In the commands replace `ROUTER_ADDRESS` with the address you use to open your router admin page, and `VERSION` with the exact version from the release, for example the file name `homensai-auto-vpn_VERSION_all.ipk` becomes the real file name you downloaded. Sections 3 and 4 and the `scp` copy run on your computer (PowerShell on Windows, Terminal on macOS or Linux); all other commands run on the router after `ssh root@ROUTER_ADDRESS` has connected.
+
+### 1. What you need
+
+1. A supported router. Continuous Auto is documented for the GL.iNet GL-MT3000 (Beryl AX) with GL.iNet firmware 4.11.0. On the GL-MT6000 (Flint 2) with 4.11.0 the program installs and monitors, but continuous Auto there is not accepted yet. Other models and firmware are not supported; the package architecture `all` does not make them supported.
+
+2. Two VPN connections already set up in the GL.iNet admin panel → VPN (WireGuard or OpenVPN clients): a primary and a reserve. They must be two different clients; two servers inside one client are not two channels. Monitoring works without them; Auto needs both.
+
+3. At least 20 MiB of free writable flash on the router. About 8 MB of it keeps a verified copy of the installed program for self-repair and for the automatic rollback of a damaged upgrade.
+
+4. Internet on the router, if missing dependencies must be installed from the firmware package lists.
+
+5. A computer with an SSH client: Windows 10/11 (built-in OpenSSH, PowerShell), macOS or Linux (Terminal). Without SSH there is a LuCI upload path with fewer checks (section 6).
+
+6. The router administrator (root) password. You type it yourself only into the hidden password prompt of the terminal or browser, never into a chat or a document.
+
+7. About 30 minutes and a second way into the router while you work, for example a network cable.
+
+### 2. What is checked and what is refused
+
+`01-preflight.sh` only reads: router model, firmware, dependencies, free and writable storage, the program's own state (Auto off, no unsaved changes, no unfinished switch, no own protection table). It saves a fingerprint of the network, firewall and main routes so that the result can be compared later. It writes only into `/tmp/homensai-kit`.
+
+`02-install.sh` refuses when the size or sha256 differs, when the signature or the release chain is wrong, when Auto is on, when the program's own protection table is still present, when the program has unsaved settings changes, or when preflight was not run. It never uses force flags.
+
+The package itself refuses to install or upgrade while Auto runs or a recovery is unfinished (`LIFECYCLE-…` codes). On a board other than GL-MT3000 or GL-MT6000 it does not start its services (`MONITOR-ONLY-DEPLOYMENT`). After installation it checks its own files; damaged files block Auto and, on an upgrade, trigger the automatic rollback described in section 9.
+
+In the program, Start of Auto is refused unless the detected model and firmware are supported, the terms are accepted by you, the router preparation checks pass and two channels are chosen. Choosing a model by hand never bypasses these checks.
+
+### 3. Download and verify the package
+
+1. Open the releases page https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases and choose one version. «Pre-release» means a test build. Read its notes: what was verified on a router and what was not.
+
+2. From the same release download: the package `homensai-auto-vpn_VERSION_all.ipk`, its `.sha256` file, and, if the release has them, `homensai-auto-vpn_VERSION_all.ipk.sig` and `CHAIN.jsonl`. Also download «Source code (tar.gz)» of the same release: its `router-test-kit` folder holds the install scripts. Never mix files from different versions.
+
+3. Compute the checksum on Windows (PowerShell, in the download folder):
+
+   ```text
+   Get-FileHash .\homensai-auto-vpn_VERSION_all.ipk -Algorithm SHA256
+   ```
+
+4. On Linux:
+
+   ```text
+   sha256sum homensai-auto-vpn_VERSION_all.ipk
+   ```
+
+5. On macOS:
+
+   ```text
+   shasum -a 256 homensai-auto-vpn_VERSION_all.ipk
+   ```
+
+6. The 64-character value must equal the value in the `.sha256` file and in the release notes (PowerShell prints capital letters; that does not matter). Compare the file size too when the notes give it. On any difference delete the file, download it again and do not install it.
+
+7. Signed releases carry `.ipk.sig` and `CHAIN.jsonl`. The router checks both with its own `usign` in section 5 before anything is changed. On a first installation the script trusts the release keys inside the kit, so compare their full fingerprints with the release page. Published fingerprints (03.11.2026): main key `701cdf098a0f849f` → `af551e8dadc9a871670704f85db928788d173773a5770de225098de33d094add`; reserve key `a1c06016584475fa` → `cb110c9917360178de0b0d98d9763c904c80f4417234674214700ff6b58fd0e7`. To compute one from the unpacked source archive (Linux, macOS or Git Bash):
+
+   ```text
+   sed -n 2p router/files/etc/homensai-vpn/keys/701cdf098a0f849f | tr -d '\r\n' | sha256sum
+   ```
+
+8. Releases published before signing have no `.sig`. Then only the checksum protects the package and the install script needs `--allow-unsigned`. Use that option only for such a release, never to skip a failed check.
+
+### 4. Make a backup
+
+1. Windows (the `cmd /c` wrapper keeps the binary archive intact):
+
+   ```text
+   cmd /c "ssh root@ROUTER_ADDRESS sysupgrade -b - > router-backup.tar.gz"
+   ```
+
+2. Linux or macOS:
+
+   ```text
+   ssh root@ROUTER_ADDRESS 'sysupgrade -b -' > router-backup.tar.gz
+   ```
+
+3. Check that the archive opens; the list must show files such as `etc/config/network`:
+
+   ```text
+   tar -tzf router-backup.tar.gz
+   ```
+
+4. Without SSH: LuCI → System → Backup / Flash Firmware → «Generate archive». Use only the backup button on that page, never its firmware flashing part.
+
+5. `sysupgrade -b` only exports settings; it never flashes. The archive contains passwords and VPN keys: keep it encrypted and private, never in Git, a chat or a public folder.
+
+### 5. Install over SSH (recommended)
+
+1. Connect. At the first connection compare the host key with trusted router information before accepting it; type the password only into the hidden prompt. If a saved key changed, stop and find out why (Help topic «How to connect by SSH»).
+
+   ```text
+   ssh root@ROUTER_ADDRESS
+   ```
+
+2. On the router, make sure it is the intended router (read-only). `board_name` `glinet,mt3000-snand` means GL-MT3000, `glinet,gl-mt6000` means GL-MT6000; the second command prints the firmware, the third the installed version of the program (nothing for a first installation).
+
+   ```text
+   ubus call system board; cat /etc/glversion; opkg status homensai-auto-vpn | grep Version
+   ```
+
+3. On your computer, in the folder with the downloads and the unpacked source archive, copy the files into `/tmp` of the router. Leave out `.sig` and `CHAIN.jsonl` if the release has none. If `scp` reports that `sftp-server` is missing, add `-O` right after `scp`. `/tmp` lives in memory and is cleared by a reboot.
+
+   ```text
+   scp homensai-auto-vpn_VERSION_all.ipk homensai-auto-vpn_VERSION_all.ipk.sig CHAIN.jsonl router-test-kit/01-preflight.sh router-test-kit/02-install.sh router-test-kit/03-verify.sh router-test-kit/04-uninstall.sh root@ROUTER_ADDRESS:/tmp/
+   ```
+
+4. On the router, check the checksum of the copied package again; it must equal the value from section 3.
+
+   ```text
+   sha256sum /tmp/homensai-auto-vpn_VERSION_all.ipk
+   ```
+
+5. On the router, run the read-only preflight. It ends with `READY to continue` or `NOT READY, fix FAIL lines`.
+
+   ```text
+   sh /tmp/01-preflight.sh
+   ```
+
+6. If only `dependency … missing` lines fail, refresh the package lists of the firmware's own feeds and install exactly the missing names (the example name is a placeholder). Do not run `opkg upgrade`, do not add other feeds. Then run preflight again. For any other FAIL line see section 12 and do not continue.
+
+   ```text
+   opkg update && opkg install lua-cjson
+   ```
+
+7. Install. The script checks size, sha256, signature and release chain, makes sure Auto is off, then runs the normal `opkg install` without force flags. For a release published before signing append ` --allow-unsigned`.
+
+   ```text
+   sh /tmp/02-install.sh /tmp/homensai-auto-vpn_VERSION_all.ipk
+   ```
+
+8. Verify. `wait` gives the monitor up to 90 s for the first sample. Every line should be PASS. An exit code 0 of opkg alone does not prove success.
+
+   ```text
+   sh /tmp/03-verify.sh wait
+   ```
+
+9. If verification says that `ubus homensai-vpn status` is unavailable, reload the RPC service, then log out of LuCI and log in again.
+
+   ```text
+   /etc/init.d/rpcd reload
+   ```
+
+### 6. Install through the LuCI page (without SSH)
+
+1. Verify the checksum on your computer first (section 3). This path runs neither the preflight nor the signature check; only the package's own install guards run. Prefer SSH when you can.
+
+2. Open the GL.iNet admin panel → System → Advanced Settings and go to LuCI.
+
+3. LuCI → System → Software: press «Update lists…». It downloads the package lists of the firmware's own feeds and installs nothing; it is needed for dependencies.
+
+4. Press «Upload Package…», choose the `.ipk`, upload it, check the name and version in the dialog and press «Install». Do not tick overwrite or force options. Never load the `.ipk` in «Flash new firmware image»: it is not firmware.
+
+5. Read the output. If it shows an error or a code (`LIFECYCLE-…`, `MONITOR-ONLY-DEPLOYMENT`, a missing dependency), stop and look it up in section 12.
+
+6. Open Services → HomenS.AI Auto VPN and press Ctrl+F5. If the page is empty or old, see the Help topic «The page is old, empty or says the monitor is not running».
+
+### 7. First start: wizard and terms
+
+1. Open LuCI → Services → HomenS.AI Auto VPN and press Ctrl+F5 (Cmd+Shift+R on macOS) so the browser loads the new page.
+
+2. The four-step wizard opens: Router (the detected model and readiness lamps; the model cannot be chosen by hand) → Channels (primary and reserve: two different VPN clients from GL.iNet → VPN) → Behaviour (how fast to switch, router load, optional Telegram) → Terms and start.
+
+3. On the last step press «Save without starting» (Auto stays off) or «Accept terms and turn Auto on» («Turn Auto on» when the terms are already accepted). Only you read and accept the terms; no script, helper or AI agent may accept them for you. Acceptance of the same terms version is remembered on the router.
+
+4. Every step has «Skip — open the interface». Skipping never starts Auto and never accepts the terms.
+
+5. Later the pair is changed in Settings → Channels: primary and reserve (Console view: the Channels tab).
+
+### 8. What runs after installation
+
+Monitoring starts at once and always runs: it checks both channels and keeps the history, traffic and response figures. It cannot be turned off (`MONITOR-ALWAYS-ON`); a page that says monitoring is not running shows an error: press «Restore monitoring», and if it does not come back, reinstall the package.
+
+Auto is off until you start it with its switch or the wizard button, and only when the readiness checks pass. Saving settings never starts Auto.
+
+While Auto runs, a failed primary leads to a switch only after the reserve passes its checks; the return follows the rule you chose. A switch can interrupt open connections. Auto changes only the routing order of the two chosen VPN channels and its own protection table; it does not edit Wi-Fi, DHCP, WAN or the VPN profiles.
+
+Auto that you started comes back by itself after a reboot or a power cut, with all its start checks. Stop cancels that.
+
+### 9. Upgrade to a newer version
+
+1. Read the notes of the new release and make a fresh backup (section 4).
+
+2. Turn Auto off on the page and wait until the page shows Auto off and no recovery running; «accepted» or «queued» is not finished yet. The install script refuses while Auto is on.
+
+3. Download and verify the new package and the kit of the same release (section 3), copy them to `/tmp` and run `01-preflight.sh`, `02-install.sh` and `03-verify.sh wait` as in section 5. Settings, the channel pair, the history and the acceptance of the same terms version are kept.
+
+4. While the package operation runs, the page shows `MAINTENANCE-IN-PROGRESS`: Start and the switching buttons are refused, Stop always works.
+
+5. Press Ctrl+F5, check the installed version, then start Auto yourself if you want it.
+
+   ```text
+   opkg status homensai-auto-vpn | grep Version
+   ```
+
+6. Automatic rollback (packages from 2.1.0-alpha10 on, upcoming; not yet verified on a router): if the new package fails its file self-check during the upgrade, the program restores exactly the previous working version from its verified copy and starts it. Settings, journal and history are not touched; Auto runs again only if you had started it. The page shows `UPGRADE-ROLLED-BACK`: download the package again, verify it and install again. Without a matching copy (`UPGRADE-ROLLBACK-UNAVAILABLE`, `UPGRADE-ROLLBACK-VERSION`, `UPGRADE-ROLLBACK-FAILED`) the service stays off until you install a verified package; less than 8 MB free flash prevents the copy (`INTEGRITY-SNAPSHOT-NO-SPACE`).
+
+### 10. Roll back to the previous version by hand
+
+1. You need the older package and the source archive of its own release (its kit). Verify the package checksum as in section 3.
+
+2. Make a backup (section 4), turn Auto off on the page and wait until it is off.
+
+3. Only when going back from 2.x to an older line (1.x or 0.9): if the file below exists, restore the old history format first. Events recorded after the change to the new format are lost.
+
+   ```text
+   cp /etc/homensai-vpn/native-history.v1.json /etc/homensai-vpn/native-history.json
+   ```
+
+4. Remove the current version. Settings and history stay on the router; the script refuses while Auto or the protection table is active.
+
+   ```text
+   sh /tmp/04-uninstall.sh
+   ```
+
+5. Copy the older package and the scripts of its own kit to `/tmp` (they replace the newer scripts), then run its preflight and install. If a signed kit stops with `CHAIN-DOWNGRADE`, the router remembers a newer release; if you really want to go back, repeat the install command with ` --allow-downgrade` at the end.
+
+   ```text
+   sh /tmp/01-preflight.sh && sh /tmp/02-install.sh /tmp/homensai-auto-vpn_OLDVERSION_all.ipk
+   ```
+
+6. Verify with the old kit. An older version may show the terms again; you accept them yourself.
+
+   ```text
+   sh /tmp/03-verify.sh wait
+   ```
+
+### 11. Remove the program
+
+1. Turn Auto off on the page and wait until it is off.
+
+2. Remove only this application (`opkg remove homensai-auto-vpn` does the same without the extra checks). Shared dependencies such as python3 or lua are never removed: other software may need them.
+
+   ```text
+   sh /tmp/04-uninstall.sh
+   ```
+
+3. opkg can return 0 even when the lifecycle guard refused. Check: an empty result means the package is gone.
+
+   ```text
+   opkg status homensai-auto-vpn
+   ```
+
+4. Settings and history stay in `/etc/config/homensai_vpn` and `/etc/homensai-vpn` for a later reinstall. Delete them only if you want a clean router and keep a backup: they may hold your Telegram token. This cannot be undone.
+
+   ```text
+   rm -f /etc/config/homensai_vpn && rm -rf /etc/homensai-vpn
+   ```
+
+5. If the removal is refused, the message says why (for example an unfinished switch). Do not force it: follow the Help topic «I have no internet» and [router-test-kit/EMERGENCY.md](../router-test-kit/EMERGENCY.md).
+
+### 12. Messages and codes: what to do
+
+Messages of the install scripts and the most frequent codes. Every program code has a full explanation in [ERROR_CODES.md](ERROR_CODES.md) and in the app (Settings → Reference); a code on the page opens its explanation with one click.
+
+| Message or code | What to do |
+|---|---|
+| `STOP: size … / STOP: sha256 …` | The file is damaged or belongs to another version. Download it again from the same release; never edit the expected values in the script. |
+| `KIT-UNAVAILABLE` | The scripts belong to a version that was not released (for example a development branch). Use the kit from the source archive of the same release as the package. |
+| `run 01-preflight.sh first` | Run `sh /tmp/01-preflight.sh` before the install script. |
+| `SIGNATURE-MISSING` | `.ipk.sig` and `CHAIN.jsonl` are not next to the package in `/tmp`. Copy them. `--allow-unsigned` only for a release that has no signature. |
+| `SIGNATURE-INVALID, SIGNATURE-KEY-UNTRUSTED, SIGNATURE-KEY-REVOKED` | The package is not signed by a trusted release key. Do not install it; download from the official releases page again and report the case. |
+| `SIGNATURE-TOOL-MISSING` | The router has no `usign` (it is part of the stock firmware). Stop and ask for help; do not install other tools to bypass it. |
+| `CHAIN-HEAD-MISMATCH` | The package is not the newest entry of that `CHAIN.jsonl`: files of different releases are mixed. Take all files from one release. |
+| `CHAIN-DOWNGRADE` | This release is older than the history the router remembers. Only for a deliberate rollback: repeat with `--allow-downgrade` (section 10). |
+| `CHAIN-FORK, CHAIN-FORMAT, CHAIN-SEQ-GAP, CHAIN-PREV-MISMATCH, CHAIN-KEY-…` | The release history is damaged or differs from the one installed. Do not install; report it. |
+| `native_enabled=1; stop Auto first, LIFECYCLE-STOP-AUTO-FIRST` | Auto is on. Turn it off on the page and wait until it is off, then repeat. |
+| `owned nft guard present` | The program's own protection table is still active (a recovery is unfinished). Do not delete it by hand first: follow the Help topic «I have no internet» and [router-test-kit/EMERGENCY.md](../router-test-kit/EMERGENCY.md). |
+| `pending uci changes, LIFECYCLE-PENDING-UCI-CHANGES` | The program has unsaved settings changes. Look at them with `uci changes homensai_vpn` and save or discard them deliberately. |
+| `LIFECYCLE-RECOVERY-UNFINISHED and other LIFECYCLE-…` | A switch or recovery is not finished. Wait, read the code explanation; never delete journals to get past it. |
+| `dependency … missing, DEPENDENCY-…, LIFECYCLE-PYTHON-REQUIRED` | Install the named package from the firmware's own feeds (section 5, step 6). |
+| `free writable storage, CONFIG-STORAGE-FREE` | Less than 20 MiB free or the configuration storage is read-only. Free space; never remount or repair the flash by force. |
+| `MONITOR-ONLY-DEPLOYMENT` | The board is not a GL-MT3000 or GL-MT6000. This router is not supported. |
+| `UNSUPPORTED-BOARD, UNSUPPORTED-FIRMWARE, FIRMWARE-UNKNOWN` | Auto is refused on this model or firmware (switching is verified only with GL.iNet 4.11.0); monitoring keeps working. Choosing a model does not bypass it. |
+| `TERMS-NOT-ACCEPTED` | Open the page and accept the terms yourself. |
+| `SERVICE-AUTO-OFF` | Press «Switch the Auto service on» in the Monitoring block; this does not start Auto by itself. |
+| `MAINTENANCE-IN-PROGRESS, MAINTENANCE-INTERRUPTED` | A package operation is running, or it was interrupted. Wait and reload; after an interruption install the package again. |
+| `UPGRADE-ROLLED-BACK, UPGRADE-ROLLBACK-…, UPGRADE-NOT-INSTALLED` | The upgrade was rolled back or could not be finished (section 9). Follow the action of the code in [ERROR_CODES.md](ERROR_CODES.md). |
+| `INTEGRITY-TOOL-MISSING, INTEGRITY-NO-AUTO` | The file self-check cannot run, so Auto is not started; the page and monitoring work. Reinstall the same version. |
+| `ubus homensai-vpn status unavailable` | Run `/etc/init.d/rpcd reload`, log out of LuCI and log in again. |
+
+### 13. Safety rules
+
+The `.ipk` is an application, not firmware: never load it as firmware and never use a factory reset as a shortcut.
+
+No `opkg --force-…` options, no `opkg upgrade` of all packages, no foreign package feeds.
+
+Work only on the intended router and check its model and address before each change. If your home network depends on a GL-MT6000, do not install there unless you deliberately want to: continuous Auto is not accepted on the MT6000.
+
+Backups contain secrets. Never put passwords, tokens, keys or full configuration files into a chat, a screenshot or a public repository.
+
+Never accept the terms or start Auto on someone else's behalf; AI agents must not do it either.
+
+Do not delete the program's journals or protection tables to get unstuck, and do not reorder VPN rules by guess: use Help and [router-test-kit/EMERGENCY.md](../router-test-kit/EMERGENCY.md).
+
+### 14. Let an AI agent do it
+
+If you do not want to type commands, an AI agent with a terminal on your computer (Codex, Claude Code or similar) can do these steps for you. A plain chat without tools cannot install anything.
+
+Copy the prompt from the Help topic «Prompt for your AI agent» (it has a copy button); the same text is in [AI-INSTALL.en.md](AI-INSTALL.en.md) and [AI-INSTALL.ru.md](AI-INSTALL.ru.md) and at the end of the guide files [INSTALL.en.md](INSTALL.en.md) and [INSTALL.ru.md](INSTALL.ru.md).
+
+The prompt makes the agent ask you first, check read-only before changes, make a backup, verify sha256 and the signature, show every command and wait for your yes before each change. It forbids accepting the terms for you, starting Auto, changing unrelated network or firewall settings and bypassing any refusal.
+
+Stay at the computer: type the router password only into the terminal prompt, answer the agent's questions, and press Accept and Start on the page yourself when you want.
+
+[Installation guide](INSTALL.en.md)
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Install, upgrade, roll back or remove: step-by-step guide.
+You want to install the program, upgrade it, go back to the previous version or remove it yourself, with commands you can copy. Reading it changes nothing.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
 <a id="ai-lan-prompt"></a>
 ## Prompt for your AI agent: run the LAN helper
 
@@ -74,11 +401,11 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 
 You want to know exactly when the router checks more often and when it returns to the chosen level.
 
-Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Three-site response measurement: 300, 120, 60, 45 and 30 s. The probe level is set in Settings → Router load (Console: Auto tab). The ping has its own interval in Router load → How response is measured: once a minute by default, from every 10 s to every 5 min. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.
+Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Three-site response measurement: 300, 120, 60, 45 and 30 s. The probe level is set in Settings → Router load (Console: Auto tab). The ping has its own interval in Router load → How response is measured: once a minute by default, from every 10 s to every 5 min. With the "Previous rule" detector a failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s. With the default HMM detector Auto decides by a probability model instead (about 25 s into a long outage); the probe level still sets how often the model receives new evidence.
 
 Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the three-site response every 30 s, whatever level you chose (the ping keeps its own interval). Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.
 
-An episode lasts 10 minutes from the last failed check, but never longer than 20 minutes in total. It ends earlier in effect when its job is done: after Auto switched the channel, or after the failure was confirmed (3 failed checks), further failures no longer extend it.
+An episode lasts 10 minutes from the last failed check, but never longer than 20 minutes in total. It ends earlier in effect when its job is done: after Auto switched the channel, or after the failure was confirmed by the detector, further failures no longer extend it.
 
 When the episode ends, the router returns to your level and writes the result to the decision log: switched (Auto changed the channel), failure-confirmed (the channel really failed), false-alarm (one check failed, then the channel worked) or disabled (you turned the boost off). Then there is a 10-minute rest: no new episode starts, and the same channel cannot start one again until it has passed a check. A channel that stays down therefore cannot keep the router at the fast cadence forever.
 
@@ -128,9 +455,9 @@ You want to know what Auto does after you turn its switch on and what the router
 
 Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. The Auto switch is on «Home» in the Simple view and in the top strip of the Console view; you can turn Auto off during startup too. Auto that you turned on comes back by itself after a reboot or power cut, with every start check; turning it off cancels that.
 
-About these checks: two selected VPN channels; the router checks them itself through each tunnel. How often is set by the probe level in Settings → Router load, Console: Auto tab (every 60 s at level 1 down to every 10 s at level 5); a failure is confirmed after 3 failed checks.
+About these checks: two selected VPN channels; the router checks them itself through each tunnel. How often is set by the probe level in Settings → Router load, Console: Auto tab (every 60 s at level 1 down to every 10 s at level 5); a failure is judged by the detector (by default a probability model; "3 failed checks in a row" only in the Previous rule mode).
 
-Lamp colours are the same in both views (Simple and Console). A channel lamp: green — the channel works (the chip "Traffic here" marks the one carrying your traffic, "Standing by" the other); yellow — it is being checked or a switch is under way; red — it does not respond or its tunnel is off (with the code); grey — no fresh data from the router. The big lamp next to the status line shows the whole VPN: green — the VPN works on the primary; yellow — the reserve is in use, a switch or a check is under way; red — the current channel or both channels fail; grey — no fresh data. The Auto switch says its state in words: Auto is on, Turning Auto on…, Auto is off and so on. "Switch here" appears only on the card of the channel that does not carry traffic.
+Lamp colours are the same in both views (Simple and Console). A channel lamp: green — the channel works (the chip "Traffic here" marks the one carrying your traffic, "Standing by" the other); yellow — it is being checked or a switch is under way; red — it does not respond or its tunnel is off (with the code); grey — no fresh data from the router. The big lamp next to the status line shows only the internet: green — there is internet, through the primary or the reserve, with Auto on or off (on the reserve the status says "Works via the reserve": there is no spare channel until the primary is back); yellow — a switch or a check is under way, or Auto is handling a failed channel (at most 60 s); red — there is no internet (both channels fail, the router itself sees no internet, the channel carrying traffic fails while Auto is off, or it still fails 60 s later); grey — no fresh data (?). The Auto switch is a separate indicator: green — Auto is on; red — manual mode, Auto is off (○), or "Auto stopped: recovery needed" (⚠); yellow — Auto is starting or paused for a speed test (the big lamp stays green: the internet works during the test); grey — no fresh data (?). It says its state in words; when Auto is stopped, the line under it names the reason (HELD, BLOCKED) and the code. Both indicators are also in the header of every page: the "Internet" and "Auto" lamps. "Switch here" appears only on the card of the channel that does not carry traffic.
 
 No internet? Open the Help topic "I have no internet" for the recovery steps (Simple view: "? Help" in the top menu; Console: System tab → Help, codes, training).
 
@@ -264,7 +591,7 @@ Check both channel cards on Home (Console: Channels tab): which one shows "Traff
 
 For an intentional return, press "Switch here" on the Primary card when the primary is confirmed working and the button is available. A manual switch never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails (there is no separate Resume Auto button). If turning Auto off left the router on the reserve, use the same "Switch here" on the Primary card and verify its actual result.
 
-Automatic return depends on the saved return policy and fresh primary health. Hold-reserve preference does not promise automatic return merely because primary probes succeed. After an Auto restart or a package upgrade Auto returns to the primary when it is healthy.
+Automatic return depends on the saved return policy and fresh primary health. The hold-reserve preference keeps a WORKING reserve: it does not return merely because primary probes succeed. If the pinned reserve itself fails (the failure detector and a fresh router probe both say so) while the primary is healthy, Auto rescues the traffic to the primary after the short rescue stability (rescue_stable, default 10 s) under any return policy; an unknown reserve check keeps the hold. After an Auto restart or a package upgrade Auto returns to the primary when it is healthy.
 
 If neither channel works or a recovery command is refused, read its code and use No internet. Do not change stock VPN profiles while Auto owns a transition.
 
@@ -460,7 +787,9 @@ BotFather provides the bot token. Treat it as a password and paste it only into 
 
 Open your new bot (the link at the end of BotFather’s message, https://t.me/<your_bot_username>) and press Start or send /start. A bot cannot write to you first.
 
-To read chat.id without adding a third-party bot, send /start or a message to your own bot, then use this PowerShell recipe locally. It asks for the token privately and prints only IDs. Do not record a transcript or share raw updates. If another bot program consumes updates, stop and inspect that configuration rather than invent an ID.
+Way 1, the simplest: in Telegram open the bot @userinfobot (https://t.me/userinfobot) and press Start. The bot answers with your data; the line Id: 123456789 is your ID. Copy only the digits and paste them into the field Recipient. This is a third-party bot, not ours and not Telegram’s: never send it your token. Your own bot is still needed: open it and press Start once, otherwise Telegram will not let it write to you.
+
+Way 2, without a third-party bot: to read chat.id send /start or a message to your own bot, then use this PowerShell recipe locally. It asks for the token privately and prints only IDs. Do not record a transcript or share raw updates. If another bot program consumes updates, stop and inspect that configuration rather than invent an ID.
 
 ```text
 $privateKey = Read-Host 'Bot token' -AsSecureString
@@ -682,7 +1011,7 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 Help for the first-run wizard (Router → Channels → Behaviour → Terms and start). Reading it saves nothing.
 
 
-The wizard opens by itself on the first visit: Router → Channels → Behaviour → Terms and start, about 2 minutes. The experimental-software agreement and the license terms (HomenSAI Personal & Commercial Source License v1.0) are shown at the last step; previously accepted terms are remembered on this router and are not asked again. Close the wizard without changes (shown once setup is complete) keeps the router settings as they are. Saving never starts Auto by itself; only the start button of the last step or the Auto switch does.
+The wizard opens by itself on the first visit: Router → Channels → Behaviour → Terms and start, about 2 minutes. The experimental-software agreement and the license terms (HomenSAI Personal & Commercial Source License v1.0) are shown at the last step; previously accepted terms are remembered on this router and are not asked again. Close the wizard without changes (shown once setup is complete) keeps the router settings as they are. Saving never starts Auto by itself; only the start button of the last step or the Auto switch does. Every step has Skip - open the interface: it closes the wizard, never starts Auto, never accepts the terms for you, and also works while Auto is running or a pair already exists.
 
 
 Router
@@ -699,7 +1028,7 @@ The wizard lists the VPN clients already configured in the GL.iNet panel → VPN
 
 Behaviour
 
-You can keep the defaults: they were verified on a router. How fast to switch: Calm, Normal (default: 3 failures, 60 s pause, return after 2 checks over 30 s) or Fast; when the primary is healthy again, return automatically or stay on the working reserve; allow a brief drop of calls and downloads, otherwise Auto does not switch during an active session. Router load: probe level 1–5 (Balanced = a check every 20 s) and automatic boost. Telegram is optional: tick Send switch reports, enter the bot token and the recipient. Example: Normal, level 3, Telegram off.
+You can keep the defaults, but they are experimental: selected in simulation and checked by tests on a PC, not validated on hardware (the detection model with threshold 0.8, the 0.90 return condition, the stability times of 120 s and 10 s, the flapping limit of 2 per 60 min, the Fibonacci retry pauses and the check spreading are chosen in simulation and not yet validated on the router; the safe alternative is the Previous rule). How fast to switch: Calm, Normal (default; the model decides when to leave the primary, with the Previous rule 3 failures; 60 s pause, return after 2 checks and 120 s of a stable primary, or 10 s if the reserve itself failed) or Fast; when the primary is healthy again, return automatically or stay on the working reserve; allow a brief drop of calls and downloads: this consent is required to start Auto at all, because every switch can interrupt connections. Router load: probe level 1–5 (Balanced = a check every 20 s) and automatic boost. Telegram is optional: tick Send switch reports, enter the bot token and the recipient. Example: Normal, level 3, Telegram off.
 
 
 
@@ -1261,7 +1590,7 @@ You want to understand the single displayed VPN response metric and gaps.
 
 Every selected VPN checks the same three ordinary HTTPS addresses: Google generate_204, Cloudflare cdn-cgi/trace and Wikipedia. Fresh DNS, TCP, TLS and all HTTP response headers are timed. This is not full webpage rendering, ICMP, or the separate technical DNS/HTTPS health probe.
 
-The displayed value is the arithmetic mean only when all three sites pass. A partial check shows coverage and no number; failures and timeouts are never zero and old metrics are never substituted. The value is fresh for at most45 seconds and is bound to the VPN generation.
+The displayed value is the arithmetic mean only when all three sites pass. A partial check shows coverage and no number; failures and timeouts are never zero and old metrics are never substituted. The value stays fresh for 1.5 × the measurement interval plus 15 seconds (60 s at a 30 s interval, 465 s at the 300 s of probe level 1) and is bound to the VPN generation.
 
 Statistics follow the selected graph window. Mean is weighted by complete three-site cycles; minimum and maximum describe observed minute means. Missing periods and incomplete checks are not filled.
 
@@ -1274,6 +1603,100 @@ Quality and ranking use these same complete website cycles. Resetting statistics
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Three-site response: method and history.
 You want to understand the single displayed VPN response metric and gaps.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
+<a id="about-project"></a>
+## About the program and the project
+
+You want to know who made this program, why it contains so much science and where its ideas come from.
+
+Why this project has so much mathematics, physics and biology. These experiments exist because the author, Serhii Khomenko, has always loved these sciences, even though they never came easily to him. That is why every idea is tested honestly: compared with the previous method in the simulator and on the router, and only what is really better is kept.
+
+HomenS.AI Auto VPN, author and copyright holder Serhii Khomenko / HomenS.AI (homensai.com). Licence: HomenSAI Personal & Commercial Source License v1.0: source-available, free for private non-commercial use of the unmodified program; the licence text governs. Tested on GL-MT3000 with firmware 4.11.0.
+
+Where the idea comes from. Tuning a threshold from a network's own history is a technique of large systems that ordinary home routers do not have: the phi-accrual failure detector (Cassandra, Akka, Hazelcast), anomaly detection in Amazon CloudWatch and Datadog, cake-autorate (OpenWrt), and TUF and Sigstore for signing releases. We took ideas, not their code.
+
+Honestly: each method is known. In an offline search of open sources we did not find the same combination in one home router, but that does not mean nobody did it, and we claim no academic novelty for any single element. Our evidence is a simulator checked against one test router; samples are small and nothing is peer reviewed.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: About the program and the project.
+You want to know who made this program, why it contains so much science and where its ideas come from.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
+<a id="auto-adaptation"></a>
+## Auto-adaptation and the master slider
+
+You want to know how Auto learns your network, what the slider “Fast reaction ↔ No unnecessary switches” does and what the modes Advice, Auto and Manual mean.
+
+The monitor keeps a short diary of your network (failed checks, outage lengths, response by hour, switches and unnecessary switches): about 3 KB a day in memory, saved to flash once a day, 30 days. Every night at 03:30, at the lowest priority, the advisor replays the past days through the same decision code that really runs, for different slider positions, and finds the position with the lowest cost: seconds of downtime plus a 20 s penalty for each unnecessary switch.
+
+Advice (default): the recommendation is shown and you apply it with a button. Auto: the system moves the slider itself, by at most 0.1 at a time and at most once per 20 hours, never during an outage or a switch, and records every change with its reason. Manual: your own values (Custom), the advice is only shown. Auto will become the default for ordinary users only after a 7-day check of the advisor on the MT3000. A suggestion appears only if it saves at least 5 % and the window held at least 5 events; otherwise you see keep or not enough data.
+
+Where: Settings → Auto-adaptation: failure reaction (expert); the Simple view has a card Auto-adaptation with the training. The page shows the chart (downtime per day against unnecessary switches per day), a table of all variables and Fine tuning. Safe limits are checked again by the router. None of this starts Auto.
+
+Not yet verified on the router: the advisor over 7 days, the Auto mode and the slider positions away from the earlier measured ones. The figures shown (downtime, unnecessary switches) are simulator and replay estimates, not measurements.
+
+Recovery time statistics keep an estimate and a guarantee apart. “P95 (estimate)” is the 95th percentile of the recorded sample itself; with fewer than 59 measurements it is shown as ≈P95, and with 19 or fewer it equals the maximum. A separate “P95 upper bound, 95 % confidence” appears only from 59 measurements: with 95 % confidence the true P95 is not above it. The number of measurements n is always shown; an empty value is shown as a dash, never as zero.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Auto-adaptation and the master slider.
+You want to know how Auto learns your network, what the slider “Fast reaction ↔ No unnecessary switches” does and what the modes Advice, Auto and Manual mean.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
+<a id="wan-and-server-keys"></a>
+## Router has no internet (WAN-DOWN) and a changed VPN-server key
+
+Auto shows WAN-DOWN or WAN-RECOVERING, or the page reports that a VPN server shows a different key.
+
+WAN-DOWN means the router itself has no internet (not just a tunnel). Before, every check went through the tunnels, so both channels looked bad. Now the router also sends its own check around the VPN and reads the GL firmware verdict. If the evidence says no internet, Auto keeps the current route instead of jumping to the reserve; if the reserve answers, WAN-DOWN is not declared. After the internet returns Auto waits up to 30 s (WAN-RECOVERING) until the primary proves healthy, even when the reserve is healthy.
+
+Other sensors only raise suspicion and never prove a failure: WireGuard events, and a tunnel that sends but receives nothing. The option wan_recover_grace (0 to 120 s, default 30) sets the wait after WAN returns.
+
+Server key pinning: on the first good look the router remembers the key of each VPN server (WireGuard peer key, or the OpenVPN CA fingerprints) by profile and host name. If the same server shows another key, the event SERVER-KEY-CHANGED appears and the page offers Accept new key (Settings → System and diagnostics → Sensors). The default mode only warns; enforce, set over SSH, refuses a move onto the channel until you accept; leaving it stays allowed. A server change inside a provider pool is a new first use, not an alarm.
+
+Not yet verified on the router: a real cut of only the router's uplink, the format of /proc/gl-kmwan/config, and key reading on the real provider profiles.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Router has no internet (WAN-DOWN) and a changed VPN-server key.
+Auto shows WAN-DOWN or WAN-RECOVERING, or the page reports that a VPN server shows a different key.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
+<a id="release-signing"></a>
+## Signed releases, release chain and recovery codes
+
+You install a package and want to know how its authenticity is checked, or you are the owner and lost the phone with the one-time code.
+
+Releases are signed with the owner's key (Ed25519, the router's stock usign) and entered in the file releases/CHAIN.jsonl, where each record carries the fingerprint of the previous one: deleting or rewriting history breaks the chain. The router remembers the verified chain and refuses a rollback or a fork (CHAIN-DOWNGRADE, CHAIN-FORK). The record's hash is also anchored in Bitcoin through OpenTimestamps as a public proof of the date; confirmation takes hours.
+
+For a user: compare the package hash and signature as written in the installation guide. The first installation trusts the keys inside the kit, so compare their fingerprints with an independent source (the release page).
+
+For the owner: signing asks for a TOTP code from the phone. Without the phone use one of the 10 one-time recovery codes printed on paper (format XXXX-XXXX-XXXX-XXXX-CCCC; the last four characters catch a typo and a typo does not burn the code). Five wrong codes in a row lock the check for 10 minutes. Secrets can move to a new computer in an encrypted archive in the age format.
+
+Not yet verified: the first installation of a signed package on the MT3000 with real keys (the lab used test keys). TOTP and the key store live in one Windows session, so this is procedural, not absolute, protection.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Signed releases, release chain and recovery codes.
+You install a package and want to know how its authenticity is checked, or you are the owner and lost the phone with the one-time code.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md

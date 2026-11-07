@@ -37,7 +37,7 @@ local function decisions(list,check_model)
   local ok,err=pcall(function()
     for _,case in ipairs(list) do
       local env=t.env()
-      local health=case.reserve_health;if none(health) then health=true end
+      local health=case.reserve_health;if none(health) then health=true elseif health=='unknown' then health=nil end
       local asked=fake(env,case.ready_upto,health)
       local consulted={}
       pair.streak=function() return case.reserve_failed end
@@ -84,6 +84,45 @@ t.test('source_ready: the shared cases',function()
     t.eq(T.source_ready(env,canon.object({source=env.backend.selection.source.id}),copy(case.settings),case.reason),case.ready,case.name)
     t.eq(asked,{case.asked},case.name..': stability asked')
   end
+end)
+
+-- Owner decision 07.11.2026 (F-80): hold_reserve holds a WORKING reserve only (Python: test_rescue_stable.HoldReserveRescue).
+local function finish(reserve_health,ready_upto,reason)
+  local env=t.env()
+  -- a real COMMITTED journal (as test_auto_transaction), then without the pair context: the single-switch branch of finish_committed
+  T.attempt(env,env.backend.selection,env.run.wall()+3600,false,{control_revision=env.revision,pair_session_order=canon.array({'r1','r2'}),
+    probe_evidence=canon.object({source_streak_met=true,reserve_streak_met=true,required_failures=3,required_successes=2}),on_dispatch=function() end})
+  local value=t.journal(env);value.pair_transition=nil
+  t.eq(value.phase,'COMMITTED')
+  env.backend.settings.recovery_return_policy='hold_reserve'
+  local asked=fake(env,ready_upto,reserve_health)
+  local rolled=0
+  local rollback=require('rollback');local real=rollback.rollback
+  rollback.rollback=function() rolled=rolled+1 end
+  local ok,returned=pcall(T.finish_committed,env,value,reason)
+  rollback.rollback=real
+  if not ok then error(returned,0) end
+  return returned,value,asked,rolled
+end
+
+t.test('hold_reserve: a reserve proven failed by a fresh probe is rescued to the verified primary',function()
+  local returned,value,asked,rolled=finish(false,10,pair.RESCUE_REASON)
+  t.eq(returned,true);t.eq(rolled,1);t.eq(asked,{10})
+end)
+
+t.test('hold_reserve: proven failed, the primary not yet rescue-stable: held, SOURCE-NOT-VERIFIED',function()
+  local returned,value,asked,rolled=finish(false,9,pair.RESCUE_REASON)
+  t.eq(returned,false);t.eq(rolled,0);t.eq({value.phase,value.reason,value.reserve_healthy},{'HELD-ON-RESERVE','SOURCE-NOT-VERIFIED',false})
+end)
+
+t.test('hold_reserve: unknown reserve health stays a hold, the primary is not asked',function()
+  local returned,value,asked,rolled=finish(nil,600,pair.RESCUE_REASON)
+  t.eq(returned,false);t.eq(rolled,0);t.eq(#asked,0);t.eq({value.phase,value.reason,value.reserve_healthy},{'HELD-ON-RESERVE','OPERATOR-HOLD-RESERVE',false})
+end)
+
+t.test('hold_reserve: a working reserve is held (unchanged)',function()
+  local returned,value,asked,rolled=finish(true,600,'PRIMARY-STABLY-RECOVERED')
+  t.eq(returned,false);t.eq(rolled,0);t.eq(#asked,0);t.eq({value.phase,value.reason,value.reserve_healthy},{'HELD-ON-RESERVE','OPERATOR-HOLD-RESERVE',true})
 end)
 
 t.test('rescue_settings: a copy with the transient marker, never part of the fingerprint',function()

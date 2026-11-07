@@ -3,11 +3,16 @@
 # The page keeps calling the rpcd object 'homensai-vpn' (ACL unchanged); this dispatcher picks who answers.
 # Lua monitor (option lua_monitor '1', marker /var/run/homensai-vpn/lua-monitor.ready present): the read polls,
 # setup_probe/setup_response/setup_stats and the buttons pair_manual/native_start/native_stop/fault_start/fault_cancel and
-# speed_start/speed_cancel/speed_live/telegram_retry
+# speed_start/speed_cancel/speed_live/telegram_retry and the read-only probe_targets (per-target probe log)
 # go to the Lua monitor's ubus object 'homensai-vpn-lua' through two RAM files (request in, canonical JSON reply
-# out) - no Python. When Lua answers {"fallback":true} (it cannot decide a guard without waiting) or its object is
-# missing, agent.py answers with the same request bytes; so does any other unclear outcome of a button (a repeated
-# Start finds its own queued intent, a repeated Stop/cancel only latches again).
+# out) - no Python. When Lua answers {"fallback":true} (it cannot decide a guard without waiting), its object is
+# missing, or it says it did not read the request (RPC-BRIDGE-PATH/RPC-UNKNOWN-METHOD/RPC-BRIDGE-STALE), agent.py
+# answers with the same request bytes. Any other unclear outcome (ubus timeout rc 7, SYSTEM-001 after a failed reply
+# write, any other rc) is answered by reads with agent.py, by setup_* with SETUP-SAVE-UNCONFIRMED and by a button with
+# RPC-BRIDGE-UNCONFIRMED (BH3-02): the queued ubus message may still reach Lua and act, so the click is never replayed
+# through agent.py; the request file is removed (a late delivery finds nothing to read) and the message carries the
+# /proc/uptime second it was sent ("sent"), so Lua drops it when it is processed too late. The page treats
+# RPC-BRIDGE-UNCONFIRMED as a lost answer (F-35): it re-reads the state and offers Retry.
 # Python monitor: read-only page polls and the queue/save buttons are answered by the running monitor
 # (status.sock) through a light client (python3 -I -S, no application imports).
 # Every other call, and any failure of these paths, runs agent.py exactly as before.
@@ -28,20 +33,27 @@ case "$1:$2:$#" in
     call:status:2|call:events:2|call:history:2|call:auto_live:2|call:inventory:2|\
     call:setup_probe:2|call:setup_response:2|call:setup_stats:2|call:pair_manual:2|\
     call:native_start:2|call:native_stop:2|call:fault_start:2|call:fault_cancel:2|\
-    call:speed_start:2|call:speed_cancel:2|call:speed_live:2|call:telegram_retry:2)
+    call:speed_start:2|call:speed_cancel:2|call:speed_live:2|call:telegram_retry:2|call:probe_targets:2)
         if [ -f "$LUA_READY" ] && req=$(mktemp /var/run/homensai-vpn/rpc-in.XXXXXX 2>/dev/null); then
             out=$(mktemp /var/run/homensai-vpn/rpc-out.XXXXXX 2>/dev/null) || out=
             head -c 65537 >"$req"
             if [ -n "$out" ]; then
-                answer=$(ubus -t 15 call homensai-vpn-lua rpc "{\"method\":\"$2\",\"request_file\":\"$req\",\"reply_file\":\"$out\"}" 2>/dev/null)
+                sent=; read -r up _ </proc/uptime 2>/dev/null && sent=${up%%.*}
+                case "$sent" in ''|*[!0-9]*) stamp= ;; *) stamp=",\"sent\":$sent" ;; esac
+                answer=$(ubus -t 15 call homensai-vpn-lua rpc "{\"method\":\"$2\",\"request_file\":\"$req\",\"reply_file\":\"$out\"$stamp}" 2>/dev/null)
                 rc=$?
                 case "$rc:$answer" in
                     0:*'"ok": true'*|0:*'"ok":true'*)
                         cat "$out"; rm -f "$req" "$out"; exit 0 ;;
                     0:*'"fallback": true'*|0:*'"fallback":true'*|4:*) ;;
+                    0:*'"RPC-BRIDGE-PATH"'*|0:*'"RPC-UNKNOWN-METHOD"'*|0:*'"RPC-BRIDGE-STALE"'*) ;;
                     *)
                         case "$2" in
                             setup_*) printf '{"saved":false,"code":"SETUP-SAVE-UNCONFIRMED"}\n'; rm -f "$req" "$out"; exit 0 ;;
+                            pair_manual|native_start|native_stop|fault_start|fault_cancel|speed_start|speed_cancel|telegram_retry)
+                                rm -f "$req" "$out"
+                                printf '{"accepted":false,"queued":false,"code":"RPC-BRIDGE-UNCONFIRMED","blockers":["RPC-BRIDGE-UNCONFIRMED"]}\n'
+                                exit 0 ;;
                         esac ;;
                 esac
                 rm -f "$out"
@@ -50,7 +62,7 @@ case "$1:$2:$#" in
             rc=$?; rm -f "$req"; exit $rc
         fi
         case "$2" in
-            inventory|speed_start|speed_cancel|speed_live|telegram_retry) ;;
+            inventory|speed_start|speed_cancel|speed_live|telegram_retry|probe_targets) ;;
             *)
                 [ -S /var/run/homensai-vpn/status.sock ] &&
                     exec /usr/bin/python3 -I -S /usr/lib/homensai-vpn/status_client.py "$2"

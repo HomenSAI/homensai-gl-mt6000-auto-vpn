@@ -50,7 +50,8 @@ t.test('charge_attempt: returns its stamp, keeps the abort series, waits out the
 end)
 
 local function journal_with(env,fields)
-  local value={phase='ROLLED-BACK',failure_code=QUIET,started=canon.float(9000),pair_transition=canon.object({destination_role='target'})}
+  local value={phase='ROLLED-BACK',failure_code=QUIET,started=canon.float(9000),pair_transition=canon.object({destination_role='target'}),
+    rtp_dispatched=false,forward_policy_touched=false}
   for k,v in pairs(fields or {}) do value[k]=v end
   local real=T.journal_read
   T.journal_read=function() return value end
@@ -73,7 +74,12 @@ t.test('refund_abort: needs a vendor code and a proven rollback',function()
     {'rolled back after a confirmation',{confirmed=canon.float(9003)},QUIET},
     {'another failure',{failure_code='VENDOR-WORKER-BUSY'},QUIET},
     {'not a pair transition',{pair_transition=canon.null},QUIET},
-    {'a newer transaction',{started=canon.float(9001.5)},QUIET}}
+    {'a newer transaction',{started=canon.float(9001.5)},QUIET},
+    -- review 04.11.2026 (finding 6): the vendor code came after the switch itself (the verify wait after rtp2, wait_quiet
+    -- after the dispatch): two real kernel switches (there and back) are no abort
+    {'after the kernel switch',{rtp_dispatched=true},QUIET},
+    {'after a policy write',{forward_policy_touched=true},QUIET},
+    {'a journal without the dispatch flags',{rtp_dispatched=canon.null},QUIET}}
   for _,row in ipairs(refused) do
     local env=t.env();env.run.wall_now=9002.5
     write_ledger(env,{8500,9001})
@@ -115,7 +121,7 @@ local function sim(opts)
   pair.save(env,canon.object({id=string.rep('11',16),phase='RUNNING',ran=true,started=canon.float(start-1000),revision=env.revision,network_identity=string.rep('aa',32),
     interfaces=canon.object({wgclient1='wgclient',ovpnclient1='ovpnclient'}),protected=canon.object({}),owned=canon.array({}),
     before_flags=canon.object({wgclient1='0',ovpnclient1='0'}),process_bindings=sel.process_bindings,order=canon.array({'r1','r2'}),policy_hash=t.HEX64,
-    policy_roles=pair.policy.proof(sel)}))
+    policy_roles=(not opts.no_roles) and pair.policy.proof(sel) or nil}))
   local rows={}
   env.backend.recovery_ready=function(id,settings)
     local policy=pair.recovery_normalized(settings)
@@ -137,13 +143,14 @@ local function sim(opts)
   -- the vendor: busy for the decision when opts.busy; when armed, apply_steps' first diagnostic (journal APPLYING)
   -- reports the abort code exactly once (MT3000 cycle 28), so the transaction rolls back before any write
   local B=env.backend
+  B.vendor_busy_seen=opts.seen
   B.diagnostic=function()
     local at=env.run.wall()-start
     if armed then
       local ok,j=pcall(T.journal_read,env)
       if ok and j.phase=='APPLYING' then armed=false;log.aborts[#log.aborts+1]=at;return {opts.code or QUIET},nil end
     end
-    if opts.busy and opts.busy(at) then return {'VENDOR-WORKER-BUSY'},nil end
+    if opts.busy and opts.busy(at) then return {'VENDOR-WORKER-BUSY'},opts.busy_selection and B.selection or nil end
     return {},B.selection
   end
   local settings=t.settings(opts.settings)
@@ -164,7 +171,7 @@ local function sim(opts)
       if before=='r2' and after=='r1' then log.returns[#log.returns+1]=at end
       log.reserve[at]=(after=='r2')
       local st=t.read(env,env.runtime..'/native-status.json') or {}
-      log.published[#log.published+1]={at,st.state,st.reason,st.source_failures,st.blockers}
+      log.published[#log.published+1]={at,st.state,st.reason,st.source_failures,st.blockers,st}
       env.run.advance(step)
     end
   end)
@@ -247,6 +254,278 @@ t.test('flap 60/120 x10: returns damped as without aborts, every outage left',fu
       if not aborted.reserve[at] then error('traffic on the dead primary at '..at..' s; switches '..list(aborted.switches),0) end
     end
   end
+end)
+
+------------------------------------------------------------------------------------------------------
+-- a long VENDOR-WORKER-BUSY: what was seen is visible; the blocker itself stays
+------------------------------------------------------------------------------------------------------
+local LOCK=canon.decode(read_file(t.here..'/../vendor_lock_cases.json'))
+local DEAD={kind='rtp-lock-dead',mark='rtp-lock:9:24680',pid=24680,workers=1}
+t.test('busy_seen_step: the shared cases',function()
+  t.eq({pair.BUSY_SEEN_SECONDS,pair.BUSY_SCAN_SECONDS},{120,30})
+  for _,case in ipairs(LOCK.cases) do
+    local track,got,scans,last=nil,{},{},nil
+    for index,tick in ipairs(case.ticks) do
+      local row
+      track,row=pair.busy_seen_step(track,tick[2],canon.number(tick[1]),function(scan)
+        if scan then scans[#scans+1]=index-1 end
+        if tick[3]=='raise' then error('read failed') end
+        return tick[3]
+      end)
+      got[index]=row and row.kind or canon.null
+      last=row
+    end
+    t.eq(canon.encode(canon.array(got)),canon.encode(case.expect),case.name)
+    t.eq(canon.encode(canon.array(scans)),canon.encode(case.scans),case.name..': scans')
+    local workers=last and last.workers;if workers==nil then workers=canon.null end
+    t.eq(workers,case.workers,case.name..': workers')
+  end
+end)
+
+t.test('every kind has its own code',function()
+  local seen={}
+  for kind,code in pairs(pair.BUSY_CODES) do t.truthy(string.find(code,'^VENDOR%-BUSY%-'),code);t.eq(seen[code],nil);seen[code]=kind end
+  t.eq(pair.BUSY_CODES['rtp-lock-dead'],'VENDOR-BUSY-RTP-LOCK-DEAD');t.eq(pair.BUSY_CODES['rtp-lock-live'],'VENDOR-BUSY-RTP-LOCK-LIVE')
+  t.eq(pair.BUSY_CODES['tunnel-switch'],'VENDOR-BUSY-TUNNEL-SWITCH');t.eq(pair.BUSY_CODES.workers,'VENDOR-BUSY-WORKERS');t.eq(pair.BUSY_CODES.unidentified,'VENDOR-BUSY-UNIDENTIFIED')
+end)
+
+local function none(v) return v==nil or v==canon.null end
+local function with_log(fn)
+  local durable=require('durable')
+  local real,lines=durable.log,{}
+  durable.log=function(line) lines[#lines+1]=line end
+  local ok,err=pcall(fn,lines)
+  durable.log=real
+  if not ok then error(err,0) end
+end
+
+for _,no_roles in ipairs({false,true}) do
+t.test('dead primary, healthy reserve, the rtp2 lock of a gone holder: its own code, the pair named, still no attempt, one log line'..(no_roles and ' (session without policy roles)' or ' (policy roles: every normal session)'),function()
+  with_log(function(lines)
+    local scans=0
+    local log=sim({up=function(at) return at<0 end,busy=function() return true end,busy_selection=true,stop=1800,no_roles=no_roles,
+      seen=function(scan) if scan then scans=scans+1 end;return DEAD end})
+    t.eq(#log.dispatches,0,'the blocker is not bypassed');t.eq(#log.switches,0);t.eq(#log.attempts,0)
+    local first
+    local source,target=log.env.backend.selection.source.id,log.env.backend.selection.target.id
+    for _,p in ipairs(log.published) do
+      t.eq(p[2],'BLOCKED');t.eq(canon.encode(p[5]),'["VENDOR-WORKER-BUSY"]','the blockers are the same list as before')
+      local st=p[6]
+      t.eq(st.source,source,'at '..p[1]);t.eq(st.target,target)
+      if p[1]<120 then t.truthy(none(p[3]),'at '..p[1]);t.eq(st.vendor_lock_pid,nil)
+      else
+        first=first or p[1]
+        t.eq(p[3],'VENDOR-BUSY-RTP-LOCK-DEAD','at '..p[1]);t.eq(st.vendor_lock_pid,24680)
+        t.truthy(canon.number(st.busy_seconds)>=120);t.eq(canon.number(st.vendor_workers),1,'the child that still runs is shown')
+      end
+    end
+    t.eq(first,120)
+    t.eq(#lines,1,'one log line, not one per tick: '..#lines)
+    t.truthy(string.find(lines[1],'VENDOR-BUSY-RTP-LOCK-DEAD: VENDOR-WORKER-BUSY for 120 s, lock pid 24680, vendor workers seen 1; observed only',1,true),lines[1])
+    t.truthy(scans<=57,'a worker scan every 30 s, not every tick: '..scans)
+    local items={}
+    for _,row in ipairs(t.read(log.env,log.env.persist..'/native-history.json').data.tail) do
+      for _,code in ipairs(row.codes) do if code=='VENDOR-BUSY-RTP-LOCK-DEAD' then items[#items+1]=row end end
+    end
+    t.eq(#items,1,'one journal event, not one per tick')
+    t.eq(items[1].source,source)
+  end)
+end)
+end
+
+t.test('each observed cause reaches the publication under its own code',function()
+  for kind,code in pairs(pair.BUSY_CODES) do
+    local log=sim({up=function(at) return at<0 end,busy=function() return true end,stop=125,
+      seen=function() return {kind=kind,mark='k'} end})
+    local last=log.published[#log.published]
+    t.eq(last[3],code,kind);t.eq(#log.dispatches,0,kind)
+  end
+end)
+
+t.test('the blocker ends: the failover follows at once, nothing was held back by the code',function()
+  local log=sim({up=function(at) return at<0 end,busy=function(at) return at<300 end,busy_selection=true,stop=320,seen=function() return DEAD end})
+  t.eq(log.switches,{300})
+end)
+
+t.test('one free tick ends the episode: the count starts again, also on the tick path that has no blockers to publish',function()
+  for _,no_roles in ipairs({false,true}) do
+    local log=sim({up=function() return true end,busy=function(at) return at<100 or at>=105 end,busy_selection=true,stop=240,no_roles=no_roles,seen=function() return DEAD end})
+    local first
+    for _,p in ipairs(log.published) do if p[3]=='VENDOR-BUSY-RTP-LOCK-DEAD' and not first then first=p[1] end end
+    t.eq(first,225,'120 s after the blocker came back')
+  end
+end)
+
+t.test('an observation that fails or a backend without one: unidentified, no attempt, the tick goes on',function()
+  for _,seen in ipairs({function() error('read failed') end,function() return 'nonsense' end,false}) do
+    for _,no_roles in ipairs({false,true}) do
+      local log=sim({up=function(at) return at<0 end,busy=function() return true end,stop=125,seen=seen or nil,no_roles=no_roles})
+      t.eq(log.published[#log.published][3],'VENDOR-BUSY-UNIDENTIFIED');t.eq(#log.dispatches,0)
+      for _,p in ipairs(log.published) do
+        if p[1]<120 then t.truthy(none(p[3])) end
+        if no_roles then t.eq(p[6].source,nil,'no selection, nothing invented') end
+      end
+    end
+  end
+end)
+
+t.test('other blockers name no pair and read nothing',function()
+  local log=sim({up=function() return true end,stop=10,no_roles=true,seen=function() error('must not be asked') end})
+  local env=log.env
+  env.backend.diagnostic=function() return {'PROFILE-NOT-MONITORED'},env.backend.selection end
+  for _=1,60 do pair.tick(env,t.settings(),env.revision);env.run.advance(2.5) end
+  local st=t.read(env,env.runtime..'/native-status.json')
+  t.eq(st.state,'BLOCKED');t.truthy(none(st.reason));t.eq(st.source,nil);t.eq(env.busy_track,nil)
+end)
+
+t.test('a transaction still meets the blocker: no path through the status code',function()
+  local env=t.env()
+  env.backend.diagnostic=function() return {'VENDOR-WORKER-BUSY'},env.backend.selection end
+  env.busy_track={since=0,seen=0,mark_since=0,mark='k',kind='rtp-lock-dead',pid=24680}
+  t.code('VENDOR-WORKER-BUSY',T.assert_selection,env,env.backend.selection)
+end)
+
+t.test('platform.vendor_busy_seen: what is seen, never more',function()
+  local platform=require('platform')
+  local function sys(fields)
+    local s={proc={},alive={},busy=0,scans=0}
+    for k,v in pairs(fields or {}) do s[k]=v end
+    s.clock=function() return 1 end
+    s.exists=function(path) return s.alive[path]==true end
+    s.lstat=function(path)
+      if path==platform.RTP_LOCK then return s.lock and {type=s.lock_type or 'reg',size=6,ino=9} or nil end
+      if s.queue and string.find(path,'gl_reload_service',1,true) then return {type='dir'} end
+    end
+    s.read=function(path)
+      if path==platform.RTP_LOCK then return s.lock end
+      return s.proc[path]
+    end
+    s.dir=function(path)
+      if path=='/var/run' then return s.switch_lock and {'tunnel-switch-1.lock'} or {} end
+      return {'x'}
+    end
+    return s
+  end
+  local LOCKED='24680\n'
+  local BASE='/proc/24680'
+  local workers=platform.workers
+  local args
+  platform.workers=function(sy,deadline,ignore) sy.scans=sy.scans+1;args={deadline,ignore};return {busy=sy.busy,verified=sy.verified~=false,time=0} end
+  local ok,err=pcall(function()
+    local seen=platform.vendor_busy_seen
+    local row=seen(sys({lock=LOCKED}))
+    t.eq(row.kind,'rtp-lock-dead');t.eq(row.pid,24680);t.eq(row.mark,'rtp-lock:9:24680');t.eq(row.workers,nil)
+    local quiet=sys({lock=LOCKED});row=seen(quiet,true)
+    t.eq(args,{3,true},'the lock file itself does not count as a worker');t.eq(row.workers,0);t.eq(quiet.scans,1)
+    local unscanned=sys({lock=LOCKED});seen(unscanned);t.eq(unscanned.scans,0,'no /proc scan on a plain tick')
+    row=seen(sys({lock=LOCKED,busy=2}),true);t.eq(row.kind,'rtp-lock-dead','a dead holder stays what was seen');t.eq(row.workers,2,'its children may run')
+    row=seen(sys({lock=LOCKED,verified=false}),true);t.eq(row.workers,nil,'unverified is not zero')
+    row=seen(sys({lock=LOCKED,alive={[BASE]=true},proc={[BASE..'/cmdline']='/bin/sh\0/usr/bin/rtp2.sh\0'}}));t.eq(row.kind,'rtp-lock-live')
+    row=seen(sys({lock=LOCKED,alive={[BASE]=true},proc={[BASE..'/cmdline']='dnsmasq\0'}}));t.eq(row.kind,'rtp-lock-dead','the number went to another process')
+    row=seen(sys({lock=LOCKED,alive={[BASE]=true},proc={[BASE..'/cmdline']=''}}));t.eq(row.kind,'rtp-lock-dead','a zombie does not run')
+    row=seen(sys({lock=LOCKED,alive={[BASE]=true}}));t.eq(row.kind,'unidentified','a failed read proves no death');t.eq(row.pid,24680)
+    row=seen(sys({lock=LOCKED,lock_type='lnk'}));t.eq(row.kind,'unidentified','a link is never trusted')
+    row=seen(sys({lock='garbage'}));t.eq(row.kind,'unidentified');t.eq(row.mark,'rtp-lock:9')
+    row=seen(sys({switch_lock=true}));t.eq(row.kind,'tunnel-switch')
+    row=seen(sys({lock=LOCKED,switch_lock=true}));t.eq(row.kind,'rtp-lock-dead','the rtp2 file is named first')
+    row=seen(sys({}));t.eq(row.kind,'unidentified','no file proves nothing');t.eq(row.mark,'no-file')
+    row=seen(sys({busy=1}),true);t.eq(row.kind,'workers')
+    row=seen(sys({queue=true}),true);t.eq(row.kind,'workers')
+    row=seen(sys({}),true);t.eq(row.kind,'unidentified','no file and no worker is still not quiet');t.eq(row.workers,0)
+    t.eq(platform.rtp_lock_busy(sys({lock=LOCKED})),true,'the blocker stays for this very lock')
+    t.eq(platform.ALLOWED_STALE_LOCK,nil,'nothing allowed the lock on the way')
+  end)
+  platform.workers=workers
+  if not ok then error(err,0) end
+end)
+
+t.test('platform.workers: the lock file counts unless the caller asks what runs besides it',function()
+  local platform=require('platform')
+  local s={clock=function() return 1 end,wall=function() return 1 end,
+    lstat=function(path) if path==platform.RTP_LOCK or path=='/proc/locks' then return {type='reg',size=0} end end,
+    stat=function(path) if path=='/proc/locks' then return {type='reg',size=0} end end,
+    read=function(path) if path==platform.RTP_LOCK then return '24680\n' end;if path=='/proc/locks' then return '' end end,
+    dir=function() return {} end}
+  t.eq(platform.workers(s).busy,1)
+  t.eq(platform.workers(s,nil,true).busy,0)
+end)
+
+-- the Telegram notice ----------------------------------------------------------------------------------------------
+local telegram=require('telegram')
+local function notice_d(send)
+  local d={runtime='/run/hv',files={},sent={},removed=0}
+  d.read=function(path) return d.files[path] end
+  d.size=function(path) return d.files[path] and #d.files[path] or nil end
+  d.is_link=function() return false end
+  d.write=function(path,text) d.files[path]=text end
+  d.remove=function(path) d.files[path]=nil;d.removed=d.removed+1 end
+  d.lock=function(fn) return fn() end
+  d.send=send or function(config,text) d.sent[#d.sent+1]=text end
+  return d
+end
+local function native(reason,fields)
+  local value=canon.object({state='BLOCKED',reason=reason,time=canon.float(1000),busy_seconds=125,vendor_lock_pid=24680,vendor_workers=1})
+  for k,v in pairs(fields or {}) do value[k]=v end
+  return canon.object({native_failover=value})
+end
+t.test('the notice: the shared text and key, every code has a text',function()
+  for _,case in ipairs(LOCK.notices) do
+    t.eq(telegram.vendor_notice_key(case.native,1000),case.key)
+    t.eq(telegram.vendor_notice_text(case.native),case.text)
+  end
+  for _,code in pairs(pair.BUSY_CODES) do t.truthy(telegram.NOTICE_TEXT[code],code) end
+  t.truthy(string.find(telegram.NOTICE_TEXT['VENDOR-BUSY-RTP-LOCK-DEAD'],'does not prove',1,true));t.truthy(string.find(telegram.NOTICE_TEXT['VENDOR-BUSY-UNIDENTIFIED'],'does not prove',1,true))
+  for _,text in pairs(telegram.NOTICE_TEXT) do t.eq(string.find(string.lower(text),'quiet',1,true),nil);t.eq(string.find(string.lower(text),'stale',1,true),nil) end
+end)
+t.test('the notice: once per cause and pid, again for another, again after the state ended; no schedule field moves',function()
+  local d=notice_d()
+  local state=canon.object({sent=canon.float(990),confirmed_reports=4})
+  local out=telegram.vendor_notice(d,{},native('VENDOR-BUSY-RTP-LOCK-DEAD'),state,1001)
+  t.eq(#d.sent,1);t.eq(out.sent,state.sent);t.eq(out.attempt,nil,'a report is not pushed back');t.eq(out.confirmed_reports,4);t.eq(out.period_keys,nil)
+  telegram.vendor_notice(d,{},native('VENDOR-BUSY-RTP-LOCK-DEAD'),state,1002);t.eq(#d.sent,1,'no second notice')
+  telegram.vendor_notice(d,{},native('VENDOR-BUSY-RTP-LOCK-DEAD',{vendor_lock_pid=24681}),state,1003);t.eq(#d.sent,2,'another pid')
+  telegram.vendor_notice(d,{},native('VENDOR-BUSY-RTP-LOCK-LIVE',{vendor_lock_pid=24681}),state,1004);t.eq(#d.sent,3,'another cause')
+  telegram.vendor_notice(d,{},canon.object({native_failover=canon.object({state='OBSERVING',time=canon.float(1005)})}),state,1005)
+  t.eq(d.files['/run/hv/'..telegram.NOTICE_FILE],nil)
+  telegram.vendor_notice(d,{},native('VENDOR-BUSY-RTP-LOCK-LIVE',{vendor_lock_pid=24681}),state,1006);t.eq(#d.sent,4,'a new episode')
+  t.truthy(string.find(d.sent[1],'Observed:',1,true))
+end)
+local function deliver_d()
+  local d=notice_d()
+  d.config=function() return {telegram_enabled='1',telegram_chat='-100',telegram_token='123:synthetic',telegram_schedule='interval',telegram_interval='60',telegram_weekly='0',telegram_monthly='0'} end
+  d.sha256=function() return string.rep('ab',32) end
+  d.wall=function() return 1001 end
+  d.sleep=function() end
+  return d
+end
+t.test('the notice goes through deliver(): no report is due, it is sent, the schedule stays; a running backoff holds it',function()
+  local d=deliver_d()
+  local saved=canon.object({sent=canon.float(990),attempt=canon.float(990),retry_after=canon.float(5)})
+  local public,state,sent=telegram.deliver(d,native('VENDOR-BUSY-RTP-LOCK-DEAD'),saved,1001)
+  t.eq(#d.sent,1,'told at once');t.eq(sent,false,'no report was sent');t.eq(public.code,nil)
+  t.eq(canon.number(state.sent),990,'the report schedule did not move');t.eq(canon.number(state.attempt),990)
+  t.truthy(telegram.valid(state),'the sender state keeps its schema')
+  local held=deliver_d()
+  telegram.deliver(held,native('VENDOR-BUSY-RTP-LOCK-DEAD'),canon.object({sent=canon.float(990),attempt=canon.float(1000),retry_after=canon.float(300)}),1001)
+  t.eq(#held.sent,0,'the Telegram backoff holds for a notice too')
+end)
+
+t.test('the notice: only for a fresh BLOCKED with one of the codes',function()
+  local d=notice_d()
+  telegram.vendor_notice(d,{},native('VENDOR-BUSY-WORKERS'),canon.object(),1000+telegram.NOTICE_MAX_AGE+1);t.eq(#d.sent,0,'an old status')
+  telegram.vendor_notice(d,{},native('PAIR-WAITING-PROBES'),canon.object(),1001);t.eq(#d.sent,0)
+  telegram.vendor_notice(d,{},native('VENDOR-BUSY-WORKERS',{state='ARMED'}),canon.object(),1001);t.eq(#d.sent,0)
+  telegram.vendor_notice(d,{},canon.object(),canon.object(),1001);t.eq(#d.sent,0)
+end)
+t.test('the notice: a failed send keeps the usual backoff and comes again, a confirmed one is not repeated',function()
+  local tries,fail=0,true
+  local d=notice_d(function() tries=tries+1;if fail then error(telegram.rejection(429,600),0) end end)
+  local out=telegram.vendor_notice(d,{},native('VENDOR-BUSY-WORKERS'),canon.object(),1001)
+  t.eq(out.last_code,'TELEGRAM-RATE-LIMIT');t.eq(canon.number(out.retry_after),600);t.eq(canon.number(out.attempt),1001);t.eq(canon.number(out.known_failures),1)
+  t.eq(d.files['/run/hv/'..telegram.NOTICE_FILE],nil)
+  fail=false
+  telegram.vendor_notice(d,{},native('VENDOR-BUSY-WORKERS'),out,1010);t.eq(tries,2)
+  telegram.vendor_notice(d,{},native('VENDOR-BUSY-WORKERS'),out,1020);t.eq(tries,2)
 end)
 
 t.run()

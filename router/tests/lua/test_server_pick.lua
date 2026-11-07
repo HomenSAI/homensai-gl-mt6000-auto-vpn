@@ -223,7 +223,56 @@ t.test('the published file is the projection input of both monitors',function()
   local w=world(c)
   S.job(w.io,c.request,plain(c.now))
   local projected=S.project(canon.decode(w.files['/run/server-pick.json']))
-  t.eq(canon.encode(projected),canon.encode(c.expect.result))
+  local expect=canon.decode(canon.encode(c.expect.result));expect.round=nil  -- the job's round counter is not status
+  t.eq(canon.encode(projected),canon.encode(expect))
+end)
+
+t.test('probe_window rotates and keeps the current (shared cases, R3-07)',function()
+  for _,c in ipairs(CASES.probe_window) do
+    local rows={}
+    for i=1,c.n do rows[i]={profile='1_'..i,current=(plain(c.current)==i)} end
+    local w=S.probe_window(rows,c.round)
+    local got={};for i=1,c.n do if w[i] then got[#got+1]=i end end
+    same(got,c.expect,c.name)
+  end
+  local rows={};for i=1,32 do rows[i]={profile='1_'..i,current=(i==20)} end
+  local seen={}
+  for r=0,2 do
+    local w,count=S.probe_window(rows,r),0
+    for i=1,32 do if w[i] then count=count+1;seen[i]=true end end
+    t.eq(count,S.MAX_MEASURED,'round '..r);t.eq(w[20],true,'the current (20th) is measured in round '..r)
+  end
+  local all=0;for _ in pairs(seen) do all=all+1 end
+  t.eq(all,32,'32 candidates are all measured within three rounds')
+  t.eq(canon.encode(S.probe_window(rows,31)),canon.encode(S.probe_window(rows,0)),'the window is periodic (31 others, steps of 11)')
+  t.eq(S.next_round(nil),0);t.eq(S.next_round(canon.object({})),0);t.eq(S.next_round(canon.object({round=5})),6)
+  t.eq(S.next_round(canon.object({round=S.ROUND_MAX-1})),S.ROUND_MAX);t.eq(S.next_round(canon.object({round=S.ROUND_MAX})),0)
+  t.eq(S.next_round(canon.object({round=true})),0);t.eq(S.next_round(canon.object({round=-1})),0)
+  t.eq(S.next_round(canon.decode('{"round":1.5}')),0)
+end)
+
+t.test('three rounds find the thirteenth candidate (shared cases, R3-07)',function()
+  local wd=CASES.rounds.world
+  for _,c in ipairs(CASES.rounds.cases) do
+    local w=world(wd)
+    local req=canon.object({enabled=true,auto_on=true,failed=wd.request.failed,model=c.model})
+    local bests={}
+    for k=0,2 do
+      local before=#w.exec
+      local res=S.job(w.io,req,plain(wd.now)+k*S.MEASURE_EVERY)
+      local row=res.tunnels[1]
+      local probed,have={},{}
+      for i=before+1,#w.exec do
+        local x=w.exec[i]
+        if x[1]=='tcp' and not have[x[2]] then have[x[2]]=true;probed[#probed+1]=x[2] end
+      end
+      same({round=res.round,probed=probed,best=plain(row.best),code=plain(row.code)},c.expect[k+1],c.name..' round '..k)
+      t.eq(have['10.0.0.14'],true,c.name..': the current is probed in round '..k)
+      t.eq(#probed<=S.MAX_MEASURED,true,c.name..': bounded')
+      bests[k+1]=plain(row.best)
+    end
+    same(bests,{'1_14','1_13','1_13'},c.name)
+  end
 end)
 
 t.run()

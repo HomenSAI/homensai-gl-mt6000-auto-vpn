@@ -589,7 +589,10 @@ class History:
         now=time.time() if now is None else now
         if type(now) not in (int,float) or not math.isfinite(now) or now<0:raise HistoryError('HISTORY-CLOCK')
         data=self._writer_load()
-        if data['last_time'] is not None and now<data['last_time']:now=data['last_time']
+        # The wall clock stepped back: keep the order (time = last time) but mark the event, because its time is not the
+        # elapsed time; a duration ending or starting here is unknown, never zero (review F-56).
+        stepped=data['last_time'] is not None and now<data['last_time']
+        if stepped:now=data['last_time']
         state=value.get('state','UNKNOWN')
         if not isinstance(state,str) or not CODE.fullmatch(state):raise HistoryError('HISTORY-STATE')
         codes=value.get('blockers',[])[:16]
@@ -632,8 +635,9 @@ class History:
             evidence={}
             for name in ('source_streak_met','reserve_streak_met'):
                 if type(raw.get(name)) is bool:evidence[name]=raw[name]
-            for name,low in (('required_failures',3),('required_successes',2)):
+            for name,low in (('required_failures',2),('required_successes',2)):
                 if type(raw.get(name)) is int and low<=raw[name]<=10:evidence[name]=raw[name]
+            if raw.get('failure_rule') in ('model','streak','heartbeat','unstable'):evidence['failure_rule']=raw['failure_rule']
             if evidence:item['probe_evidence']=evidence
         phases=value.get('phase_evidence')
         if isinstance(phases,list):
@@ -661,6 +665,7 @@ class History:
         if data['sequence']>=2**53-1:raise HistoryError('HISTORY-SEQUENCE-LIMIT')
         data['active_attempt']=active;data['retry_episode']=episode
         item.update(time=now,sequence=data['sequence']+1)
+        if stepped:item['clock_stepped_back']=True
         data['sequence']+=1;data['last_key']=key;data['last_time']=now
         index=data['index'];excess=len(index)+1-self.limit
         dropped=sum(row[1]>=now-self.detail_days*86400 for row in index[:max(0,excess)])

@@ -32,7 +32,9 @@ for(const r of ctx.ERROR_ROWS){
 // The linker also recognises one-word states and family prefixes.
 for(const word of ['COMMITTED','APPLYING','ARMED','ROLLED-BACK','WAIT-CLIENT','OFFLINE-FIXTURE','OBSERVING','BLOCKED'])assert(ctx.ERROR_GROUP_OF[word],'state/code not linked: '+word);
 assert(ctx.errorFamilyOf('CASCADE-PROOF-EXPIRED')&&ctx.errorFamilyOf('MIGRATION-ANYTHING')&&!ctx.errorFamilyOf('DNS-001'));
-console.log('PASS: '+total+' emitted code references covered by '+Object.keys(ctx.ERROR_GROUP_OF).length+' rows and '+ctx.ERROR_FAMILIES.length+' families; states and notices link');
+const familyCount=ctx.ERROR_ROWS.filter(row=>row[0].includes('*')).length;
+assert(familyCount>0,'the current catalogue retains documented runtime families');
+console.log('PASS: '+total+' emitted code references covered by '+Object.keys(ctx.ERROR_GROUP_OF).length+' rows and '+familyCount+' families; states and notices link');
 // Rule: every code of the error table is found by the page linker, alone and inside a sentence (regression: DNS-001 was skipped by a pre-filter).
 const notLinked=[];
 for(const code of Object.keys(ctx.ERROR_GROUP_OF).filter(c=>!c.includes('*'))){

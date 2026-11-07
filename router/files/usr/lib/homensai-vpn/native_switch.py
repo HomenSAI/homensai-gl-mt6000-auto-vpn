@@ -23,6 +23,7 @@ import tempfile
 import time
 import uuid
 from datetime import datetime
+import retry_policy
 
 # The daemon/apply CLI and imported helpers must share exception classes,
 # Stop and proof scope. A second module instance can turn a coded refusal into
@@ -54,6 +55,47 @@ class Refused(Exception):
 
 def digest(value):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+
+
+def key_unaccepted(*profiles):
+    """server_pin.py (option server_key_pin 'enforce'): SERVER-KEY-UNACCEPTED when one of these profiles has a changed, not
+    yet accepted server key, else None. Review 04.11.2026 (findings 1, 2): this is no blocker of diagnostic() any more.
+    diagnostic() answers whether the route and the vendor can be proven; a key is a question of trust in one channel and says
+    nothing about either. As a blocker it failed the proof of a finished rollback (Stop on the reserve: ROLLBACK-UNVERIFIED,
+    journal RESTORING, 90 s wait) and stopped every decision of a working pair (a changed key on the primary, the primary
+    dies, a clean reserve stays unused). The gate is directional now: only a move ONTO the channel is refused
+    (attempt, instant_manual, operator_return, committed_recovery_decision, forward_resume, pair_auto.tick); leaving it, the
+    emergency return to a clean channel and every rollback stay free. A Start: carrying_unaccepted. Lua: backend.key_unaccepted,
+    transaction.key_unaccepted."""
+    from server_pin import gate
+    def read(path):
+        try:
+            with (Path(path) if isinstance(path,str) else path).open('rb') as stream:return stream.read(2*1024*1024).decode('latin-1')
+        except OSError:return None
+    return gate(read,RUNTIME,PERSIST,[x for x in profiles if isinstance(x,str)])
+
+
+def carrying_unaccepted(backend,selection):
+    """The rule of a Start (owner 05.11.2026): only the channel that carries the traffic after the Start must be clean. The live
+    policy order names it, so it is the source on a fresh Start, the reserve on a boot handover, and the reserve too when the
+    router already has it first (RESERVE-ALREADY-FIRST). A key on the other channel lets the Start go: the directional gate
+    (key_unaccepted) still refuses every move onto it. An order that proves no role counts both channels, as before.
+    Lua: transaction.carrying_unaccepted."""
+    from pair_policy import proof,role
+    try:carrying=selection[role(proof(selection),backend.order()[0])]['id']
+    except (Refused,OSError,ValueError,KeyError,TypeError,AttributeError,IndexError,subprocess.SubprocessError):
+        return key_unaccepted(*[(selection.get(name) or {}).get('id') for name in ('source','target')])
+    return key_unaccepted(carrying)
+
+
+def key_blockers(blockers,selection,backend=None):
+    """blockers of a whole pair outside a running session (the legacy one-shot buttons, a fault test, a trial): either channel
+    counts, they move onto the other one at once. With backend (a legacy Start, which only arms the watch): the rule of a
+    Start, carrying_unaccepted."""
+    if not isinstance(selection,dict):return blockers
+    ids=[(selection.get(role) or {}).get('id') for role in ('source','target')]
+    pinned=carrying_unaccepted(backend,selection) if backend is not None else key_unaccepted(*ids)
+    return blockers+[pinned] if pinned and pinned not in blockers else blockers
 
 
 def bind_policy_context(backend,record):
@@ -161,7 +203,20 @@ TRANSACTION_SECONDS=120
 RTP_TIMEOUT=45
 POST_RTP_SECONDS=30
 RTP_DISPATCH_RESERVE=RTP_TIMEOUT+POST_RTP_SECONDS
+# Review F-30 (06.11.2026): every waiting stage after the vendor apply (wait_quiet, the transient-blocker wait of the
+# verify step) is cut to what the journal's one monotonic deadline leaves after this reserve for the final diagnostic and
+# attestation, so the child ends inside the parent's wait (deadline + WORKER_WAIT_GRACE) instead of being killed mid-verify.
+POST_APPLY_RESERVE=10
+WAIT_QUIET_SECONDS=20
 WORKER_WAIT_GRACE=5
+
+
+def stage_budget(journal,want,reserve=POST_APPLY_RESERVE,now=None):
+    """Seconds a waiting stage may take: `want`, cut to what the journal's monotonic deadline leaves after `reserve`."""
+    deadline=journal.get('monotonic_deadline') if isinstance(journal,dict) else None
+    if type(deadline) not in (int,float) or not math.isfinite(deadline):return want
+    now=time.monotonic() if now is None else now
+    return max(0,min(want,deadline-reserve-now))
 RTP_TERM_GRACE=5
 JOURNAL_ALARM=PERSIST/'native-journal-alarm.json'
 RETURN_PAUSE=10
@@ -229,6 +284,10 @@ def stop_latch(trial):
         previous=old.get('requested',0) if isinstance(old,dict) else 0
         now=time.time()
         if type(previous) in (int,float) and math.isfinite(previous):now=max(now,previous)
+        # T1: no RTC on the router: the latch is newer than the owner's marker also with a wall clock behind it
+        from boot_resume import marker_time
+        started=marker_time(PERSIST)
+        if math.isfinite(started):now=max(now,started)
         record={'requested':now,'trial':trial,'all_trials':True}
         if revision_error is not None:record['control_revision_failed']=True
         atomic_json(PERSIST/'native-stop.json',record)
@@ -399,7 +458,11 @@ def deadline(value):
     except (ValueError,OverflowError):
         if not isinstance(value,str):raise Refused('BOUNDED-DEADLINE-REQUIRED') from None
         try:
-            normal=re.sub(r'(\.\d{6})\d+(?=[+-]\d{2}:\d{2}$)',r'\1',value.replace('Z','+00:00'))
+            normal=value.replace('Z','+00:00')
+            # F-42: one grammar on Python 3.9 and 3.11 and in lua/transaction.lua deadline(): the offsets +HHMM and
+            # +HH are written as +HH:MM before fromisoformat (3.11 accepts the short forms itself, 3.9 does not).
+            normal=re.sub(r'([+-]\d{2})(\d{2})$',r'\1:\2',normal);normal=re.sub(r'([+-]\d{2})$',r'\1:00',normal)
+            normal=re.sub(r'(\.\d{6})\d+(?=[+-]\d{2}:\d{2}$)',r'\1',normal)
             parsed=datetime.fromisoformat(normal)
             if parsed.tzinfo is None:raise Refused('DEADLINE-TIMEZONE-REQUIRED')
             result=parsed.timestamp()
@@ -608,6 +671,20 @@ def lua_instant_switch(backend,selection,journal,pair_destination,after):
     error=Refused(code);error.lua_result=result;raise error
 
 
+def lua_rollback_required(error,saved,tx):
+    """After a failed Lua write stage (review F-20, 06.11.2026): does this transaction need the guarded rollback?
+
+    A parsed Lua answer decides by its rollback_required. A lost answer (timeout, killed helper, unparseable output:
+    no lua_result on the error) after the dispatch is an uncertain operation: when the durable journal of this very
+    transaction is still APPLYING, the helper got past its fenced journal write and may have changed UCI or the
+    kernel, so the journal stays APPLYING and the guarded recovery runs. Only a missing or settled journal of this
+    transaction is positive evidence that nothing was written.
+    """
+    result=getattr(error,'lua_result',None)
+    if isinstance(result,dict):return bool(result.get('rollback_required'))
+    return isinstance(saved,dict) and saved.get('tx')==tx and saved.get('phase')=='APPLYING'
+
+
 def fast_switch_enabled():
     """On the installed router unless the owner set `option fast_switch '0'` (then every switch uses the vendor
     rebuild). Read from the config file itself: no process, and never on a host without the package config."""
@@ -747,6 +824,9 @@ class Linux:
         from rollback_recovery import rtp_lock_busy
         if list(Path('/var/run').glob('tunnel-switch*.lock')) or rtp_lock_busy():blockers.append('VENDOR-WORKER-BUSY')
         return list(dict.fromkeys(blockers)),selection
+    def vendor_busy_seen(self,scan=False):
+        from rollback_recovery import vendor_busy_seen
+        return vendor_busy_seen(scan)
     def order(self):
         data=self.policy();return policy_order(data['sections'],self.process_bindings),policy_hash(data['sections'],self.process_bindings)
     def kernel_fingerprint(self):
@@ -892,7 +972,9 @@ class Linux:
             (write_command or command)(['/usr/bin/rtp2.sh','not_reload_network'],timeout=RTP_TIMEOUT)
         if detected=='mt3000' and not (self.fast_path or {}).get('used'):
             from native_platform import wait_quiet
-            try:wait_quiet()
+            # the transaction's worker sets stage_budget (F-30): the quiet wait ends inside its monotonic deadline
+            budget=getattr(self,'stage_budget',None)
+            try:wait_quiet(budget(WAIT_QUIET_SECONDS) if budget else WAIT_QUIET_SECONDS)
             except (OSError,ValueError) as error:raise Refused(str(error)if str(error)in('VENDOR-WORKER-BUSY','VENDOR-WORKER-QUIET-UNVERIFIED')else'VENDOR-WORKER-QUIET-UNVERIFIED') from None
         from process_policy import applied
         try:verified=applied(self.policy()['sections'],self.process_bindings)
@@ -1069,6 +1151,18 @@ def rollback(backend,journal,reason,restore_order=None):
             abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
             raise Refused('EXTERNAL-POLICY-CHANGE-RELEASED')
         if order!=journal['before']:backend.reorder(journal['before'])
+        # Power cut (POWER-CUT-INTEGRITY-2026-10-31.ru.md; T2, trace conformance 04.11.2026: the Python twin had not got
+        # it): the vendor rebuilt the kernel at boot from the MOVED UCI order, so undoing UCI alone would leave the traffic
+        # on the reserve while UCI and this journal say primary. When the kernel is no longer the one recorded before our
+        # move, the vendor's own reload from the restored UCI makes it follow again. Best effort: a failure keeps the
+        # journal ROLLED-BACK with kernel_policy_verified=False and the loop's attestation blocks. Only in the recovery
+        # (a power cut is where the boot rebuilt it): inside a running pass this transaction wrote no kernel, a changed
+        # graph there is foreign and stays (test_pair_review_regressions). Lua: rollback.lua.
+        before_fingerprint=journal.get('kernel_before_fingerprint')
+        if (reason=='SUPERVISOR-RECOVERY' and isinstance(before_fingerprint,str) and re.fullmatch('[a-f0-9]{64}',before_fingerprint)
+                and backend.kernel_fingerprint()!=before_fingerprint):
+            try:backend.apply()
+            except (Refused,OSError,ValueError,subprocess.SubprocessError):pass
         devices=backend.devices()
         if devices:backend.guard(devices)
         journal.update(phase='ROLLED-BACK',reason=reason,finished=time.time(),restore_before_order=list(order),restore_before_verified=False,
@@ -1173,8 +1267,14 @@ def rollback(backend,journal,reason,restore_order=None):
     if journal.get('pair_transition') is not None:
         from pair_policy import role
         from rollback_recovery import settled
-        blockers,current=settled(backend)  # after a reboot/restart the pair needs ~30 s to settle
-        proof=backend.attest_policy(current) if not blockers and current else {}
+        # T3 (trace conformance 04.11.2026): a reserve that is simply not connected says nothing about the route back to
+        # the primary. diagnostic() answers RESERVE-NOT-CONNECTED without a selection, so the proof of a return was refused
+        # with the kernel already on the primary: the journal stayed RESTORING, ROLLBACK-UNVERIFIED, then ROLLBACK-GIVEN-UP
+        # (and settled() kept the LAN blocked for its whole wait). attest_policy() without a selection tolerates exactly
+        # this blocker, as it does for the proof before the return. Lua: rollback.lua.
+        tolerated='RESERVE-NOT-CONNECTED' if role(pair_context,restore_order)=='source' else None
+        blockers,current=settled(backend,tolerated=tolerated)  # after a reboot/restart the pair needs ~30 s to settle
+        proof=backend.attest_policy(current) if not blockers and current else backend.attest_policy() if blockers==[tolerated] else {}
         if proof.get('verified') is not True or proof.get('role')!=role(pair_context,restore_order):
             backend.guard(backend.devices())
             raise Refused('ROLLBACK-UNVERIFIED')
@@ -1229,6 +1329,32 @@ def rollback_counted(backend,journal,reason):
 BOOT_SETTLE_UPTIME=600
 BOOT_RETRY_WAIT=5
 BOOT_RETRY_CODES=('KERNEL-POLICY-UNVERIFIED','ROLLBACK-UNVERIFIED')
+
+
+QUEUED_SEEN=[None]  # the queued owner click this supervisor last woke for
+
+
+def queued_click():
+    """A QUEUED owner click that has not ended a pause yet, or None. Each row ends one pause (review 04.11.2026, finding 4):
+    a pass that fails before pair_manual.consume leaves the row QUEUED, and a pause cut short by it every time was no pause
+    at all, a pass right after the other (Python) or five a second (Lua) until the click was gone. Lua: auto.queued_click."""
+    try:row=read_json(RUNTIME/'pair-manual-control.json',{})
+    except (OSError,ValueError):return None
+    if not isinstance(row,dict) or row.get('state')!='QUEUED':return None
+    key=(row.get('id'),row.get('requested'))
+    if key==QUEUED_SEEN[0]:return None
+    QUEUED_SEEN[0]=key
+    return row
+
+
+def failed_pass_rest(seconds):
+    """The pause after a failed pass: up to 15 s, so Stop and a new queued owner click end it (Lua: auto.nap)."""
+    end=time.monotonic()+seconds
+    while not STOP:
+        left=end-time.monotonic()
+        if left<=0:return
+        if queued_click() is not None:return
+        time.sleep(min(.2,left))
 
 
 def boot_rollback(backend,journal,uptime=time.monotonic,sleep=time.sleep):
@@ -1286,6 +1412,10 @@ def source_ready(backend,journal,settings,reason):
 def operator_return(backend,journal,reason='OPERATOR-RETURN',control_revision=None):
     """Leave a held or committed reserve and restore the original order; needs the source freshly healthy."""
     if journal.get('phase') not in ('HELD-ON-RESERVE','COMMITTED'):return 'RETURN-NOT-APPLICABLE'
+    # the owner's request to move; not the 'PRIMARY-RECOVERED' end of a Stop that waited on the reserve (key_unaccepted)
+    if reason=='OPERATOR-RETURN':
+        pinned=key_unaccepted(journal.get('source'))
+        if pinned:return pinned
     if backend.health(journal['source']) is not True:return 'SOURCE-NOT-HEALTHY'
     if control_revision is not None:require_control_revision(control_revision)
     from pair_policy import metadata
@@ -1322,6 +1452,36 @@ def handle_return(backend,journal,request,last_time,control_revision=None):
     return True,stamp
 
 
+def pair_hold_reason(backend,journal,order,context,reason,desired,settings,recovery):
+    """finish_committed of a pair journal: the reason to stay on the reserve, or None for the return. Lua: transaction.lua."""
+    from pair_policy import role
+    if desired not in (journal['before'],context['primary_order'],context['session_order']):raise Refused('POLICY-IDENTITY-CHANGED')
+    wanted=role(context,desired)
+    ready=source_ready(backend,journal,settings,reason) if wanted=='source' else backend.recovery_ready(journal[wanted],settings) is True
+    # Owner decision 07.11.2026 (F-80): hold_reserve keeps a WORKING reserve only. The rescue from a reserve that
+    # committed_recovery_decision proved failed (RESCUE_REASON, a fresh negative probe) goes through under any policy.
+    from recovery_settings import RESCUE_REASON
+    if order!=desired and (not ready or wanted=='source' and recovery['return_policy']=='hold_reserve' and reason!=RESCUE_REASON):
+        return 'SOURCE-NOT-VERIFIED' if wanted=='source' else 'RESERVE-NOT-CONNECTED'
+    return None
+
+
+def hold_unchanged(backend,journal,reason,restore_order=None,hold=None):
+    """T4 (trace conformance 04.11.2026), read-only: True when finish_committed would only write the same HELD-ON-RESERVE
+    again (pair_auto.reserve_waits). Any doubt is False: finish_committed then decides as before. Lua: T.hold_unchanged."""
+    from pair_policy import metadata
+    from recovery_settings import normalized
+    context=metadata(journal)
+    if context is None or journal.get('phase')!='HELD-ON-RESERVE':return False
+    order,fingerprint=backend.order()
+    if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after'],journal.get('restore_target_order'),journal.get('restored_order')):return False
+    settings=backend.policy().get('settings',{})
+    recovery=normalized(settings)
+    if hold is not None:settings=dict(settings,recovery_primary_stable=hold)
+    held=pair_hold_reason(backend,journal,order,context,reason,restore_order or context['primary_order'],settings,recovery)
+    return held is not None and held==journal.get('reason')
+
+
 def finish_committed(backend,journal,reason,restore_order=None,hold=None):
     bind_policy_context(backend,journal)
     """A completed, client-confirmed switch must not expire back onto a failed source.
@@ -1335,33 +1495,40 @@ def finish_committed(backend,journal,reason,restore_order=None,hold=None):
     settings=backend.policy().get('settings',{})
     recovery=normalized(settings)
     if hold is not None:settings=dict(settings,recovery_primary_stable=hold)
-    from pair_policy import metadata,role
+    from pair_policy import metadata
     context=metadata(journal)
     if context is not None:
         desired=restore_order or context['primary_order']
-        if desired not in (journal['before'],context['primary_order'],context['session_order']):raise Refused('POLICY-IDENTITY-CHANGED')
-        wanted=role(context,desired)
-        ready=source_ready(backend,journal,settings,reason) if wanted=='source' else backend.recovery_ready(journal[wanted],settings) is True
-        if order!=desired and (not ready
-                or wanted=='source' and recovery['return_policy']=='hold_reserve'):
+        held=pair_hold_reason(backend,journal,order,context,reason,desired,settings,recovery)
+        if held is not None:
             backend.guard(backend.devices())
-            journal.update(phase='HELD-ON-RESERVE',reason='SOURCE-NOT-VERIFIED' if wanted=='source' else 'RESERVE-NOT-CONNECTED',finished=time.time())
+            journal.update(phase='HELD-ON-RESERVE',reason=held,finished=time.time())
             journal_write(journal)
             return False
         rollback(backend,journal,reason,restore_order=desired)
         return True
-    if order==journal['after'] and (recovery['return_policy']=='hold_reserve' or not source_ready(backend,journal,settings,reason)):
-        healthy=backend.health(journal['target']) is True
-        backend.guard(backend.devices())
-        journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-HOLD-RESERVE' if recovery['return_policy']=='hold_reserve' else 'SOURCE-NOT-VERIFIED',finished=time.time(),reserve_healthy=healthy)
-        journal_write(journal)
-        publish({'state':'STOPPED-ON-RESERVE','reason':journal['reason'],'source':journal['source'],
-                 'target':journal['target'],'expected_exit':journal.get('expected_exit'),
-                 'reserve_healthy':healthy,'original_restored':False,'trial':journal.get('trial',False)})
-        return False
+    if order==journal['after']:
+        # Owner decision 07.11.2026 (F-80): hold_reserve holds a WORKING reserve (or one whose fresh probe is unknown);
+        # a reserve a fresh probe proves failed is rescued to a verified primary (source_ready) like under healthy_primary.
+        hold_policy=recovery['return_policy']=='hold_reserve'
+        healthy=backend.health(journal['target']) if hold_policy else None
+        pinned=hold_policy and healthy is not False
+        if pinned or not source_ready(backend,journal,settings,reason):
+            if not hold_policy:healthy=backend.health(journal['target'])
+            healthy=healthy is True
+            backend.guard(backend.devices())
+            journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-HOLD-RESERVE' if pinned else 'SOURCE-NOT-VERIFIED',finished=time.time(),reserve_healthy=healthy)
+            journal_write(journal)
+            publish({'state':'STOPPED-ON-RESERVE','reason':journal['reason'],'source':journal['source'],
+                     'target':journal['target'],'expected_exit':journal.get('expected_exit'),
+                     'reserve_healthy':healthy,'original_restored':False,'trial':journal.get('trial',False)})
+            return False
     journal.update(phase='RESTORING');journal_write(journal)
     rollback(backend,journal,reason)
     return True
+
+
+RESERVE_STABLE=('id','protocol','interface','vendor_tunnel_id')  # the identity of a reserve without the monitor's epoch
 
 
 def committed_recovery_decision(backend,journal,settings,samples,now,status=None,hold=None):
@@ -1383,6 +1550,7 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     from observation_freshness import valid_for,settle_for
     recovery=normalized(settings)
     age=valid_for(settings)
+    pinned=key_unaccepted(journal['source'])  # no return onto a primary with an unaccepted key; the decision to leave a failed reserve waits for the owner
     selection_settings=dict(settings)
     for role in ('source','target'):
         if not selection_settings.get('plan_'+role):selection_settings['plan_'+role]=journal[role]
@@ -1390,9 +1558,29 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     pair=resolve_pair(status,selection_settings,now,age,settle_for(settings),flap_window(settle_for(settings)))
     proofs=journal.get('vendor_profiles',{})
     target=pair['target'];expected=proofs.get('target') if isinstance(proofs,dict) else None
-    if (pair['coordination']['state']!='READY' or target is None or target['id']!=journal['target']
-            or expected is not None and profile_identity(target)!=expected):
+    # Finding 7 (MT3000, 04.11.2026 14:06-15:33): the vendor rebuilt the reserve while it carried the traffic. Only its
+    # vendor_generation (the monitor's observation epoch) changed; every pass held RESERVE-IDENTITY-UNKNOWN for over an hour
+    # with both tunnels healthy, until the owner's Stop + Start. The vendor is quiet (READY: settled, stable samples) and
+    # the rule is now: the same id, protocol, interface and tunnel with a healthy streak OF THE NEW GENERATION is the same
+    # reserve (the decision goes on, the pair tick rebinds the journal proof: rebind). Anything else stays unknown, but
+    # an unknown reserve is no reason to stay on it: with the planned rule (min_dwell, max(primary_stable, hold), the
+    # model gate, the guarded finish_committed) the traffic returns to a stably healthy primary. Lua: transaction.lua.
+    ready=pair['coordination']['state']=='READY'
+    known=ready and target is not None and target['id']==journal['target']
+    live=profile_identity(target) if known and expected is not None else None
+    proven=(live is not None and live!=expected and all(live.get(key)==expected.get(key) for key in RESERVE_STABLE)
+            and streak(samples,target['id'],recovery['successes'],now,age,True,target))
+    dwell=now-journal.get('confirmed',journal.get('started',now))
+    need=recovery['min_dwell'] if hold is None else max(recovery['cooldown'],recovery['min_dwell'])
+    if not known or expected is not None and live!=expected and not proven:
+        if ready and recovery['return_policy']=='healthy_primary' and dwell>=need and not pinned:
+            from channel_model import return_ready as primary_ready
+            ready_settings,model_gate=return_rule(settings,'planned',hold)
+            if ((not model_gate or primary_ready(samples,journal['source'],recovery['primary_successes'],now,age,settings,pair['source']))
+                    and backend.recovery_ready(journal['source'],ready_settings) is True):
+                return {'action':'RESTORE-PRIMARY','reason':'PRIMARY-STABLY-RECOVERED'}
         return {'action':'HOLD','reason':'RESERVE-IDENTITY-UNKNOWN','reserve_healthy':None}
+    rebind={'rebind':True} if proven else {}
     # The reserve carrying traffic failed: the owner's failure model (channel_model, 'consecutive' = the streak).
     from channel_model import channel_failed,return_ready,name as failure_model
     failed=(streak(samples,target['id'],recovery['failures'],now,age,False,target) if failure_model(settings)=='consecutive'
@@ -1400,9 +1588,16 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     from fault_control import testing_profile
     fault_test=failed and testing_profile(journal['target'])
     damped=hold is not None and not failed and hold>recovery['primary_stable']
-    if recovery['return_policy']=='healthy_primary' or fault_test:
-        dwell=now-journal.get('confirmed',journal.get('started',now))
-        need=recovery['min_dwell'] if hold is None else max(recovery['cooldown'],recovery['min_dwell'])
+    refused=None
+    health=None;probed=False  # the one fresh probe of a reserve the detector calls failed
+    deciding=recovery['return_policy']=='healthy_primary' or fault_test
+    if failed and not deciding:
+        # Owner decision 07.11.2026 (F-80): hold_reserve means "do not return from a WORKING reserve". A reserve the
+        # detector calls failed AND a fresh negative probe confirms is rescued to a verified primary (rescue_stable, no
+        # model gate) under any return policy; an unknown or stale probe (RESERVE-HEALTH-UNKNOWN) stays a hold.
+        health=backend.health(journal['target']);probed=True
+        deciding=health is False
+    if deciding:
         # The one return rule of both deciders (recovery_settings.return_rule; Lua pair.return_rule): from a FAILED
         # reserve the rescue stability min(primary_stable, rescue_stable) and no model gate (the HMM return gate never
         # delays leaving a dead reserve); a planned return wants max(primary_stable, hold) AND, in the HMM modes,
@@ -1411,13 +1606,14 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
         if ((failed or dwell>=need)
                 and (not model_gate or return_ready(samples,journal['source'],recovery['primary_successes'],now,age,settings,pair['source']))
                 and backend.recovery_ready(journal['source'],ready_settings) is True):
-            return {'action':'RESTORE-PRIMARY','reason':'RESERVE-FAILED-PRIMARY-VERIFIED' if failed else 'PRIMARY-STABLY-RECOVERED'}
+            if not pinned:return {'action':'RESTORE-PRIMARY','reason':'RESERVE-FAILED-PRIMARY-VERIFIED' if failed else 'PRIMARY-STABLY-RECOVERED'}
+            refused=pinned  # the return was due: the page names what it waits for
     if failed:
         # A fresh negative check avoids acting on stale monitor failure history.
-        health=backend.health(journal['target'])
-        if health is False:return {'action':'HOLD','reason':'RESERVE-FAILED','reserve_healthy':False}
-        if health is None:return {'action':'HOLD','reason':'RESERVE-HEALTH-UNKNOWN','reserve_healthy':None}
-    return {'action':'OBSERVE','reason':'PAIR-RATE-LIMIT' if damped and recovery['return_policy']=='healthy_primary' else 'CLIENT-CONFIRMED'}
+        if not probed:health=backend.health(journal['target'])
+        if health is False:return dict({'action':'HOLD','reason':refused or 'RESERVE-FAILED','reserve_healthy':False},**rebind)
+        if health is None:return dict({'action':'HOLD','reason':refused or 'RESERVE-HEALTH-UNKNOWN','reserve_healthy':None},**rebind)
+    return dict({'action':'OBSERVE','reason':refused or ('PAIR-RATE-LIMIT' if damped and recovery['return_policy']=='healthy_primary' else 'CLIENT-CONFIRMED')},**rebind)
 
 
 def disable_acceleration(backend,request):
@@ -1536,13 +1732,15 @@ def child(tx):
     apply_progress(tx,'reorder')
     backend.reorder(journal['after'],write_command=write_command)
     apply_progress(tx,'apply')
-    backend.apply(write_command=write_command)
+    backend.stage_budget=lambda want:stage_budget(journal,want)  # F-30: one monotonic deadline for every stage
+    try:backend.apply(write_command=write_command)
+    finally:backend.stage_budget=None
     if journal.get('pair_transition') is not None:
         apply_progress(tx,'verify-diagnostic')
         blockers,current=backend.diagnostic()
         # GL often restarts the failed tunnel at this very moment (seen on the MT3000: VENDOR-WORKER-BUSY right
         # after a fast switch). A busy or settling vendor worker is transient: wait for it, bounded, then judge.
-        waited_until=time.monotonic()+VERIFY_VENDOR_WAIT
+        waited_until=time.monotonic()+stage_budget(journal,VERIFY_VENDOR_WAIT)
         while blockers and set(blockers)<=VERIFY_TRANSIENT and time.monotonic()<waited_until:
             time.sleep(2);blockers,current=backend.diagnostic()
         if blockers:raise Refused(blockers[0])
@@ -1675,6 +1873,9 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
     if pair_destination is not None and (manual_request_id is None and not pair_reapply and not pair_return or pair_destination not in ('source','target') or PROOF_SCOPE!='router-probed-ipv4'):
         raise Refused('MANUAL-REQUEST-INVALID')
     if pair_session_order is not None and (trial or PROOF_SCOPE!='router-probed-ipv4'):raise Refused('MANUAL-REQUEST-INVALID')
+    if not pair_reapply:  # a repair of the rules of the carrying channel moves nothing
+        pinned=key_unaccepted(selection[pair_destination or 'target']['id'])
+        if pinned:raise Refused(pinned)
     if control_revision is None:
         from auto_control import current_revision
         control_revision=current_revision(RUNTIME)
@@ -1868,6 +2069,9 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
                 # the manual hold below: a Stop (it rotates the revision under this lock) is before or after, never between
                 with control_lock(RUNTIME):
                     require_control_revision(control_revision)
+                    # Review F-29 (06.11.2026): the loop checked the deadline before the probe; a probe that crossed it cannot commit.
+                    if STOP:raise Refused('CLIENT-STOP')
+                    if transaction_expired(journal):raise Refused('TRANSACTION-EXPIRED')
                     journal.update(phase='COMMITTED',confirmed=time.time());journal_write(journal)
                 from switch_timing import record as record_switch_time
                 record_switch_time(PERSIST,journal['confirmed']-journal['started'])  # page countdown only
@@ -1932,6 +2136,8 @@ def instant_manual(backend,selection,until,control_revision,manual_request_id,re
     if (not isinstance(manual_request_id,str) or not re.fullmatch(r'[a-f0-9]{32}',manual_request_id)
             or pair_destination not in ('source','target') or PROOF_SCOPE!='router-probed-ipv4' or pair_session_order is None):
         raise Refused('MANUAL-REQUEST-INVALID')
+    pinned=key_unaccepted(selection[pair_destination]['id'])
+    if pinned:raise Refused(pinned)
     from auto_control import normalize_request_source,control_lock
     from pair_policy import transition,desired_order
     bind_policy_context(backend,selection)
@@ -1987,7 +2193,8 @@ def instant_manual(backend,selection,until,control_revision,manual_request_id,re
             saved=journal_read()
             if saved.get('tx')==tx:journal=saved
             journal['failure_code']=code;journal['failure_detail']=record_attempt_failure(tx,'lua-instant',error,mono)
-            if (getattr(error,'lua_result',None) or {}).get('rollback_required') or journal.get('phase')=='HELD-ON-RESERVE':
+            # A lost helper answer with the durable journal still APPLYING is no proof of "nothing written" (F-20).
+            if lua_rollback_required(error,saved,tx) or journal.get('phase')=='HELD-ON-RESERVE':
                 journal_write(journal);rollback_counted(backend,journal,'TRANSACTION-FAILED')
             elif journal.get('phase')!='ROLLED-BACK':
                 journal.update(phase='ROLLED-BACK',reason='FAILED-BEFORE-APPLY',restored_order=list(before),finished=time.time());journal_write(journal)
@@ -2045,17 +2252,31 @@ def manual_stamp(name,request_id=None):
     except (OSError,ValueError,TypeError):pass
 
 
+WAKE_SEEN=[None]  # the newest wake row this supervisor reacted to (each row ends one nap)
+
+
+def wake_due():
+    """L1: the monitor left a new row in RAM (a failed sample of an Auto channel, probe_policy.wake_row). A hint only:
+    the tick that follows reads and proves everything itself. Lua: auto.wake_due."""
+    from channel_model import WAKE_NAME
+    try:row=read_json(RUNTIME/WAKE_NAME,{})
+    except (OSError,ValueError):return False
+    stamp=row.get('since',row.get('time')) if isinstance(row,dict) else None  # a heartbeat row: one wake per run of lost beats
+    if type(stamp) not in (int,float) or stamp==WAKE_SEEN[0]:return False
+    WAKE_SEEN[0]=stamp
+    return True
+
+
 def nap(seconds):
-    """The supervisor's pause between pair ticks; a queued owner click ends it at once (instant manual switch)."""
+    """The supervisor's pause between pair ticks; a queued owner click or a wake row ends it at once."""
     end=time.monotonic()+seconds
     while not STOP:
         left=end-time.monotonic()
         if left<=0:return
-        try:
-            row=read_json(RUNTIME/'pair-manual-control.json',{})
-            if row.get('state')=='QUEUED':
-                manual_stamp('woke',row.get('id'));return
-        except (OSError,ValueError,AttributeError):pass
+        row=queued_click()
+        if row is not None:
+            manual_stamp('woke',row.get('id'));return
+        if wake_due():return
         time.sleep(min(.2,left))
 
 
@@ -2214,7 +2435,11 @@ def serve():
         from boot_resume import write_token
         write_token(RUNTIME)
         last_return=0;consumed={};last_trial=None;last_attempt=0
+        failed_passes=0;failed_at=None;settings={}
         while not STOP:
+            # before anything that can fail: a pass that never reaches consume must not keep a click queued for ever
+            from pair_manual import expire_queued
+            expire_queued()
             try:
                 from speed_pause import gate as speed_gate
                 if speed_gate('auto'):
@@ -2368,12 +2593,23 @@ def serve():
                 if 'GUARD-RETAINED' in reason or pending.get('phase') in RECOVERY_PHASES:
                     fence_recovery()
                     return
+                # A failed pass is retried (ifup, a refused step): Fibonacci 2..15 s with full jitter (retry_policy.py).
+                failed_passes,failed_at=retry_policy.count(failed_passes,failed_at,time.monotonic())
+                failed_pass_rest(retry_policy.pause(failed_passes,settings))
+                continue
             time.sleep(5)
         active=journal_read()
         if active.get('phase')=='COMMITTED':
             if finish_committed(backend,active,'SERVICE-STOPPED') and backend.order()==(active.get('restored_order',active['before']),active['hash']):backend.unguard()
         from pair_auto import recover as pair_shutdown
-        pair_shutdown(backend)
+        shutdown_record(pair_shutdown(backend))
+
+
+def shutdown_record(ok):
+    """Audit F-17 (plan item 54): the supervisor's last word on its shutdown recovery, for the package prerm guard that
+    runs after the service stop (lifecycle_guard.shutdown_refusal: ok must be true). RAM only. Lua: auto.shutdown."""
+    try:atomic_json(RUNTIME/'supervisor-shutdown.json',{'ok':ok is True,'code':None if ok is True else 'PAIR-RECOVERY-REQUIRED','time':time.time()})
+    except OSError:pass
 
 
 def configure_timezone():

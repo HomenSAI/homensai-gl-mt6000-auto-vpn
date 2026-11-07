@@ -38,6 +38,11 @@ PROFILES = {
     'faults-power': ['--no-gl', '--no-crash', '--faults'],               # power cut + failed kernel reload (K10)
     'server': ['--no-gl', '--no-power', '--server'],                     # server pick stages 2/3
     'glpower-net': ['--no-crash', '--no-expire', '--ext', 'net'],        # outside client change, then power cut (K9, K11; ~0.3 M states)
+    'rebuild': ['--no-gl', '--no-power', '--rebuild'],                   # the vendor rebuilds the carrying reserve (K12, finding 7)
+    'fast': ['--no-gl', '--no-power', '--fast-switch'],                  # the fast end: leaving a live primary, a recheck that missed its recovery
+    'fast-power': ['--no-gl', '--no-crash', '--fast-switch'],            # the same with a power cut
+    'window': ['--no-gl', '--no-crash', '--no-expire', '--window'],      # the uptime window of the boot hand-over, variant C (G2, G3)
+    'keys': ['--no-gl', '--no-power', '--no-expire', '--key-pin', 'directional'],   # server_key_pin enforce: a directional gate (review 04.11.2026, findings 1, 2)
 }
 MIN_STATES = 50000   # a profile that explores far fewer states than designed means the model was broken, not "green"
 
@@ -59,6 +64,10 @@ def signatures(result):
         sig['EF-START'] = result['ef_stuck']
     if (result.get('liveness_failover') or {}).get('bad'):
         sig['LIVENESS:failover'] = result['liveness_failover']['bad']
+    if (result.get('liveness_return') or {}).get('bad'):
+        sig['LIVENESS:return'] = result['liveness_return']['bad']
+    if (result.get('liveness_stop_hold') or {}).get('bad'):
+        sig['LIVENESS:stop-ends-hold'] = result['liveness_stop_hold']['bad']
     for which in ('up', 'down'):
         bad = (result.get('liveness_stop_primary_' + which) or {}).get('not_clean')
         if bad:

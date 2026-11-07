@@ -1,7 +1,7 @@
 {
   "_comment": "Expected violations of the formal model, variant fix with the K fixes of the fixed list switched on (= the code of the integration branch). xfail = known counterexample, not fixed yet: CI is red when it DISAPPEARS (flip it) and when anything NOT listed appears. accepted = by design or a model artifact. K numbers are the counterexamples K1-K10 of REPORT.ru.md (K = Cyrillic К). See README.md for flipping.",
   "variant": "fix",
-  "fixed": ["K1T", "K2", "K3", "K4", "K5", "K9", "K11"],
+  "fixed": ["K1T", "K2", "K3", "K4", "K5", "K9", "K11", "K12", "F32", "T4A"],
   "known": {
 
     "LEAK:begin-instant": {"status": "accepted", "note": "by design: the instant between the STARTING write and guard(), no I/O wait in between"},
@@ -12,6 +12,6 @@
     "LIVENESS:stop-primary-down": {"status": "accepted", "note": "K8 by design: Stop with a dead primary leaves the traffic on the reserve under VPN-only"},
     "LIVENESS:stop-primary-up": {"status": "accepted", "profiles": ["faults", "faults-power"], "note": "K7: after failures ROLLBACK-GIVEN-UP needs the operator"},
     "EF-START": {"status": "accepted", "profiles": ["faults", "faults-power"], "note": "K7: ROLLBACK-GIVEN-UP is left only by the operator"},
-    "INCONSISTENT": {"status": "accepted", "profiles": ["faults-power"], "note": "K10: only with failures after a power cut (failed kernel reload in the rollback); possibly a model artifact"}
+    "INCONSISTENT": {"status": "accepted", "profiles": ["faults", "faults-power"], "note": "K10: only with failures: a failed kernel reload in the rollback after a power cut (possibly a model artifact), and G7: a recovery whose cleanup failed ends with the journal RESTORING until the next pass exits and rolls back"}
   }
 }

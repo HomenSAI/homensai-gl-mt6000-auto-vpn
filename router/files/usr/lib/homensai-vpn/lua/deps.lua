@@ -100,22 +100,26 @@ function M.manual_control(env)
   return C
 end
 
--- switch_timing.record: display-only running average of confirmed switch durations
+-- switch_timing.record: display-only running average of confirmed switch durations.
+-- Accepts finite 0 < seconds <= 600 (sub-second fast swaps included, review F-51) and keeps the unrounded
+-- accumulator A1 = s1, An = 0.7*A(n-1) + 0.3*sn; rounding is for the page only (monitor_status, review F-52).
 M.TIMING_NAME='switch-timing.json'
-local function round(x,digits) local m=10^digits;return math.floor(x*m+0.5)/m end
+local function timing_valid(raw)
+  local x=canon.number(raw)
+  return x~=nil and type(raw)~='boolean' and py.finite(raw) and x>0 and x<=600
+end
 function M.record_switch_time(env,seconds)
   local ok,value=pcall(function()
+    if not timing_valid(seconds) then return nil end
     local x=canon.number(seconds)
-    if x==nil or not py.finite(seconds) or x<1 or x>600 then return nil end
     local path=env.persist..'/'..M.TIMING_NAME
     local current=nil
     local rok,row=pcall(ctl.read_json,env.run,path,nil)
-    if rok and canon.is_object(row) and py.is_int(row.count) and row.count>=1 then
-      local avg=canon.number(row.avg_seconds)
-      if avg~=nil and type(row.avg_seconds)~='boolean' and avg>=1 and avg<=600 then current={avg=round(avg,1),count=row.count} end
+    if rok and canon.is_object(row) and py.is_int(row.count) and row.count>=1 and timing_valid(row.avg_seconds) then
+      current={avg=canon.number(row.avg_seconds),count=row.count}
     end
     local average=current and (current.avg*0.7+x*0.3) or x
-    local out=canon.object({avg_seconds=canon.float(round(average,2)),count=(current and current.count or 0)+1,last_seconds=canon.float(round(x,1)),
+    local out=canon.object({avg_seconds=canon.float(average),count=(current and current.count or 0)+1,last_seconds=canon.float(x),
       updated=canon.float(env.run.wall())})
     ctl.write_json(env.run,path,out)
     return out

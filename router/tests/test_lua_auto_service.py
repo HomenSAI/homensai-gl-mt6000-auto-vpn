@@ -33,6 +33,7 @@ procd_set_param() { printf 'PARAM %s\\n' "$*"; }
 procd_close_instance() { printf 'CLOSE\\n'; }
 ubus() { :; }
 jsonfilter() { cat >/dev/null; printf 'glinet,mt3000-snand\\n'; }
+integrity_gate() { echo normal; }  # a verified install (the self-check: test_integrity_faults)
 start_service
 '''
 
@@ -98,6 +99,7 @@ procd_set_param() { printf 'PARAM %s\\n' "$*"; }
 procd_close_instance() { printf 'CLOSE\\n'; }
 ubus() { :; }
 jsonfilter() { cat >/dev/null; printf 'glinet,mt3000-snand\\n'; }
+integrity_gate() { echo normal; }  # a verified install (the self-check: test_integrity_faults)
 start_service
 '''
 

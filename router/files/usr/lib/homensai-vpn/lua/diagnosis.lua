@@ -217,6 +217,9 @@ function M.resolve_pair(status,settings,now,max_age,settle_seconds,source_window
   return result
 end
 
+M.WAN_HOLD_ACTIONS={['WAN-DOWN']='The router itself has no Internet (WAN); switching VPN cannot help. Waiting for the WAN.',
+  ['WAN-RECOVERING']='The WAN came back; the primary is re-checked before any switch.'}
+
 function M.diagnose(status,source,now,settings)
   local pair=require('pair')
   local age
@@ -236,6 +239,13 @@ function M.diagnose(status,source,now,settings)
   if uplink==nil then uplink=canon.object({}) end
   if canon.is_object(uplink) and uplink.state=='DOWN' and fresh(get(uplink,'time'),now,age) then
     return result('UPLINK-LINK-DOWN',true,'Restore configured uplink; do not cycle VPN reserves.')
+  end
+  -- GL-SENSORS-2026-11-04 item 1 (wan_diag.lua): the WAN itself is proven down (or came back seconds ago and the
+  -- primary has not been re-checked yet): switching to the other VPN cannot help; no budget, cooldown or dwell is used.
+  local wan=status.wan_diagnosis
+  if canon.is_object(wan) and wan.hold==true and type(wan.code)=='string' and M.WAN_HOLD_ACTIONS[wan.code]
+     and fresh(get(wan,'time'),now,age) then
+    return result(wan.code,true,M.WAN_HOLD_ACTIONS[wan.code])
   end
   local profiles=status.profiles
   if profiles==nil then profiles=canon.array({}) end

@@ -1,0 +1,171 @@
+{
+ "platform": "Windows 11, Python 3.14, DPAPI lab store, alpine:3.20 + real OpenWrt 21.02.7 usign (router steps)",
+ "command": "py -3.14 scripts/signing/lab.py --run-all-drills --no-network",
+ "drills": {
+  "a": {
+   "status": "PASS",
+   "seconds": 0.7,
+   "mode": "auto"
+  },
+  "b": {
+   "status": "PASS",
+   "seconds": 2.9,
+   "mode": "auto"
+  },
+  "c": {
+   "status": "PASS",
+   "seconds": 3.8,
+   "mode": "auto"
+  },
+  "d": {
+   "status": "PASS",
+   "seconds": 1.9,
+   "mode": "auto"
+  },
+  "e": {
+   "status": "PASS",
+   "seconds": 6.0,
+   "mode": "auto"
+  },
+  "f": {
+   "status": "PASS",
+   "seconds": 32.8,
+   "mode": "auto"
+  },
+  "g": {
+   "status": "PASS",
+   "seconds": 7.3,
+   "mode": "auto"
+  },
+  "h": {
+   "status": "PASS",
+   "seconds": 42.4,
+   "mode": "auto"
+  },
+  "i": {
+   "status": "PASS",
+   "seconds": 18.5,
+   "mode": "auto"
+  },
+  "j": {
+   "status": "PASS",
+   "seconds": 74.5,
+   "mode": "auto"
+  },
+  "k": {
+   "status": "PASS",
+   "seconds": 63.8,
+   "mode": "auto"
+  },
+  "l": {
+   "status": "PASS",
+   "seconds": 33.7,
+   "mode": "auto"
+  },
+  "m": {
+   "status": "SKIP",
+   "seconds": 0.0,
+   "mode": "auto"
+  },
+  "n": {
+   "status": "PASS",
+   "seconds": 4.1,
+   "mode": "auto"
+  },
+  "o": {
+   "status": "PASS",
+   "seconds": 33.6,
+   "mode": "auto"
+  }
+ },
+ "drill_o_steps": [
+  {
+   "ok": true,
+   "step": "Работаю на временной копии лаборатории, коды подставляются автоматически"
+  },
+  {
+   "ok": true,
+   "step": "Новый фиктивный пакет homensai-auto-vpn_0.0.4-alpha1-1_all.ipk"
+  },
+  {
+   "ok": true,
+   "step": "Фиктивные отчёты: история тестов, CI, soak, очередь, формальная проверка"
+  },
+  {
+   "ok": true,
+   "step": "Манифест перечисляет все 7 файлов с SHA-256"
+  },
+  {
+   "ok": true,
+   "step": "Отказ EVIDENCE-SIGNATURE-MISSING, как и должно быть"
+  },
+  {
+   "ok": true,
+   "step": "Неподписанный манифест не принят и не связан с цепочкой"
+  },
+  {
+   "ok": true,
+   "step": "Манифест подписан тем же путём с кодом, хеш внутри записи цепочки"
+  },
+  {
+   "ok": true,
+   "step": "Проверка честного комплекта: PASS"
+  },
+  {
+   "ok": true,
+   "step": "Симулятор роутера: alpine:3.20, BusyBox ash/sed + real OpenWrt 21.02.7 usign"
+  },
+  {
+   "ok": true,
+   "step": "Роутер: код 0 release chain verified"
+  },
+  {
+   "ok": true,
+   "step": "Запись цепочки с evidence_sha256 принята строгим sed роутера"
+  },
+  {
+   "ok": true,
+   "step": "Отказ EVIDENCE-FILE-CHANGED: qa/FAKE-LOCAL-CI.json, как и должно быть"
+  },
+  {
+   "ok": true,
+   "step": "Названа ровно одна изменённая запись: qa/FAKE-LOCAL-CI.json"
+  },
+  {
+   "ok": true,
+   "step": "Отказ EVIDENCE-FILE-MISSING: private/soak-24h/report-fake/cycles.json, как и должно быть"
+  },
+  {
+   "ok": true,
+   "step": "Отказ EVIDENCE-SIGNATURE-INVALID, как и должно быть"
+  },
+  {
+   "ok": true,
+   "step": "Манифест подогнан под файл, но подпись и ссылка в цепочке не сходятся"
+  },
+  {
+   "ok": true,
+   "step": "Отказ EVIDENCE-MANIFEST-FORMAT, как и должно быть"
+  },
+  {
+   "ok": true,
+   "step": "Отказ EVIDENCE-SIGNATURE-MISSING, как и должно быть"
+  },
+  {
+   "ok": true,
+   "step": "Отказ EVIDENCE-SIGNATURE-INVALID, как и должно быть"
+  },
+  {
+   "ok": true,
+   "step": "Новый манифест с чужой подписью не проходит и не найден в цепочке"
+  },
+  {
+   "ok": true,
+   "step": "Отказ EVIDENCE-NOT-IN-CHAIN, как и должно быть"
+  },
+  {
+   "ok": true,
+   "step": "Всё возвращено на место: проверка снова PASS"
+  }
+ ]
+}

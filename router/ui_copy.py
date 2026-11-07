@@ -76,9 +76,6 @@ COPY = [
      'Saving does not start Auto. The router-probed mode checks its own readiness; a separate LAN trial is required only for a mode that uses it.',
      'Сохранение не запускает Auto. Режим с проверками роутера проверяет свою готовность; отдельный LAN-тест нужен только режиму, который его использует.'),
     # Settings and system
-    ('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.',
-     'Turns the background checks on or off. Stop Auto and wait for it to hand control back before turning the checks off. The real state is confirmed by fresh results.',
-     'Включает или выключает фоновые проверки. Перед выключением остановите Auto и дождитесь, пока он вернёт управление. Реальное состояние подтверждают свежие результаты.'),
     ('Native failover · controlled trial', 'Automatic switching · LAN trial', 'Автопереключение · LAN-тест'),
     ('Download LAN test helper', 'Download LAN helper', 'Скачать LAN-помощник'),
     ('Stop trial and restore', 'Stop and return to the primary', 'Остановить и вернуться на основной'),

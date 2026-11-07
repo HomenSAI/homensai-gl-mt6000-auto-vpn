@@ -1,4 +1,18 @@
 #!/bin/sh
-# Keeps the version honest: if the product source changed without a version change, bump it and stage the result.
-python scripts/bump-version.py || exit 1
-git add VERSION.json router/Makefile router/build_ipk.py router/build_sidebar_ui.py router/files lab/storage_adversity_guest.py router-test-kit/02-install.sh router-test-kit/03-verify.sh
+# 1) Secret scan of the staged files (values are never printed). Blocks the commit on any finding.
+#    Known test placeholders are listed with reasons in scripts/secret_scan_allowlist.json.
+#    The scan is required: a missing scanner blocks the commit instead of skipping the check.
+if [ ! -f scripts/secret_scan.py ]; then
+  echo "pre-commit: scripts/secret_scan.py is missing, the required secret scan cannot run, nothing committed" >&2
+  exit 1
+fi
+python scripts/secret_scan.py --staged || { echo "pre-commit: secret scan failed, nothing committed" >&2; exit 1; }
+# 2) Checks that the version fingerprint is current. The hook only CHECKS and REFUSES: it never bumps the version, renames
+#    dashboards or stages router files by itself (those silent edits mixed unrelated changes into a commit).
+#    A stale fingerprint means the product source changed after it was recorded.
+python scripts/bump-version.py --check >/dev/null 2>&1 || {
+  echo "pre-commit: the source fingerprint in VERSION.json is stale (the product source changed after it was recorded), nothing committed." >&2
+  echo "pre-commit: run   python scripts/bump-version.py --fingerprint-only   and stage VERSION.json, then commit again." >&2
+  echo "pre-commit: during a release use the release bump (python scripts/bump-version.py) deliberately, not from the hook." >&2
+  exit 1
+}

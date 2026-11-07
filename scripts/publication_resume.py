@@ -1,6 +1,21 @@
 """Reconcile remote evidence before retrying any publication mutation."""
+import re
+
+FULL_SHA=re.compile('[a-f0-9]{40}')
+
+
+def checked_ledger(ledger):
+    """The ledger names immutable commits, never a branch: the push sends exactly ledger['public']."""
+    if not isinstance(ledger,dict):raise ValueError('PUBLICATION-LEDGER-SHA')
+    for key in ('parent','public'):
+        value=ledger.get(key)
+        if not isinstance(value,str) or not FULL_SHA.fullmatch(value):raise ValueError('PUBLICATION-LEDGER-SHA')
+    if ledger['parent']==ledger['public']:raise ValueError('PUBLICATION-LEDGER-SHA')
+    return ledger
+
 
 def finish(ledger,remote,persist):
+    checked_ledger(ledger)
     def confirmed(action,read,expected):
         try:action()
         except Exception:

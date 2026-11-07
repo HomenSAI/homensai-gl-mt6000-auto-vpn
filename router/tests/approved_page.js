@@ -2,13 +2,14 @@
 // (qa/ui-preview/fixture-pair.js): no browser, no router. Every router call is recorded in order.
 'use strict';
 const fs=require('fs'),vm=require('vm'),path=require('path');
+const {luciE}=require('./luci_dom_model');  // BH3-01: E follows LuCI (a single scalar child -> innerHTML, recorded)
 const ROOT=path.resolve(__dirname,'..','..');
 const app=JSON.parse(fs.readFileSync(path.join(ROOT,'VERSION.json'),'utf8').replace(/^﻿/,'')).application;
 const PAGE=path.join(ROOT,'router/files/www/luci-static/resources/view/homensai-vpn/'+app.ui_module+'.js');
 const CSS=path.join(ROOT,'router/files/www/luci-static/resources/view/homensai-vpn/'+app.ui_stylesheet);
 function pageSource(){return fs.readFileSync(PAGE,'utf8');}
 function load(opts){
-  opts=opts||{};const scn=opts.scn||'ok',calls=[],stored=Object.assign({},opts.storage||{}),modals=[],toasts=[];
+  opts=opts||{};const scn=opts.scn||'ok',innerHtml=[],calls=[],stored=Object.assign({},opts.storage||{}),modals=[],toasts=[];
   const settings={},profiles=[],status={profiles},inventory={profiles:[],servers:[],settings};
   const c={console,URL,URLSearchParams,Intl,Promise,Date,Math,JSON,Error,Object,Array,Number,String,Boolean,RegExp,Map,Set,WeakMap,
     setTimeout:(fn,ms)=>ms<=50?setTimeout(fn,0):0,clearTimeout(){},setInterval(){return 0;},clearInterval(){},
@@ -16,7 +17,7 @@ function load(opts){
     localStorage:{getItem:k=>Object.prototype.hasOwnProperty.call(stored,k)?stored[k]:null,setItem:(k,v)=>{stored[k]=String(v);}},
     sessionStorage:{getItem:()=>null,setItem(){}},performance:{now:()=>Date.now()},navigator:{},
     document:{hidden:false,head:null,activeElement:null,createElement:()=>({}),addEventListener(){},querySelector(){return null;},querySelectorAll(){return [];},getElementById(){return null;}},
-    E:(tag,attrs,children)=>({tag,attrs,children}),L:{resource:p=>'/luci-static/resources/'+p,require:()=>Promise.reject(new Error('no lazy module in this test'))},
+    E:luciE((tag,attrs)=>({tag,attrs,children:[]}),innerHtml),L:{resource:p=>'/luci-static/resources/'+p,require:()=>Promise.reject(new Error('no lazy module in this test'))},
     poll:{add(){}},ui:{addNotification(){},showModal(){},hideModal(){}},view:{extend:o=>o},baseclass:{extend:o=>o},request:{},
     addEventListener(){},scrollTo(){},pageYOffset:0,fixtureCalls:[]};
   c.window=c;c.globalThis=c;
@@ -38,8 +39,8 @@ function load(opts){
   T.setLocale(opts.lang||'ru');
   if(opts.tick!==false&&opts.mutate===undefined)c.HV_FIXTURE_CMD=undefined;
   T.snap();
-  return {c,T,calls,modals,toasts,status,inventory,settings,profiles,stored,view,flush:()=>new Promise(r=>setTimeout(r,20)),
-    methods:()=>calls.map(x=>x.method).filter(m=>m!=='status'&&m!=='history'&&m!=='inventory')};
+  return {c,T,calls,innerHtml,modals,toasts,status,inventory,settings,profiles,stored,view,flush:()=>new Promise(r=>setTimeout(r,20)),
+    methods:()=>calls.map(x=>x.method).filter(m=>m!=='status'&&m!=='history'&&m!=='inventory'&&m!=='advisor')};  // advisor: read-only (the slider curve)
 }
 function strip(html){return String(html).replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#39;|&quot;|&amp;|&lt;|&gt;/g,' ').replace(/\s+/g,' ');}
 module.exports={load,strip,pageSource,PAGE,CSS,ROOT,app};

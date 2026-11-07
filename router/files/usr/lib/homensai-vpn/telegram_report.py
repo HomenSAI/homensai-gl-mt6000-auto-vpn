@@ -26,6 +26,9 @@ def format_report(status, minutes, now=None, items=None):
     from telegram_items import ITEMS
     items=ITEMS if items is None else items
     now=time.time() if now is None else now
+    if tuple(items)==('brief',):
+        from telegram_brief import format_brief
+        return format_brief(status,now-minutes*60,now,now)
     lines = ['HomenSAI Auto VPN · monitoring', datetime.fromtimestamp(now).strftime('%d.%m.%Y %H:%M Europe/Berlin'),
              'Report interval: %s min' % minutes]
     if 'servers' in items:
@@ -147,6 +150,155 @@ def delta_lines(status,saved,now):
     return lines
 
 
+# A long VENDOR-WORKER-BUSY (pair_auto.busy_fields) is told at once, apart from the schedule: no report is moved, the sender state
+# and flash are not touched. RAM key: one notice per cause and pid until the state ends; a failed send is tried again after the
+# usual backoff. The text says what was observed, not that GL is idle. Lua: telegram.vendor_notice (the same text and file).
+NOTICE_FILE='telegram-vendor-notice.json'
+NOTICE_MAX_AGE=60
+NOTICE_TEXT={
+    'VENDOR-BUSY-RTP-LOCK-DEAD':'The GL.iNet rtp2 lock file names a process that is no longer running. This does not prove GL.iNet has finished: a killed rtp2 can leave its child commands running. A router reboot clears the file.',
+    'VENDOR-BUSY-RTP-LOCK-LIVE':'An rtp2 process named in the GL.iNet lock file is running.',
+    'VENDOR-BUSY-TUNNEL-SWITCH':'A GL.iNet tunnel-switch lock file is present.',
+    'VENDOR-BUSY-WORKERS':'No GL.iNet lock file is visible, but GL.iNet workers or service queues are running.',
+    'VENDOR-BUSY-UNIDENTIFIED':'The router reports GL.iNet busy and the cause could not be identified. A missing file does not prove GL.iNet is idle.'}
+
+
+def vendor_notice_key(native,now):
+    if not isinstance(native,dict) or native.get('state')!='BLOCKED' or native.get('reason') not in NOTICE_TEXT:return None
+    stamp=native.get('time')
+    if isinstance(stamp,bool) or not isinstance(stamp,(int,float)) or now-stamp>NOTICE_MAX_AGE:return None
+    pid=native.get('vendor_lock_pid')
+    return '%s:%d'%(native['reason'],pid if isinstance(pid,int) and not isinstance(pid,bool) else 0)
+
+
+def vendor_notice_text(native):
+    pid=native.get('vendor_lock_pid');workers=native.get('vendor_workers')
+    return ('HomenSAI Auto VPN notice: %s\nObserved: Auto has been blocked by VENDOR-WORKER-BUSY for %d s. %s'%(native['reason'],native.get('busy_seconds') or 0,NOTICE_TEXT[native['reason']])
+            +('\nLock pid: %d'%pid if isinstance(pid,int) else '')+'\nVendor workers seen: '+(str(workers) if isinstance(workers,int) else 'not read')
+            +'\nAuto stays blocked and makes no switch attempt. It does not remove any lock.')
+
+
+def vendor_notice(config,status,state,now):
+    """-> state"""
+    from agent import RUNTIME,atomic_json,read_json
+    from auto_control import control_lock
+    native=status.get('native_failover');path=RUNTIME/NOTICE_FILE
+    key=vendor_notice_key(native,now)
+    try:known=read_json(path,{}).get('key')
+    except (OSError,ValueError,AttributeError):known=None
+    if key is None:
+        if known is not None:
+            try:path.unlink()
+            except OSError:pass
+        return state
+    if known==key:return state
+    with control_lock(RUNTIME/'telegram-control'):
+        try:send_message(config,vendor_notice_text(native))
+        except DeliveryError as error:
+            counter='unknown_deliveries' if error.uncertain else 'known_failures'
+            return dict(state,attempt=now,last_code=error.code,retry_after=error.retry_after,**{counter:state.get(counter,0)+1})
+        atomic_json(path,{'key':key})
+    return dict(state,last_code='TELEGRAM-DELIVERED')
+
+
+# Owner decision 07.11.2026: a HOLD or an automatic ADOPT of a change made outside the app is told (telegram_state's RAM
+# ring, written by the pair when it decides, so a seconds-long ADOPT is not lost before this round). Gated exactly like
+# the VENDOR-BUSY notice: only from deliver(), i.e. Telegram on with a valid chat and token; the usual backoff holds it.
+# At most one message per class (HOLD, ADOPT, RELEASE) every OUTSIDE_INTERVAL s: decisions within the window are not dropped,
+# the next message tells the newest one and how many came before it. Older than OUTSIDE_MAX_AGE: marked, not sent.
+# Text: class, trigger, reason and package NAMES only (validated codes and names), EN then RU. The told keys and the
+# last message time per class live in RUNTIME (OUTSIDE_SEEN, bounded by the ring). Lua: telegram.outside_notice.
+OUTSIDE_INTERVAL=600
+OUTSIDE_MAX_AGE=21600
+OUTSIDE_HEAD={
+    'HOLD':('Auto found a configuration change made outside the app and HOLDS it: the change was not adopted, Auto is blocked and makes no switch.',
+            'Auto обнаружил изменение настроек, сделанное вне приложения, и УДЕРЖИВАЕТ его: изменение не принято, Auto заблокирован и не переключает каналы.'),
+    'ADOPT':('Auto found a configuration change made outside the app and adopted it by itself: only Wi-Fi, DHCP, the GL DNS page or the network interface class changed. Auto continues.',
+             'Auto обнаружил изменение настроек, сделанное вне приложения, и принял его сам: изменились только Wi-Fi, DHCP, страница GL DNS или класс сетевых интерфейсов. Auto продолжает работу.'),
+    # owner decision 07.11.2026: the hold ended by the owner (class RELEASE; the variant is item['release'], see outside_variant)
+    'RELEASE_STOP':('The outside-change hold ended: owner Stop. The change was not adopted and Auto is stopped.',
+                    'Удержание изменения, сделанного вне приложения, завершено: «Стоп» владельца. Изменение не принято, Auto остановлен.'),
+    'RELEASE_START':('The outside-change hold ended: owner Start, new configuration accepted. Auto starts a new session with it, after the usual start checks.',
+                     'Удержание изменения, сделанного вне приложения, завершено: «Старт» владельца, новая конфигурация принята. Auto начинает новую сессию с ней, после обычных проверок запуска.')}
+OUTSIDE_TODO={
+    'HOLD':('What to do: check the change. If it is yours, press Stop, then Start: Start adopts the current configuration. Until then Auto stays blocked.',
+            'Что сделать: проверьте изменение. Если оно ваше, нажмите «Стоп», затем «Старт»: «Старт» примет текущую конфигурацию. До этого Auto остаётся заблокированным.'),
+    'ADOPT':('Nothing to do.','Ничего делать не нужно.'),
+    'RELEASE_STOP':('What to do: press Start when you want Auto to run again; Start takes the current configuration.',
+                    'Что сделать: когда нужно снова запустить Auto, нажмите «Старт»: «Старт» примет текущую конфигурацию.'),
+    'RELEASE_START':('Nothing to do.','Ничего делать не нужно.')}
+OUTSIDE_CODE={'HOLD':'PAIR-OUTSIDE-CHANGE-HELD','ADOPT':'PAIR-OUTSIDE-CHANGE-ADOPTED','RELEASE':'PAIR-OUTSIDE-CHANGE-RELEASED'}
+
+
+def outside_variant(item):
+    return 'RELEASE_'+item['release'] if item['decision']=='RELEASE' else item['decision']
+
+
+def outside_text(item,more=0,since=None):
+    code=OUTSIDE_CODE[item['decision']]
+    when=datetime.fromtimestamp(item['time']).strftime('%d.%m.%Y %H:%M')
+    first=datetime.fromtimestamp(since if since is not None else item['time']).strftime('%d.%m.%Y %H:%M')
+    names=' '.join(item['packages']) or '-'
+    head=OUTSIDE_HEAD[outside_variant(item)];todo=OUTSIDE_TODO[outside_variant(item)]
+    en=['HomenSAI Auto VPN notice: '+code,head[0],'Time: '+when,'Trigger: '+item['trigger'],'Changed packages: '+names,'Class: '+item['why'],todo[0]]
+    ru=['Уведомление HomenSAI Auto VPN: '+code,head[1],'Время: '+when,'Причина: '+item['trigger'],'Изменённые пакеты: '+names,'Класс: '+item['why'],todo[1]]
+    if more:
+        en.append('%d earlier decision(s) of this class since %s were not sent separately (at most one message per class every 10 min).'%(more,first))
+        ru.append('Ещё решений этого класса с %s, не отправленных отдельно: %d (не чаще одного сообщения на класс в 10 минут).'%(first,more))
+    return '\n'.join(en)+'\n\n'+'\n'.join(ru)
+
+
+def _mono_now():
+    import telegram_state
+    try:return telegram_state._mono()
+    except (OSError,ValueError):return None
+
+
+def outside_notice(config,state,now):
+    """-> state"""
+    from agent import RUNTIME,atomic_json,read_json
+    from auto_control import control_lock
+    from telegram_state import OUTSIDE_FILE,OUTSIDE_SEEN,OUTSIDE_CLASSES,outside_items,outside_mono
+    try:items=outside_items(read_json(RUNTIME/OUTSIDE_FILE,{}))
+    except (OSError,ValueError):items=[]
+    try:seen=read_json(RUNTIME/OUTSIDE_SEEN,{})
+    except (OSError,ValueError):seen={}
+    if not isinstance(seen,dict):seen={}
+    keys={x['key'] for x in items}
+    told=seen.get('done') if isinstance(seen.get('done'),list) else []
+    old_done=[k for k in told if isinstance(k,str) and k in keys]  # bounded by the ring
+    last=seen.get('last') if isinstance(seen.get('last'),dict) else {}
+    old_last={c:float(last[c]) for c in OUTSIDE_CLASSES if isinstance(last.get(c),(int,float)) and not isinstance(last.get(c),bool) and math.isfinite(last[c])}
+    done=list(old_done);stamps=dict(old_last);sent=False
+    pending=[x for x in items if x['key'] not in old_done]
+    # BH-05: the age by the monotonic clock when the item has it (same boot: the ring is RAM), else by the wall clock
+    mono_now=outside_mono(_mono_now())
+    def age(x):
+        if mono_now is not None and 'mono' in x and mono_now>=x['mono']:return mono_now-x['mono']
+        return now-x['time']
+    done+=[x['key'] for x in pending if age(x)>OUTSIDE_MAX_AGE]
+    def store():
+        if (done,stamps)!=(told,old_last):
+            try:atomic_json(RUNTIME/OUTSIDE_SEEN,{'done':done,'last':stamps})
+            except (OSError,ValueError):pass
+    for cls in OUTSIDE_CLASSES:
+        # BH2-05: sorted() is stable, so equal times keep the ring (insertion) order; lua/telegram.lua compares the ring index
+        group=sorted((x for x in pending if x['decision']==cls and x['key'] not in done),key=lambda x:x['time'])
+        if not group:continue
+        previous=stamps.get(cls)
+        if previous is not None and 0<=now-previous<OUTSIDE_INTERVAL:continue  # told together after the window
+        if sent:time.sleep(1.05)
+        with control_lock(RUNTIME/'telegram-control'):
+            try:send_message(config,outside_text(group[-1],len(group)-1,group[0]['time']))
+            except DeliveryError as error:
+                store()
+                counter='unknown_deliveries' if error.uncertain else 'known_failures'
+                return dict(state,attempt=now,last_code=error.code,retry_after=error.retry_after,**{counter:state.get(counter,0)+1})
+        done+=[x['key'] for x in group];stamps[cls]=float(now);sent=True
+        state=dict(state,last_code='TELEGRAM-DELIVERED')
+    store()
+    return state
+
 def deliver(status,saved,now):
     from agent import RUNTIME, read_json
     from auto_control import control_lock
@@ -171,6 +323,8 @@ def deliver(status,saved,now):
     if state.get('sent',0)>now+5:return dict(public,code='TELEGRAM-CLOCK-BACKWARD'),state,False
     remaining=state.get('retry_after',300)-(now-state.get('attempt',0))
     if remaining>0 and state.get('attempt',0):return dict(public,code=state.get('last_code','TELEGRAM-RETRY'),retry_in=math.ceil(remaining)),state,False
+    state=vendor_notice(config,status,state,now)
+    if state.get('attempt')!=now:state=outside_notice(config,state,now)  # not right after a failed VENDOR-BUSY notice
     if not jobs:
         if state.get('uncertain'):public['code']='TELEGRAM-DELIVERY-UNKNOWN'
         return public,state,False

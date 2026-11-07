@@ -54,6 +54,63 @@ function M.fast_switch_enabled(config_text)
   return true
 end
 
+-- F-35: answers already given to caller-supplied request ids (pair_manual.ledger_*; same file and shape).
+M.LEDGER_LIMIT=16
+local function client_valid(v) return type(v)=='string' and #v>=8 and #v<=64 and string.find(v,'^[A-Za-z0-9_-]+$')~=nil end
+M.client_valid=client_valid
+local function ledger_path(runtime) return runtime..'/pair-manual-requests.json' end
+-- -> entries (newest last); error('PAIR-MANUAL-STATE-UNVERIFIED') on a damaged file
+function M.ledger_read(deps)
+  local text=deps.read(ledger_path(deps.runtime))
+  if text==nil then return {} end
+  local ok,data=pcall(canon.decode,text)
+  if not ok or not canon.is_object(data) then error('PAIR-MANUAL-STATE-UNVERIFIED',0) end
+  local count=0
+  for k in pairs(data) do count=count+1;if k~='entries' then error('PAIR-MANUAL-STATE-UNVERIFIED',0) end end
+  if count==0 then return {} end
+  local entries=data.entries
+  if type(entries)~='table' or canon.is_object(entries) and next(entries)~=nil or #entries>M.LEDGER_LIMIT then error('PAIR-MANUAL-STATE-UNVERIFIED',0) end
+  for _,e in ipairs(entries) do
+    local keys=0
+    if canon.is_object(e) then for k in pairs(e) do keys=keys+1;if k~='client' and k~='reply' then keys=-100 end end end
+    if keys~=2 or not client_valid(e.client) or not canon.is_object(e.reply) or type(e.reply.accepted)~='boolean' then
+      error('PAIR-MANUAL-STATE-UNVERIFIED',0)
+    end
+  end
+  return entries
+end
+-- BH-07 (bug hunt 07.11.2026): a refusal for a condition that passes by itself is not kept for its id, so the owner's
+-- Retry with the same id is decided afresh; accepted answers and lasting refusals are kept and replayed. An older entry
+-- of this kind is ignored the same way. Python: pair_manual.TRANSIENT_REFUSALS / transient_refusal.
+M.TRANSIENT={['SPEED-BUSY']=true,['PAIR-MANUAL-BUSY']=true,['PAIR-MANUAL-REQUEST-UNCONFIRMED']=true}
+function M.transient_refusal(reply)
+  local blockers=canon.is_object(reply) and reply.blockers or nil
+  return canon.is_object(reply) and reply.accepted==false and type(blockers)=='table' and type(blockers[1])=='string'
+    and M.TRANSIENT[blockers[1]]==true
+end
+function M.ledger_find(deps,client)
+  local entries=M.ledger_read(deps)
+  for i=#entries,1,-1 do
+    if entries[i].client==client then
+      if M.transient_refusal(entries[i].reply) then return nil end
+      local copy=canon.object({})
+      for k,v in pairs(entries[i].reply) do copy[k]=v end
+      copy.replayed=true
+      return copy
+    end
+  end
+  return nil
+end
+-- caller holds the control lock
+function M.ledger_store_locked(deps,client,reply)
+  local kept={}
+  for _,e in ipairs(M.ledger_read(deps)) do if e.client~=client then kept[#kept+1]=e end end
+  local out={}
+  for i=math.max(1,#kept-(M.LEDGER_LIMIT-2)),#kept do out[#out+1]=kept[i] end
+  out[#out+1]=canon.object({client=client,reply=reply})
+  deps.write(ledger_path(deps.runtime),canon.encode(canon.object({entries=canon.array(out)})))
+end
+
 local function uuid_hex(read)
   local text=read('/proc/sys/kernel/random/uuid')
   local id=text and string.gsub(text,'[^0-9a-f]','') or ''
@@ -67,7 +124,7 @@ end
 function M.request(deps,arguments)
   if not canon.is_object(arguments) then return canon.object({accepted=false,blockers=canon.array({'PAIR-MANUAL-FIELDS'})}) end
   for key in pairs(arguments) do
-    if key~='direction' and key~='control_revision' and key~='request_source' then
+    if key~='direction' and key~='control_revision' and key~='request_source' and key~='client_request_id' then
       return canon.object({accepted=false,blockers=canon.array({'PAIR-MANUAL-FIELDS'})})
     end
   end
@@ -76,6 +133,13 @@ function M.request(deps,arguments)
   end
   local direction,revision=arguments.direction,arguments.control_revision
   if (direction~='primary' and direction~='reserve' and direction~='resume') or not hex(revision,32) then return refuse('PAIR-MANUAL-FIELDS') end
+  local client=arguments.client_request_id
+  if client~=nil and not client_valid(client) then return refuse('PAIR-MANUAL-FIELDS') end
+  if client~=nil then
+    local found,stored=pcall(M.ledger_find,deps,client)
+    if not found then return refuse('PAIR-MANUAL-STATE-UNVERIFIED') end
+    if stored then return stored end
+  end
   if direction=='resume' then return M.FALLBACK end
   local ok,reply=pcall(function()
     if deps.uci_get('pair_auto_mode')~=M.MODE then return refuse('PAIR-MODE-NOT-CONFIGURED') end
@@ -114,6 +178,10 @@ function M.request(deps,arguments)
          or state.id~=intent.id or state.revision~=intent.revision or intent.revision~=revision then
         return refuse('CONTROL-REVISION-STALE')
       end
+      if client~=nil then
+        local stored=M.ledger_find(deps,client)  -- the same id raced in meanwhile: its answer, never a second action
+        if stored then return stored end
+      end
       local old=read_json(runtime..'/pair-manual-control.json')
       if canon.is_object(old) and PENDING[old.state] then return refuse('PAIR-MANUAL-BUSY') end
       local id=uuid_hex(deps.read)
@@ -122,13 +190,25 @@ function M.request(deps,arguments)
       local row=canon.object({id=id,pair=state.id,revision=revision,direction=direction,state='QUEUED',requested=at,updated=at,
         selection=canon.object({tx=tx}),code=canon.null,request_source=SOURCES[source] and source or 'unknown'})
       deps.write(runtime..'/pair-manual-control.json',canon.encode(row))
-      return canon.object({accepted=true,queued=true,completed=false,request_id=id,control_revision=revision})
+      local accepted=canon.object({accepted=true,queued=true,completed=false,request_id=id,control_revision=revision})
+      if client~=nil then M.ledger_store_locked(deps,client,accepted) end
+      return accepted
     end)
     if not locked then return M.FALLBACK end
     return result
   end)
-  if ok then return reply end
-  return refuse('PAIR-MANUAL-REQUEST-UNCONFIRMED')
+  if not ok then reply=refuse('PAIR-MANUAL-REQUEST-UNCONFIRMED') end
+  if client==nil or reply==M.FALLBACK or reply.accepted==true or reply.replayed==true then return reply end
+  -- keep the refusal for this id (pair_manual.request), or let agent.py decide and keep it when the lock is held
+  local okl,locked,result=pcall(deps.try_lock,function()
+    local stored=M.ledger_find(deps,client)
+    if stored then return stored end
+    if not M.transient_refusal(reply) then M.ledger_store_locked(deps,client,reply) end  -- BH-07
+    return reply
+  end)
+  if not okl then return reply end
+  if not locked then return M.FALLBACK end
+  return result
 end
 
 return M

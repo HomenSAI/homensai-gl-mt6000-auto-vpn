@@ -6,8 +6,13 @@ on the pages is the new one, and records the new fingerprint.
   python scripts/bump-version.py --check    exit 1 and say so when the source changed without a version change
   python scripts/bump-version.py            bump when needed (does nothing when the version is current)
   python scripts/bump-version.py --fingerprint-only   record the fingerprint without changing the version (after a release build)
+  python scripts/bump-version.py --help     print this usage and exit without touching anything
+
+Arguments are parsed strictly: an unknown or misspelled argument exits non-zero BEFORE anything is read or written (an unknown
+argument used to fall through to the bump mode and advanced the version by accident).
 
 Offline: reads and writes files in this checkout only."""
+import argparse
 import hashlib
 import json
 import re
@@ -17,7 +22,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT/'VERSION.json'
-SOURCE_DIRS = ('router/files',)
+# router/ui holds the editable page sources (views.js, bridge.js, advisor.js, mockup CSS): a change there is a product change.
+SOURCE_DIRS = ('router/files', 'router/ui')
 SOURCE_GLOBS = ('router/*.inc.js', 'router/*.py', 'router/*.css', 'router/*.lua', 'qa/export_lazy_titles.js', 'qa/export_documentation.js')
 SKIP_PARTS = {'__pycache__', 'dist', 'tests'}
 # Files that carry the version as a literal (everything else, such as docs and release notes, is written by hand at release time).
@@ -78,6 +84,36 @@ def rewrite(old_version, old_package, new_version, new_package):
                 stream.write(updated)
 
 
+KIT = 'router-test-kit/02-install.sh'
+UNBUILT_SHA = '0'*64
+
+
+def mark_kit_unavailable():
+    """Hash and size of the previous package never stay next to a new version: zero them (the kit then stops with
+    KIT-UNAVAILABLE) until the release record fills both from the built package."""
+    path = ROOT/KIT
+    text = path.read_text(encoding='utf-8')
+    updated, sha = re.subn(r'(?m)^EXPECTED_SHA=.*$', 'EXPECTED_SHA='+UNBUILT_SHA, text)
+    updated, size = re.subn(r'(?m)^EXPECTED_SIZE=.*$', 'EXPECTED_SIZE=0', updated)
+    if sha != 1 or size != 1:
+        raise SystemExit('VERSION-KIT-LITERALS')
+    with path.open('w', encoding='utf-8', newline='') as stream:
+        stream.write(updated)
+
+
+def shipped_lazy_modules():
+    """The optional page modules the package builder actually selects, as VERSION.json names them."""
+    sys.dont_write_bytecode = True
+    sys.path.insert(0, str(ROOT/'router'))
+    try:
+        from build_ipk import selected_source_files
+    finally:
+        sys.path.pop(0)
+    lazy = 'www/luci-static/resources/homensai-vpn/'
+    return sorted('homensai-vpn/'+name[len(lazy):] for name, _, _ in selected_source_files(ROOT/'router/files')
+                  if name.startswith(lazy) and re.fullmatch(r'(?:help|pick)[0-9]+\.js', name[len(lazy):]))
+
+
 def next_ui(app):
     """Each release ships its page under a new file name, so browsers never run a cached older page."""
     build = ROOT/'router/build_sidebar_ui.py'
@@ -92,18 +128,31 @@ def next_ui(app):
     return new_js, new_css
 
 
+def parse_arguments(argv):
+    """Strict parsing: --help exits 0, any unknown argument exits 2; both happen before any file is read or written."""
+    parser = argparse.ArgumentParser(prog='bump-version.py', allow_abbrev=False,
+                                     description='Keeps the version honest (see the module docstring). Without arguments: the '
+                                                 'deliberate release bump (advances the prerelease number when the source changed).')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--check', action='store_true', help='exit 1 when the source changed without a version change; writes nothing')
+    mode.add_argument('--fingerprint-only', action='store_true',
+                      help='record the source fingerprint in VERSION.json without changing the version')
+    return parser.parse_args(argv)
+
+
 def main(argv):
+    arguments = parse_arguments(argv)
     data = load()
     app = data['application']
     current = fingerprint(app['version'], app['package_version'])
     stale = app.get('source_fingerprint') != current
-    if '--check' in argv:
+    if arguments.check:
         if stale:
             print('VERSION-STALE: the product source changed but the version did not. Run: python scripts/bump-version.py')
             return 1
         print('VERSION-CURRENT', app['package_version'])
         return 0
-    if '--fingerprint-only' in argv:
+    if arguments.fingerprint_only:
         app['source_fingerprint'] = current
         MANIFEST.write_text(json.dumps(data, indent=2, ensure_ascii=False)+'\n', encoding='utf-8')
         print('FINGERPRINT-RECORDED', current[:12])
@@ -123,15 +172,13 @@ def main(argv):
     # The page shows the version it was built with: rebuild it, then record the fingerprint of the rebuilt source.
     subprocess.run([sys.executable, str(ROOT/'router/build_sidebar_ui.py')], check=True, stdout=subprocess.DEVNULL)
     data = load()
-    # The builder derives the optional module name from the freshly advanced dashboard number.
-    lazy_name='help'+ui_module.removeprefix('dashboard')+'.js'
-    if not (ROOT/'router/files/www/luci-static/resources/homensai-vpn'/lazy_name).is_file():
+    # The new version has no built package yet: the install kit says so instead of keeping the previous hash and size.
+    mark_kit_unavailable()
+    # Declare exactly the optional modules the package ships (the ones the selected page loads), never a generated module
+    # the page does not reference (pick*.js is generated for the legacy reference only).
+    data['application']['ui_lazy_modules']=shipped_lazy_modules()
+    if not any(re.fullmatch(r'homensai-vpn/help[0-9]+\.js',name) for name in data['application']['ui_lazy_modules']):
         raise SystemExit('UI-LAZY-MODULE-MISSING')
-    # The server-pick panel (2.1.0) is the second optional module, named after the same number.
-    pick_name='pick'+ui_module.removeprefix('dashboard')+'.js'
-    if not (ROOT/'router/files/www/luci-static/resources/homensai-vpn'/pick_name).is_file():
-        raise SystemExit('UI-LAZY-MODULE-MISSING')
-    data['application']['ui_lazy_modules']=['homensai-vpn/'+lazy_name,'homensai-vpn/'+pick_name]
     data['application']['source_fingerprint'] = fingerprint(new_version, new_package)
     MANIFEST.write_text(json.dumps(data, indent=2, ensure_ascii=False)+'\n', encoding='utf-8')
     print('VERSION-BUMPED %s -> %s (package %s); sha256 is recorded after the package build' % (old_version, new_version, new_package))

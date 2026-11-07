@@ -61,10 +61,15 @@ function renderCascadePath(status,inventory){
     E('details',{'class':'hv-cascade-legend'},[E('summary',{},bi('What the notes mean','Что означают пометки')),E('ul',{},legendKeys.map(function(k){var n=ownGet(CASCADE_NOTES,k)||CASCADE_NOTES.UNKNOWN;return E('li',{},[E('b',{},bi(n[0],n[1]))]);}).concat([E('li',{},bi('A code such as DNS-001 next to a server is a real error: press it to read what it means and how to fix it.','Код вроде DNS-001 рядом с сервером — настоящая ошибка: нажмите на него, чтобы прочитать, что он значит и как исправить.'))]))])
   ]);
 }
+/* Who started the transition, as the router saved it (transition_source / action_source): never guessed from the absence of a trial flag. */
+function transitionOrigin(e){var s=e&&e.transition_source;if(['manual','automatic','test','programmatic'].indexOf(s)>=0)return s;return e&&e.action_source==='manual'?'manual':'unknown';}
 function retainedTransitions(history){
   var events=(history.events||[]).slice().sort(function(a,b){return a.sequence-b.sequence;}),rows=[],open=null,last=null,lastTime=null;
   function close(outcome,event,reason){if(!open)return;open.outcome=outcome;open.close_reason=reason||null;open.terminal_state=event&&event.state||null;
-    if(event&&Number.isFinite(event.time)&&event.time>=open.start){open.end=event.time;open.duration=open.applied_at==null?null:event.time-open.applied_at;}
+    if(event&&event.clock_stepped_back===true)open.clock_stepped_back=true;
+    // A wall-clock step back inside the attempt (saved by the router as clock_stepped_back) leaves the elapsed time
+    // unknown: duration null, excluded from median/P95/worst; the outcome is kept (review F-56).
+    if(event&&Number.isFinite(event.time)&&event.time>=open.start){open.end=event.time;open.duration=open.applied_at==null||open.clock_stepped_back?null:event.time-open.applied_at;}
     rows.push(open);open=null;
   }
   function identifier(value){return Number.isSafeInteger(value)&&value>0?value:null;}
@@ -74,7 +79,7 @@ function retainedTransitions(history){
     source:transition.present?(transition.from?e[transition.from]:'unknown'):e.source||'unknown',target:transition.present?(transition.to?e[transition.to]:'unknown'):e.target||'unknown',
     source_role:transition.present?transition.from:'source',target_role:transition.present?transition.to:'target',transition_metadata_present:transition.present,
     kind:['server','channel','protocol'].indexOf(e.transition_kind)>=0?e.transition_kind:'unknown',
-    trial:e.trial===true,outcome:'pending',phases:[],codes:[],probe_evidence:{}};}
+    trial:e.trial===true,provenance:transitionOrigin(e),outcome:'pending',phases:[],codes:[],probe_evidence:{}};}
   events.forEach(function(e){
     if(!Number.isFinite(e.time)||e.time<0||e.time>253402300799||!Number.isSafeInteger(e.sequence)||e.sequence<1)return;
     if(last!==null&&e.sequence<=last)return;
@@ -97,7 +102,9 @@ function retainedTransitions(history){
       else if(e.state==='APPLYING'){open.applied_at=e.time;open.start=e.time;if(['server','channel','protocol'].indexOf(e.transition_kind)>=0)open.kind=e.transition_kind;}
     }
     if(!open)return;
+    if(e.clock_stepped_back===true)open.clock_stepped_back=true;
     if(e.trial===true)open.trial=true;
+    if(open.provenance==='unknown'){var origin=transitionOrigin(e);if(origin!=='unknown')open.provenance=origin;}
     if((identifier(e.attempt_id)&&e.attempt_id!==open.id)||(e.source&&e.source!==open.pair_source)||(e.target&&e.target!==open.pair_target)){close('unknown',null,'pair-changed');return;}
     open.phases.push({state:e.state,time:e.time});
     (e.codes||[]).forEach(function(code){if(typeof code==='string'&&/^[A-Z0-9_-]{1,96}$/.test(code)&&open.codes.indexOf(code)<0)open.codes.push(code);});
@@ -123,6 +130,41 @@ function retainedTransitions(history){
   return rows;
 }
 
+/* P95 rules (same as scripts/honest_stats.py): the empirical P95 is an estimate at every n and never a bound (at n = 59..300 it
+   covers the true P95 in only 35-57 % of cases). A separate 95 %-confidence upper bound exists only from n >= 59 samples
+   (0.95^59 = 0.0485 < 0.05): it is the order statistic X(s) of quantileUpperRank (the maximum for n = 59..92, X(99) at n = 100,
+   X(292) at n = 300), valid for independent samples. With fewer samples the P95 is shown as '≈' (for n <= 19 it is just the
+   maximum); with 95 % confidence at least 100*0.05^(1/n) % of cases are not slower than the sample maximum. */
+var P95_MIN_N=59;
+function p95Honest(n){return n>=P95_MIN_N;}
+/* The upper confidence bound of the true q-quantile (scripts/honest_stats.py, 'upper'): X(s) for the smallest rank s with P(B <= s-1) >= conf,
+   B ~ Binomial(n, q) = how many samples lie below the true quantile. None (null) until the sample is large enough: for the P95 at 95 %
+   from n = 59. Computed in log space (0.05^n underflows already at a few hundred samples). */
+function quantileUpperRank(n,q,conf){
+  q=q||0.95;conf=conf||0.95;if(!(n>=1))return null;
+  var lf=[0],i;for(i=1;i<=n;i++)lf.push(lf[i-1]+Math.log(i));
+  var cum=0;
+  for(i=0;i<n;i++){cum+=Math.exp(lf[n]-lf[i]-lf[n-i]+i*Math.log(q)+(n-i)*Math.log(1-q));if(cum>=conf-1e-12)return i+1;}
+  return null;
+}
+function p95UpperText(value,n,fmt){
+  if(value==null)return '— ('+bi('needs ≥'+P95_MIN_N+' samples; n='+n,'нужно ≥'+P95_MIN_N+' измерений; n='+n)+')';
+  return fmt?fmt(value):String(value);
+}
+function p95MaxCoverage(n){return n>0?Math.floor(Math.pow(0.05,1/n)*100+1e-9):0;}
+function p95Text(value,n,fmt){
+  if(value==null)return '—';
+  var v=fmt?fmt(value):String(value);
+  return p95Honest(n)?v:'≈'+v+' ('+bi('too few samples: n='+n+', needs ≥'+P95_MIN_N,'мало данных: n='+n+', нужно ≥'+P95_MIN_N)+')';
+}
+function p95MaxText(value,n,fmt){
+  if(value==null||p95Honest(n))return fmt?fmt(value):String(value);
+  return (fmt?fmt(value):String(value))+' (≥'+p95MaxCoverage(n)+' %)';
+}
+function p95MaxClaim(value,n,fmt){
+  if(value==null||p95Honest(n))return '';
+  return bi('max '+(fmt?fmt(value):value)+': with 95 % confidence ≥'+p95MaxCoverage(n)+' % of cases are no slower than the max','max '+(fmt?fmt(value):value)+': с 95 % уверенностью ≥'+p95MaxCoverage(n)+' % случаев не медленнее max');
+}
 function recoverySummary(rows,start,end){
   var selected=rows.filter(function(r){return r.start>=start&&r.start<end&&r.operation!=='restoration';}),durations=[],known=0,committed=0,trialsPassed=0;
   var streaks=Object.create(null),maxFailures=0;
@@ -139,10 +181,12 @@ function recoverySummary(rows,start,end){
   var n=durations.length;
   return {attempts:selected.length,known_outcomes:known,unknown_or_pending:selected.length-known,
     trial_attempts:selected.filter(function(r){return r.trial===true;}).length,
-    automatic_attempts:selected.filter(function(r){return r.trial!==true;}).length,
+    automatic_attempts:selected.filter(function(r){return r.trial!==true&&r.provenance==='automatic';}).length,
+    manual_attempts:selected.filter(function(r){return r.provenance==='manual';}).length,
+    other_attempts:selected.filter(function(r){return r.trial!==true&&r.provenance!=='automatic'&&r.provenance!=='manual';}).length,
     committed:committed,trials_passed:trialsPassed,success_ratio:known?(committed+trialsPassed)/known:null,recovered_samples:n,
     median:n?(durations[Math.floor((n-1)/2)]+durations[Math.floor(n/2)])/2:null,
-    p95:n?durations[Math.ceil(n*0.95)-1]:null,worst:n?durations[n-1]:null,max_consecutive_failures:maxFailures};
+    p95:n?durations[Math.ceil(n*0.95)-1]:null,p95_upper:n&&quantileUpperRank(n)?durations[quantileUpperRank(n)-1]:null,p95_honest:p95Honest(n),p95_max_coverage:p95MaxCoverage(n),worst:n?durations[n-1]:null,max_consecutive_failures:maxFailures};
 }
 function recoveryWindow(period,now,timezone){
   timezone=timezone||'Europe/Berlin';
@@ -336,24 +380,29 @@ function renderTransitionAnalytics(status,inventory){
        [bi('No result','Без итога'),s.unknown_or_pending],
        [bi('Trial attempts','Тестовые попытки'),s.trial_attempts],
        [bi('Automatic attempts','Автоматические попытки'),s.automatic_attempts],
+       [bi('Manual attempts (started by you)','Ручные попытки (запущены вами)'),s.manual_attempts],
+       [bi('Other or unrecorded source','Другой или не записанный источник'),s.other_attempts],
        [bi('Verified outcome ratio (including trials)','Доля подтверждённых результатов (включая тесты)'),s.success_ratio==null?'—':(s.success_ratio*100).toFixed(1)+'%'],
        [bi('Recovery time, median (s)','Время восстановления, медиана (с)'),fmt(s.median)],
-       [bi('Recovery time, P95 (s)','Время восстановления, P95 (с)'),fmt(s.p95)],
-       [bi('Recovery time, worst (s)','Время восстановления, максимум (с)'),fmt(s.worst)]].map(function(r){return E('tr',{'class':'tr'},[E('td',{'class':'td'},r[0]),E('td',{'class':'td'},String(r[1]))]);})].reduce(function(a,b){return a.concat(b);},[])));
+       [bi('Recovery time, P95 estimate (s)','Время восстановления, P95 — оценка (с)'),p95Text(s.p95,s.recovered_samples,fmt)],
+       [bi('Recovery time, P95 upper bound, 95 % confidence (s)','Время восстановления, верхняя граница P95, уверенность 95 % (с)'),p95UpperText(s.p95_upper,s.recovered_samples,fmt)],
+       [bi('Recovery time, worst (s)','Время восстановления, максимум (с)'),p95MaxText(s.worst,s.recovered_samples,fmt)],
+       [bi('Samples with a known recovery time','Измерений времени восстановления'),s.recovered_samples]].map(function(r){return E('tr',{'class':'tr'},[E('td',{'class':'td'},r[0]),E('td',{'class':'td'},String(r[1]))]);})].reduce(function(a,b){return a.concat(b);},[])));
+    var claim=p95MaxClaim(s.worst,s.recovered_samples,fmt);if(claim)summaryHost.appendChild(E('p',{'class':'hv-recovery-claim','role':'note'},claim));
     while(groupHost.firstChild)groupHost.removeChild(groupHost.firstChild);
     var groups=recoveryGroups(rows,status.profiles||[],window.start,window.end,inventory);
     var kindTitle={server:bi('By server','По серверам'),channel:bi('By group (channel)','По группам (каналам)'),protocol:bi('By protocol','По протоколам')};
     Object.keys(groups).forEach(function(kind){
       if(!groups[kind].length)return;
       groupHost.appendChild(E('h4',{},ownGet(kindTitle,kind)||kind));
-      groupHost.appendChild(E('table',{'class':'table hv-recovery-table'},[E('tr',{'class':'tr table-titles'},[kind==='server'?bi('VPN server / protocol','VPN-сервер / протокол'):kind==='channel'?bi('Channel','Канал'):bi('Protocol','Протокол'),bi('Successful / known','Удачных / известных'),bi('P95, s','P95, с'),bi('Failures in a row','Сбоев подряд')].map(function(t){return E('th',{'scope':'col'},t);}))].concat(groups[kind].map(function(g){var m=g.metrics;
-        return E('tr',{'class':'tr'},[E('td',{'class':'td hv-recovery-identity'},g.name),E('td',{'class':'td'},(m.committed+m.trials_passed)+' / '+m.known_outcomes),E('td',{'class':'td'},m.p95==null?'—':m.p95.toFixed(1)),E('td',{'class':'td'},String(m.max_consecutive_failures))]);}))));
+      groupHost.appendChild(E('table',{'class':'table hv-recovery-table'},[E('tr',{'class':'tr table-titles'},[kind==='server'?bi('VPN server / protocol','VPN-сервер / протокол'):kind==='channel'?bi('Channel','Канал'):bi('Protocol','Протокол'),bi('Successful / known','Удачных / известных'),bi('P95 estimate, s','P95 — оценка, с'),bi('Failures in a row','Сбоев подряд')].map(function(t){return E('th',{'scope':'col'},t);}))].concat(groups[kind].map(function(g){var m=g.metrics;
+        return E('tr',{'class':'tr'},[E('td',{'class':'td hv-recovery-identity'},g.name),E('td',{'class':'td'},(m.committed+m.trials_passed)+' / '+m.known_outcomes),E('td',{'class':'td'},p95Text(m.p95,m.recovered_samples,function(v){return v.toFixed(1);})),E('td',{'class':'td'},String(m.max_consecutive_failures))]);}))));
     });
     groupHost.appendChild(E('div',{'class':'hv-recovery-legend'},[E('strong',{},bi('How to read these tables','Как читать эти таблицы')),E('p',{},bi('There is one table per kind of grouping (server, group of servers, protocol). Example row: b · 1 / 1 · 5.0 · 0.','Для каждого вида группировки своя таблица (сервер, группа серверов, протокол). Пример строки: b · 1 / 1 · 5.0 · 0.')),
       E('ul',{},[
         E('li',{},bi('Name (b, Main, openvpn): the server, the group (channel) or the protocol these numbers belong to.','Имя (b, Main, openvpn): сервер, группа (канал) или протокол, к которым относятся цифры.')),
         E('li',{},bi('1/1: successful switches / switches whose result is known. 1/1 = every known switch to it succeeded; 0/1 = the only known switch failed; 1/2 = one of two worked. Pending or unknown results are not counted.','1/1: удачные переключения / переключения с известным результатом. 1/1 — все известные переключения на него удались; 0/1 — единственное известное не удалось; 1/2 — одно из двух удалось. Ожидающие и неизвестные результаты не считаются.')),
-        E('li',{},bi('P95 5.0 s: 95 % of recoveries on this server took no longer than 5 seconds (the slowest 5 % are excluded). “—” means no timing yet. Smaller is better.','P95 5.0 с: 95 % восстановлений на этом сервере заняли не больше 5 секунд (самые медленные 5 % не учитываются). «—» — времени ещё нет. Чем меньше, тем лучше.')),
+        E('li',{},bi('P95 5.0 s (an estimate): in the recorded sample 95 % of recoveries on this server took no longer than 5 seconds (the slowest 5 % are excluded). It is the sample’s own 95th percentile, not a promise for future recoveries. “—” means no timing yet. Smaller is better. “≈P95” means too few samples (fewer than 59). The separate “P95 upper bound” appears from 59 samples: with 95 % confidence the true P95 is not above it. With fewer samples the maximum comes with “(≥k %)”: with 95 % confidence at least k % of cases are no slower than that maximum (k = 100·0.05^(1/n)).','P95 5.0 с (оценка): в записанной выборке 95 % восстановлений на этом сервере заняли не больше 5 секунд (самые медленные 5 % не учитываются). Это собственный 95-й процентиль выборки, а не обещание для будущих восстановлений. «—» — времени ещё нет. Чем меньше, тем лучше. «≈P95» — мало данных (меньше 59 измерений). Отдельная строка «верхняя граница P95» появляется от 59 измерений: с 95 % уверенностью настоящий P95 её не превышает. При меньшем числе у максимума стоит «(≥k %)»: с 95 % уверенностью не менее k % случаев не медленнее этого максимума (k = 100·0,05^(1/n)).')),
         E('li',{},bi('Consecutive failures: the longest run of failed attempts one after another in the chosen period. 0 = none; 1 = one failure, 2 or more = the server repeatedly failed to take over and deserves attention.','Сбоев подряд: самая длинная серия неудачных попыток подряд за выбранный период. 0 — не было; 1 — одна неудача; 2 и больше — сервер несколько раз подряд не смог принять трафик, на него стоит обратить внимание.'))]),
       E('p',{},bi('Example: “d · 0/1 · P95 8.0 s · consecutive failures: 1” = the only known switch to d failed (took 8 s), so d is a weak reserve for now; “b · 1/1” is a reliable one.','Пример: «d · 0/1 · P95 8.0 с · сбоев подряд: 1» — единственное известное переключение на d не удалось (8 с), значит d пока слабый резерв; «b · 1/1» — надёжный.'))]));
   }
@@ -425,7 +474,7 @@ function renderDecisionExplanation(status,inventory){
   else if((status.auto_control||{}).requested==='off'&&['COMMITTED','DEGRADED-ON-RESERVE'].indexOf(state)>=0)next=bi('Stop was requested; recovery confirmation is still required. Review the Auto card and its explicit return control. No automatic return is confirmed.','Запрошена остановка; подтверждение восстановления ещё необходимо. Проверьте блок Auto и отдельное действие возврата. Автоматический возврат не подтверждён.');
   else if(state==='DEGRADED-ON-RESERVE')next=bi('The last report retained the reserve with a recovery issue. Review the Auto card and the explicit return control; no automatic return is confirmed.','Последний отчёт указывает на сохранение резерва с проблемой восстановления. Проверьте блок Auto и отдельное действие возврата; автоматический возврат не подтверждён.');
   else if(state==='COMMITTED'&&!nativeFresh)next=bi('The reserve was reported in use, but controller data is stale. A current route or automatic return is not confirmed.','Ранее сообщалось об использовании резерва, но данные контроллера устарели. Текущий маршрут и автоматический возврат не подтверждены.');
-  else if(state==='COMMITTED'&&settings.recovery_return_policy==='hold_reserve')next=bi('The hold-reserve policy keeps a healthy reserve for operator review. Use the explicit return control when appropriate; this policy does not promise automatic return.','Политика сохранения резерва оставляет работающий резерв до решения оператора. При необходимости используйте отдельное действие возврата; эта политика не обещает автоматического возврата.');
+  else if(state==='COMMITTED'&&settings.recovery_return_policy==='hold_reserve')next=bi('The hold-reserve policy keeps a healthy reserve for operator review. Use the explicit return control when appropriate; this policy does not promise automatic return from a working reserve. Only a reserve that itself fails (proven by a fresh check) is rescued to a healthy primary.','Политика сохранения резерва оставляет работающий резерв до решения оператора. При необходимости используйте отдельное действие возврата; эта политика не обещает автоматического возврата с работающего резерва. Только резерв, который сам отказал (доказано свежей проверкой), спасается на исправный основной.');
   else if(state==='COMMITTED'&&settings.recovery_return_policy==='healthy_primary')next=bi('The healthy-primary policy may consider return only in an enabled, validated trial with fresh primary checks. LAN verification and recovery guards still apply; return is not promised.','Политика здорового основного может рассматривать возврат только во включённом подтверждённом тесте со свежими проверками основного. Проверка LAN и ограничения восстановления остаются обязательными; возврат не обещан.');
   else if(state==='COMMITTED')next=bi('The return policy is unknown. Review Settings and the Auto card; no automatic return is confirmed.','Политика возврата неизвестна. Проверьте настройки и блок Auto; автоматический возврат не подтверждён.');
   else if(failMet&&goodMet)next=bi('The router probe quorum is met: a candidate can be reviewed. These checks do not authorize a route change; router firmware coordination, native capability, Stop state, the bounded trial and LAN verification remain separate gates.','Порог проверок с роутера достигнут: можно рассмотреть кандидата. Эти проверки не разрешают изменение маршрута; координация со штатной прошивкой, нативные возможности, состояние Stop, ограниченный тест и проверка LAN остаются отдельными условиями.');

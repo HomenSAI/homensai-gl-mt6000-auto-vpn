@@ -113,6 +113,42 @@ t.test('bridge call: request file in, canonical reply file out, fallback, path c
   t.eq(R.files['/run/hv/rpc-out.Zz99Yy'],'{"error":"RPC-DUPLICATE-FIELD"}','input errors keep the Python codes')
 end)
 
+t.test('BH3-02 bridge call: a message handled later than BRIDGE_STALE seconds is dropped unread',function()
+  local handler,R=make(canon.object({version='v',mode='monitor',time=1,profiles=canon.array(),events=canon.array()}))
+  local function call(sent)
+    R.files['/run/hv/rpc-out.Zz99Yy']=nil;R.files['/run/hv/rpc-in.Ab12Cd']='{"request_source":"manual"}'
+    return handler.bridge_call({method='events',request_file='/run/hv/rpc-in.Ab12Cd',reply_file='/run/hv/rpc-out.Zz99Yy',sent=sent})
+  end
+  t.eq(rpc.BRIDGE_STALE,12)
+  R.mono=1000.4
+  t.eq(call(1000),{ok=true},'fresh: handled')
+  t.eq(call(988.5),{ok=true},'11.9 s old: handled')
+  t.eq(call(987),{error='RPC-BRIDGE-STALE'},'13 s old: dropped')
+  t.eq(R.files['/run/hv/rpc-out.Zz99Yy'],nil,'a dropped message writes no reply')
+  t.eq(call(100),{error='RPC-BRIDGE-STALE'},'a loop stalled for minutes: dropped')
+  t.eq(call(nil),{ok=true},'no stamp (older dispatcher): handled as before')
+  t.eq(call('987'),{ok=true},'a non-number stamp is ignored')
+  t.eq(call(0/0),{ok=true},'NaN is ignored')
+  -- a button: dropped before it can act (the pair_manual handler is never called)
+  local acted=0
+  local h2=rpc.new({version='v',now=function() return R.now end,status=function() return canon.object() end,
+    native_status=function() return canon.object() end,inventory=function() return canon.object() end,
+    pair_manual=function() acted=acted+1;return canon.object({accepted=true}) end},R)
+  R.files['/run/hv/rpc-in.Ab12Cd']='{"direction":"reserve"}'
+  t.eq(h2.bridge_call({method='pair_manual',request_file='/run/hv/rpc-in.Ab12Cd',reply_file='/run/hv/rpc-out.Zz99Yy',sent=980}),{error='RPC-BRIDGE-STALE'})
+  t.eq(acted,0,'a stale button never acts')
+  t.eq(h2.bridge_call({method='pair_manual',request_file='/run/hv/rpc-in.Ab12Cd',reply_file='/run/hv/rpc-out.Zz99Yy',sent=999}),{ok=true})
+  t.eq(acted,1)
+  -- the dispatcher removed the request file after answering RPC-BRIDGE-UNCONFIRMED: a late delivery reads nothing
+  R.files['/run/hv/rpc-in.Ab12Cd']=nil
+  t.eq(h2.bridge_call({method='pair_manual',request_file='/run/hv/rpc-in.Ab12Cd',reply_file='/run/hv/rpc-out.Zz99Yy',sent=1000}),{error='RPC-BRIDGE-PATH'})
+  t.eq(acted,1,'a late delivery after the file was removed never acts')
+  -- a runner without a clock: handled as before
+  local saved=R.clock;R.clock=nil;R.files['/run/hv/rpc-in.Ab12Cd']='{}'
+  t.eq(handler.bridge_call({method='events',request_file='/run/hv/rpc-in.Ab12Cd',reply_file='/run/hv/rpc-out.Zz99Yy',sent=1}),{ok=true})
+  R.clock=saved
+end)
+
 t.test('ubus object: native methods registered, for_ubus unboxes floats and drops nulls',function()
   local handler=make(nil)
   local replies={}
@@ -127,6 +163,22 @@ t.test('ubus object: native methods registered, for_ubus unboxes floats and drop
   methods.status[1]('req',{})
   t.eq(replies[1][1],'req');t.eq(replies[1][2].error,'SERVICE-STOPPED')
   t.eq(rpc.for_ubus(canon.object({a=canon.float(1.5),b=canon.null,c=canon.array({1,canon.null})})),{a=1.5,c={1}})
+end)
+
+t.test('monitor_control: a stop is always refused with MONITOR-ALWAYS-ON (twin of monitor_control.py); a start goes on to agent.py',function()
+  local handler=make(nil)
+  local refused=canon.object({accepted=false,code='MONITOR-ALWAYS-ON',configured=true,auto_started=false})
+  t.eq(canon.encode(handler.handle('monitor_control','{"enabled":false}')),canon.encode(refused))
+  t.eq(canon.encode(handler.handle('monitor_control','{"enabled":false,"ubus_rpc_session":"s"}')),canon.encode(refused))
+  -- Auto on or off makes no difference: the refusal never looks at Auto state (state has no auto fields at all here)
+  t.eq(handler.handle('monitor_control','{"enabled":true}'),rpc.FALLBACK,'start is allowed (recovery)')
+  t.eq(handler.handle('monitor_control','{"enabled":"false"}'),rpc.FALLBACK,'malformed: Python answers MONITOR-INVALID')
+  t.eq(handler.handle('monitor_control','{"enabled":false,"x":1}'),rpc.FALLBACK)
+  t.eq(handler.handle('monitor_control',''),rpc.FALLBACK)
+  t.eq(handler.handle('monitor_control','{bad'),canon.object({error='RPC-INPUT-INVALID'}))
+  -- the dispatcher still routes monitor_control to Python only; the Lua object never registers it
+  local conn={reply=function() end}
+  t.eq(handler.ubus_object(conn,{})['homensai-vpn-lua'].monitor_control,nil)
 end)
 
 t.run()

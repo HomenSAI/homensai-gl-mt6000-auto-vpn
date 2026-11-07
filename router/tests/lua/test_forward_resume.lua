@@ -342,6 +342,24 @@ for _,case in ipairs(UNSAFE) do
   end)
 end
 
+t.test('a key changed since: nothing moved yet is no new move; a kernel already there stays (review 04.11.2026)',function()
+  local CODE='SERVER-KEY-UNACCEPTED'
+  local function keyed(env) env.backend.key_unaccepted=function(profiles) return CODE end end
+  for _,point in ipairs({'before-reorder','after-reorder'}) do
+    local env=crashed(point)
+    keyed(env)
+    local j=rolled_back(env,point)
+    t.eq(j.phase,'ROLLED-BACK',point);t.truthy(refused_for(CODE),point)
+  end
+  local env=crashed('after-kernel')
+  keyed(env)
+  local calls,restore=rollbacks()
+  t.eq(A.recover(env),'ready')
+  restore()
+  local j=T.journal_read(env)
+  t.eq({j.phase,j.forward_resumed.kernel},{'COMMITTED','reserve'});t.eq(#calls,0,'the traffic is there: only a move is refused')
+end)
+
 t.test('unsafe, rolls back as before: an interrupted manual switch',function()
   log_lines={}
   local env=router()

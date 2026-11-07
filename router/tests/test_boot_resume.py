@@ -56,6 +56,22 @@ class BootResume(unittest.TestCase):
         self.replies=[{'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']}]
         self.assertEqual(self.run_once(),'FAILED');self.assertEqual(self.state()['code'],'JOURNAL-INTEGRITY-FAILED')
 
+    def test_integrity_auto_blocked_is_final(self):
+        # IR-03 (integration review 07.11.2026): BH-04's refusal holds for the whole service run, no retry every 5 s
+        br.remember(self.persist,now=500)
+        self.replies=[{'accepted':False,'blockers':['INTEGRITY-AUTO-BLOCKED']},{'accepted':True}]
+        clock=[0.0]
+        def sleep(s):clock[0]+=s
+        self.assertEqual(br.run(self.runtime,self.persist,sleep=sleep,uptime=60,clock=lambda:clock[0]),'FAILED');self.assertEqual(self.state()['code'],'INTEGRITY-AUTO-BLOCKED')
+        self.assertEqual(len(self.calls),1,'Start is pressed once, not every 5 s for the window')
+
+    def test_maintenance_in_progress_keeps_waiting(self):
+        # IR-03: a package operation ends within the window, so MAINTENANCE-IN-PROGRESS is not final
+        self.assertNotIn('MAINTENANCE-IN-PROGRESS',br.FINAL)
+        br.remember(self.persist,now=500)
+        self.replies=[{'accepted':False,'blockers':['MAINTENANCE-IN-PROGRESS']}]*3+[{'accepted':True}]
+        self.assertEqual(self.run_once(),'RESUMED');self.assertEqual(len(self.calls),4)
+
     def test_marker_matches_the_lua_format(self):
         br.remember(self.persist,now=500)
         row=json.loads((self.persist/br.MARKER).read_text())

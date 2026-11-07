@@ -6,9 +6,16 @@ import json
 # docs/architecture/RESCUE-STABLE-2026-11-03.ru.md). The longer stability is safe only together with rescue_stable:
 # when the reserve that carries the traffic has failed itself, the primary is taken back after rescue_stable seconds
 # of stability instead of the full primary_stable (0 = the old rule: the full primary_stable).
-DEFAULTS={'failures':3,'successes':2,'cooldown':60,'min_dwell':60,'return_policy':'healthy_primary','primary_successes':2,'primary_stable':120,'attempt_limit':3,'attempt_window':15,'rescue_stable':10}
+# flap_*: the damping of the return (pair_auto.return_hold; study private/math/wave3, docs/architecture/WAVE3-PRODUCT-2026-11-04.ru.md).
+# They stand apart from attempt_limit/attempt_window on purpose: those two stay the rate limit of manual switches and of
+# the kernel-policy repair (pair_auto.budget); 2 per 60 min there would refuse the repair for up to an hour.
+DEFAULTS={'failures':3,'successes':2,'cooldown':60,'min_dwell':60,'return_policy':'healthy_primary','primary_successes':2,'primary_stable':120,'attempt_limit':3,'attempt_window':15,'rescue_stable':10,
+          'flap_model':'double','flap_limit':2,'flap_window':60,'flap_halflife':1800,'flap_suppress':1500,'flap_reuse':500}
+FLAP_MODELS=('double','halflife')
+FLAP_FIELDS=('flap_model','flap_limit','flap_window','flap_halflife','flap_suppress','flap_reuse')
 FAILURE_MODELS=('hmm','hmm-fast','consecutive')  # channel_model.MODELS (option failure_model)
-RANGES={'failures':(3,10),'successes':(2,10),'cooldown':(60,1800),'min_dwell':(60,3600),'primary_successes':(2,10),'primary_stable':(30,600),'attempt_limit':(1,10),'attempt_window':(1,15),'rescue_stable':(0,60)}
+RANGES={'failures':(2,10),'successes':(2,10),'cooldown':(60,1800),'min_dwell':(60,3600),'primary_successes':(2,10),'primary_stable':(30,600),'attempt_limit':(1,10),'attempt_window':(1,15),'rescue_stable':(0,60),
+        'flap_limit':(1,10),'flap_window':(1,120),'flap_halflife':(600,3600),'flap_suppress':(1000,3000),'flap_reuse':(200,1000)}
 # The committed-return reason of a reserve that failed while carrying (native_switch.committed_recovery_decision).
 RESCUE_REASON='RESERVE-FAILED-PRIMARY-VERIFIED'
 
@@ -18,7 +25,8 @@ def normalized(settings):
     for key,default in DEFAULTS.items():
         value=settings.get('recovery_'+key,default)
         if key=='return_policy':result[key]=value if value in ('healthy_primary','hold_reserve') else default
-        elif key in ('attempt_limit','attempt_window'):
+        elif key=='flap_model':result[key]=value if value in FLAP_MODELS else default
+        elif key in ('attempt_limit','attempt_window','flap_limit','flap_window'):
             # Malformed/out-of-range input cannot silently relax the default limit.
             import re
             if type(value)is int:number=value
@@ -26,8 +34,16 @@ def normalized(settings):
             else:number=default
             lo,hi=RANGES[key];result[key]=number if lo<=number<=hi else default
         else:
-            try:number=int(value)
-            except (ValueError,TypeError):number=default
+            # Review F-46 (06.11.2026): one grammar with lua/pair.lua recovery_normalized: a whole number or a decimal
+            # string (blanks and a sign allowed); '3_0', 30.5, True and the like take the default, never int()'s reading.
+            # R2-03: at most 9 digits (a longer string is nobody's setting, and int() may refuse it on a Python with a
+            # conversion limit); a conversion error takes the default too.
+            import re
+            if type(value) is int:number=value
+            elif isinstance(value,str) and re.fullmatch(r'\s*[+-]?[0-9]{1,9}\s*',value):
+                try:number=int(value)
+                except ValueError:number=default
+            else:number=default
             lo,hi=RANGES[key];result[key]=max(lo,min(hi,number))
     return result
 
@@ -35,14 +51,15 @@ def normalized(settings):
 def payload(arguments):
     # Older installed pages send the original seven fields. Missing optional
     # fields are left untouched, never silently reset when an old page saves.
-    required=set(DEFAULTS)-{'attempt_limit','attempt_window','rescue_stable'}
-    optional={'attempt_limit','attempt_window','rescue_stable','interval','failure_model'}
+    required=set(DEFAULTS)-{'attempt_limit','attempt_window','rescue_stable'}-set(FLAP_FIELDS)
+    optional={'attempt_limit','attempt_window','rescue_stable','interval','failure_model'}|set(FLAP_FIELDS)
     if not isinstance(arguments,dict) or not required<=set(arguments) or set(arguments)-required-optional:
         raise ValueError('RECOVERY-FIELDS')
     for key,(low,high) in RANGES.items():
         if key in arguments and (type(arguments[key]) is not int or not low<=arguments[key]<=high):raise ValueError('RECOVERY-RANGE')
     if 'interval' in arguments and (type(arguments['interval']) is not int or not 10<=arguments['interval']<=300):raise ValueError('RECOVERY-RANGE')
     if arguments['return_policy'] not in ('healthy_primary','hold_reserve'):raise ValueError('RECOVERY-RETURN-POLICY')
+    if 'flap_model' in arguments and arguments['flap_model'] not in FLAP_MODELS:raise ValueError('RECOVERY-RANGE')
     # channel_model.MODELS; the option has no recovery_ prefix (option failure_model)
     if 'failure_model' in arguments and arguments['failure_model'] not in FAILURE_MODELS:raise ValueError('RECOVERY-RANGE')
     main={'recovery_'+key:str(value) for key,value in arguments.items() if key not in ('interval','failure_model')}

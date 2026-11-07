@@ -56,6 +56,8 @@ class Fixture(unittest.TestCase):
         self.writes=[];self.writer_fails=False;self.logged=[]
         self.start(patch.object(p.subprocess,'run',side_effect=self.fake_run))
         self.revision=auto_control.current_revision()
+        # the records carry the fixture clock (the Stop latch below is at 2000): this Start prepared before that Stop
+        self.prepared_at=1500.0
         # Start's preparation: two autostart records (unset -> 0, '1' -> 0) and the stock vpn-client boot record
         for action in ('wg-autostart','ovpn-autostart'):self.prepare(action)
         self.boot('vpn-client');self.prepare('vpn-boot')
@@ -72,6 +74,15 @@ class Fixture(unittest.TestCase):
         review=p.preview({'action':action});self.assertTrue(review['accepted'],review)
         result=p.apply({k:review[k] for k in ('action','revision','control_revision')})
         self.assertTrue(result.get('verified'),result)
+        self.age(self.prepared_at)
+
+    def age(self,at):
+        """The record apply just wrote (real clock) gets the fixture time `at`."""
+        for path in (self.persist/'preparation-changes').iterdir():
+            data=agent.read_json(path,{})['data']
+            if data['time']>1e9:
+                data['time']=data['verified_at']=at
+                agent.atomic_json(path,{'data':data,'sha256':agent.checksum(data)})
 
     def prepare_write(self,action,plan):
         path=self.root/'etc/config/network';path.write_text(path.read_text()+'# prepared\n')
@@ -245,6 +256,74 @@ class Restore(Fixture):
             p.autostart_after_stop();self.assertEqual(len(calls),2,'a new Stop is looked at')
             for path in (self.persist/'preparation-changes').iterdir():path.unlink()
             p._after_stop.clear();p.autostart_after_stop();self.assertEqual(len(calls),2,'no records: nothing to look at')
+
+    def test_a_rewritten_session_record_with_the_same_decision_starts_nothing(self):
+        # review 04.11.2026 (finding 3): STOPPING + HELD written on a pass of a HELD session (a held journal, a damped return)
+        # is a new file with the same fields: the hook runs for a change of what it decides from, not of the file's identity
+        calls=[];path=self.persist/'pair-auto-state.json'
+        def write(**fields):
+            data=dict({'id':'a'*32,'phase':'HELD','recovery_error':'PAIR-RECOVERY-REQUIRED','started':1000.0,'owned':['wgclient1']},**fields)
+            agent.atomic_json(path,{'data':data,'sha256':agent.checksum(data)})
+        write()
+        with patch.object(p,'restore_autostart',side_effect=lambda:calls.append(1) or {'code':None}), \
+             patch('pair_auto.paths',return_value=(self.runtime/'pair-auto-control.json',path)):
+            p._after_stop.clear()
+            p.autostart_after_stop();self.assertEqual(len(calls),1)
+            for _ in range(3):
+                write(phase='STOPPING');write()
+                p.autostart_after_stop()
+            self.assertEqual(len(calls),1,'python3 on every pass of the Lua line before the fix')
+            write(recovery_error='PAIR-EXTERNAL-NETWORK-CHANGE');p.autostart_after_stop();self.assertEqual(len(calls),2)
+            write(recovery_error='PAIR-EXTERNAL-NETWORK-CHANGE',phase='STOPPED');p.autostart_after_stop();self.assertEqual(len(calls),3)
+            write(recovery_error='PAIR-EXTERNAL-NETWORK-CHANGE',phase='STOPPED',owned=[]);p.autostart_after_stop();self.assertEqual(len(calls),4)
+            write(recovery_error='PAIR-EXTERNAL-NETWORK-CHANGE',phase='STOPPED',owned=[],kept=['wgclient1']);p.autostart_after_stop();self.assertEqual(len(calls),5)
+
+
+
+class StartAfterStop(Fixture):
+    """Independent review 04.11.2026, finding 1: auto_control.start runs auto_prepare (new before-records, auto=0, the
+    S-link removed) BEFORE pair_request writes the 'on' intent. A supervisor pass in that window saw intent off and the
+    owner's Stop latch newer than the old session, and undid the preparation of the Start in progress (rows[-1] is the
+    newest record) - the new session's begin() then refused PAIR-PROFILES-UNVERIFIED (auto must be '0') or Auto ran
+    with the stock vpn-client start link back. Only what was prepared before the Stop is the Stop's to undo."""
+
+    def stop_restores(self):
+        self.assertEqual(p.restore_autostart()['restored'],['ovpnclient1','wgclient1'])
+        self.assertEqual(self.records(),[])
+
+    def start_prepares(self,at,actions=('wg-autostart','ovpn-autostart','vpn-boot')):
+        saved=self.state,self.intent
+        self.state={};self.intent={};self.prepared_at=at
+        for action in actions:self.prepare(action)
+        self.state,self.intent=saved
+
+    def test_a_start_after_the_owner_stop_is_never_undone(self):
+        self.stop_restores();writes=len(self.writes)
+        self.start_prepares(2500.0)   # the next Start, before its pair intent exists
+        before=copy.deepcopy(self.values)
+        result=p.restore_autostart()
+        self.assertEqual((result['code'],result.get('skipped')),(None,'start-in-progress'),result)
+        self.assertEqual(self.values,before,"the Start's auto=0 was put back to 1/unset before the fix")
+        self.assertIsNone(self.link(),'the stock start link came back while Auto starts before the fix')
+        self.assertEqual(len(self.writes),writes);self.assertEqual(self.records(),['ovpn-autostart','vpn-boot','wg-autostart'])
+        # the owner's next Stop (a newer latch) undoes that Start's preparation as before
+        self.latch({'requested':3000.0,'request_source':'manual'})
+        self.stop_restores();self.assertEqual(self.link(),'../init.d/vpn-client')
+
+    def test_one_newer_record_keeps_the_whole_history(self):
+        # the owner changed wgclient1 meanwhile (kept: its old record stays); the next Start writes only the boot record
+        self.values['wgclient1']['auto']='1'
+        self.assertEqual(p.restore_autostart()['kept'],['wgclient1'])
+        self.assertEqual(self.records(),['wg-autostart'])
+        self.start_prepares(2500.0,('vpn-boot',))
+        result=p.restore_autostart()
+        self.assertEqual((result.get('skipped'),result['restored'],result['boot_restored']),('start-in-progress',[],[]))
+        self.assertIsNone(self.link());self.assertEqual(self.records(),['vpn-boot','wg-autostart'])
+
+    def test_a_record_from_the_same_instant_as_the_stop_belongs_to_the_start(self):
+        self.stop_restores()
+        self.start_prepares(2000.0,('vpn-boot',))
+        self.assertEqual(p.restore_autostart().get('skipped'),'start-in-progress')
 
 
 if __name__=='__main__':unittest.main()

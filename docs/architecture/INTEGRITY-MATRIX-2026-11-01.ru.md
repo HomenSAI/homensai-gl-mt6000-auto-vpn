@@ -19,7 +19,7 @@ HomenS.AI Auto VPN · Serhii Khomenko · 01.11.2026 · ветка `lua/agent-int
 | hv-core → раздельные процессы | `hv_core.lua` `HV-CORE-FALLBACK` + сторож | ошибки/зависание hv-core | битый `auto.lua` (require до счётчика); по умолчанию hv-core выключен |
 | Страница → Python | rpcd `homensai-vpn` | нет маркера `lua-monitor.ready` / `{"fallback":true}` → `agent.py` | битый `agent.py` |
 | Журнал sha256 + `.backup.json` + карантин | `journal.lua`, `durable.lua` | повреждённые файлы состояния → коды, VPN-only, `give_up` | — (см. документ о питании) |
-| Конфиг | init `HOMENSAI-CONFIG-UNREADABLE` | битый/удалённый `/etc/config/homensai_vpn` → служба выключена | — |
+| Конфиг | init `HOMENSAI-CONFIG-UNREADABLE` | битый/удалённый `/etc/config/homensai_vpn` → мониторинг работает, Auto не запущен (`SERVICE-AUTO-OFF`, с 07.11.2026; раньше служба выключалась) | — |
 | Установка | `02-install.sh` (sha256 пакета), `preinst/prerm` (lifecycle guard) | подмена пакета при установке; установка поверх активного Auto | повреждение **после** установки |
 | Аварийный инструмент | `/usr/sbin/homensai-vpn-emergency` | ручное: show / stop-auto / remove-guard / close-journal | проверка и восстановление файлов (нет) |
 
@@ -68,7 +68,7 @@ HomenS.AI Auto VPN · Serhii Khomenko · 01.11.2026 · ветка `lua/agent-int
 | `canon_c.so` битый / 0 байт / чужая архитектура [Ф] | самопроверка → чистый Lua (медленнее) | не меняется | корректен | `canon.c_module=nil` (виден в `auto.lua check`) | не нужно | показать на странице; восстановить файл |
 | `canon_c.so` грузится, но ломает память (segfault) [К] | процесс падает до счётчика → как строка 1 | — | стоп | `logread` | `HOMENSAI_CANON_C=0` нет в init | sha256 файла + переключатель в UCI |
 | Битый init-скрипт [К] | служба не запускается совсем; никакой наш код не работает | guard не ставится, журнал не откатывается | стоп | нет | переустановка | второй маленький init `homensai-vpn-integrity` (START=98) проверяет и чинит основной |
-| Битый/удалённый `/etc/config/homensai_vpn` [К] | `HOMENSAI-CONFIG-UNREADABLE`, служба выключена | LAN не трогается | стоп | код в `logread` | настройка заново | **не восстанавливать автоматически** (настройки и согласие владельца); показать код |
+| Битый/удалённый `/etc/config/homensai_vpn` [К] | `HOMENSAI-CONFIG-UNREADABLE`, мониторинг работает, Auto не запущен (`SERVICE-AUTO-OFF`, с 07.11.2026) | LAN не трогается | стоп | код в `logread` | настройка заново | **не восстанавливать автоматически** (настройки и согласие владельца); показать код |
 | Журнал / история / сертификат / Stop-защёлка [Ф в др. документе] | см. `POWER-CUT-INTEGRITY` | VPN-only | `give_up` / `BLOCKED` с кодом | `JOURNAL-INTEGRITY-FAILED`, `STATE-FILE-DAMAGED`, `HISTORY-CORRUPT` | карантин, резервная копия | без изменений (это данные, не код) |
 | Согласие с условиями (`terms_version` в UCI) [К] | Auto отказывает `TERMS-NOT-ACCEPTED` | — | стоп | код | владелец принимает заново | **никогда не восстанавливать** |
 | Нет `/var/run/homensai-vpn` [К] | Auto/hv-core делают `mkdir -p`; rpcd `mktemp` не удался → `agent.py` | — | корректен | — | само | — |
@@ -157,7 +157,8 @@ HomenS.AI Auto VPN · Serhii Khomenko · 01.11.2026 · ветка `lua/agent-int
 | Часть | Где |
 |---|---|
 | Манифест `usr/lib/homensai-vpn/integrity.sha256` (`sha256 режим /путь`, conffile без хэша, версия пакета) | `build_ipk.selected_files()` → оба сборщика (своя IPK и SDK через `stage_files.py`) |
-| Инструмент `verify / snapshot / boot / restore` (sh + busybox sha256sum/stat/tar/awk; 3 процесса на проверку) | `/usr/sbin/homensai-vpn-integrity` |
+| Инструмент `verify / snapshot / boot / recheck / restore` (sh + busybox sha256sum/stat/tar/awk; 3 процесса на проверку) | `/usr/sbin/homensai-vpn-integrity` |
+| Проверка, отложенная на время `opkg` (обзор безопасности 07.11.2026, F-02) | `boot` при `/var/lock/opkg.lock` пишет `INTEGRITY-DEFERRED` и запускает отдельно `recheck`: один экземпляр (pid-ссылка в RAM), ждёт снятия блокировки каждые 10 с до 10 мин, только пока в отчёте ещё DEFERRED; проверка только чтением. Чисто / только права / нечем сверить — `INTEGRITY-OK` / `INTEGRITY-MODE-DIFFERS` / `INTEGRITY-UNVERIFIED` (режим normal, монитор не перезапускается); повреждено и служба работает — один `restart` через init (восстановление и режимы делает обычный путь `boot`); служба не работает — не запускается, `INTEGRITY-RECHECK-DAMAGED` с режимом по повреждению; блокировка не снята за 10 мин — `INTEGRITY-RECHECK-TIMEOUT`. Auto не запускает. Заметка: `router/tests/INTEGRITY-RECHECK-NOTE.md` |
 | Проверка до запуска экземпляров | init `integrity_gate` в `start_service`: режим `normal` / `no-c` (`HOMENSAI_CANON_C=0`) / `python` (оба экземпляра на Python) / `stopped` (ни одного экземпляра; guard не трогается) |
 | Сам инструмент повреждён | init сверяет его sha256 с манифестом и достаёт из снимка (снимок сверяется с `.sha256`); иначе не запускает его и стартует как раньше |
 | Отчёт | `/var/run/homensai-vpn/integrity.json` {code, mode, restored, files ≤ 20, version, time} → `status.integrity` (agent.py и Lua-монитор), строки `logread` |
@@ -167,7 +168,8 @@ HomenS.AI Auto VPN · Serhii Khomenko · 01.11.2026 · ветка `lua/agent-int
 
 Никогда не пишется: conffile (настройки, `terms_version`, токены), всё под `/etc/config/` и `/etc/homensai-vpn/`
 (журнал, история, сертификаты), nft, маршруты, флаг Auto. Пределы: 1 восстановление за загрузку (метка в RAM) и 3 за
-24 ч (журнал в `/etc`, будущие отметки считаются). Во время `opkg` (есть `/var/lock/opkg.lock`) — `INTEGRITY-DEFERRED`.
+24 ч (журнал в `/etc`, будущие отметки считаются). Во время `opkg` (есть `/var/lock/opkg.lock`) — `INTEGRITY-DEFERRED`,
+после окончания `opkg` проверку выполняет `recheck` (строка таблицы выше).
 Нет ни манифеста, ни снимка — `INTEGRITY-UNVERIFIED`, служба стартует как раньше.
 
 Проверено [Ф]: `router/tests/test_integrity_faults.py` — 34 теста (docker python39); тот же инструмент под busybox

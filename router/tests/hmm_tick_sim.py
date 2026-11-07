@@ -34,7 +34,8 @@ PRIMARY = {'id': 'wireguard:peer_1', 'protocol': 'wireguard', 'interface': 'wgcl
 RESERVE = {'id': 'openvpn:1_1', 'protocol': 'openvpn', 'interface': 'ovpnclient1',
            'vendor_tunnel_id': 'openvpn:ovpnclient1', 'vendor_generation': '02' * 16, 'vendor_changed_at': -1e6}
 RECOVERY = {'failures': 3, 'successes': 2, 'cooldown': 60, 'min_dwell': 60, 'primary_successes': 2,
-            'primary_stable': 30, 'attempt_limit': 3, 'attempt_window': 15, 'return_policy': 'healthy_primary'}
+            'primary_stable': 30, 'attempt_limit': 3, 'attempt_window': 15, 'return_policy': 'healthy_primary',
+            'flap_model': 'double', 'flap_limit': 3, 'flap_window': 15}
 # Integration 2.1.0-alpha8: rescue-tune changed the defaults (primary_stable 120 s; the Lua heartbeat suspects after 2 lost
 # echoes, lua/fast_detect.lua M.LOSSES) - RECOVERY_MERGED/HB_LOSSES_MERGED are those shipped defaults. The reserve is
 # always healthy here, so rescue_stable (a FAILED reserve) never applies in this simulation.

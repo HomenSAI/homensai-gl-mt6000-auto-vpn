@@ -15,7 +15,7 @@ import sys
 import tempfile
 import time
 import unittest
-from contextlib import ExitStack
+from contextlib import ExitStack, nullcontext
 from unittest.mock import patch, MagicMock
 
 ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
@@ -440,15 +440,11 @@ class Settings(unittest.TestCase):
         writer.assert_not_called()
 
     def test_monitor_switch_with_hung_writer_or_active_auto(self):
-        self.stack.enter_context(patch.object(self.monitor,'inventory',return_value={'settings':{}}))
-        self.stack.enter_context(patch.object(self.monitor,'read_json',return_value={}))
-        self.stack.enter_context(patch.object(self.monitor,'journal_read',return_value={}))
-        with patch.object(self.monitor,'assess',return_value=None),patch.object(self.monitor.subprocess,'run',side_effect=subprocess.TimeoutExpired('lua',10)):
-            self.assertEqual(self.monitor.change({'enabled':False}),{'accepted':False,'code':'SETUP-SAVE-UNCONFIRMED'})
-        with patch.object(self.monitor,'assess',return_value='LIFECYCLE-STOP-AUTO-FIRST'),patch.object(self.monitor.subprocess,'run') as writer:
-            self.assertEqual(self.monitor.change({'enabled':False})['code'],'MONITOR-STOP-AUTO-FIRST');writer.assert_not_called()
-        with patch.object(self.monitor,'journal_read',side_effect=native.Refused('JOURNAL-INTEGRITY-FAILED')):
-            self.assertEqual(self.monitor.change({'enabled':False})['code'],'MONITOR-JOURNAL-UNVERIFIED')
+        # owner main rule 07.11.2026: a stop is refused with MONITOR-ALWAYS-ON before anything runs; only a start reaches the writer
+        with patch.object(self.monitor,'control_lock',return_value=nullcontext()),patch('rpc_throttle.allow',return_value=True),patch.object(self.monitor.subprocess,'run',side_effect=subprocess.TimeoutExpired('lua',10)) as writer:
+            self.assertEqual(self.monitor.change({'enabled':True}),{'accepted':False,'code':'SETUP-SAVE-UNCONFIRMED'})
+            self.assertEqual(self.monitor.change({'enabled':False})['code'],'MONITOR-ALWAYS-ON')
+            self.assertEqual(writer.call_count,1)
 
 
 if __name__=='__main__':

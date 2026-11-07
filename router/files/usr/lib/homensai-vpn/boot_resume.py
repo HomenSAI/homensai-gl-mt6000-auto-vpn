@@ -23,6 +23,7 @@ times, inside the same window and with every check. Before, Auto stayed off afte
 Lua counterpart: lua/boot_resume.lua (same marker, same decision, same state file).
 """
 import json
+import math
 import threading
 import time
 
@@ -37,7 +38,11 @@ BOOT_AGE=900
 SUPERVISOR='supervisor-start.json'  # runtime: {"id":<hex32>,"time":} written by each supervisor start after recovery
 RESTART_LIMIT=3     # resumes after supervisor restarts within RESTART_WINDOW (monotonic seconds)
 RESTART_WINDOW=900
-FINAL={'JOURNAL-INTEGRITY-FAILED'}
+# Refusals that cannot clear within this service run end the resume at once (FAILED with that code). IR-03 (integration
+# review 07.11.2026): INTEGRITY-AUTO-BLOCKED (BH-04) reads RUNTIME/integrity.json, rewritten only at a service start, so
+# pressing Start every EVERY s for the whole window only churned the status and the log. MAINTENANCE-IN-PROGRESS stays
+# a waiting code on purpose: a package operation ends within the window. Lua: boot_resume.RETRY (false = final).
+FINAL={'JOURNAL-INTEGRITY-FAILED','INTEGRITY-AUTO-BLOCKED'}
 
 
 def remember(persist=None,now=None):
@@ -59,6 +64,19 @@ def wanted(persist=None):
         stopped=latch.get('requested') if isinstance(latch,dict) else None
         if type(stopped) not in (int,float) or stopped>=at:return False,'AUTO-RESUME-STOPPED'
     return True,None
+
+
+def marker_time(persist=None):
+    """T1 (trace conformance 04.11.2026): the moment of the owner's last Start as this file tells it, for every writer of
+    the stop latch: 0 without a marker, inf for a marker that cannot be read (a Stop then always writes). A Stop must be
+    newer than this, or wanted() stays true and Auto comes back after the next power cut against the owner's last Stop.
+    Lua: boot_resume.marker_time."""
+    from agent import PERSIST,read_json
+    try:marker=read_json((persist or PERSIST)/MARKER,None)
+    except (OSError,ValueError):return float('inf')
+    if marker is None:return 0
+    at=marker.get('time') if isinstance(marker,dict) else None
+    return at if type(at) in (int,float) and math.isfinite(at) else float('inf')
 
 
 def token(runtime=None):

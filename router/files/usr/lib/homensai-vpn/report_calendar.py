@@ -77,6 +77,9 @@ def traffic_lines(accounting,start,end,monthly=False):
 def format_period(status,job,now,items=None):
     from telegram_items import ITEMS
     items=ITEMS if items is None else items
+    if tuple(items)==('brief',):
+        from telegram_brief import format_brief
+        return format_brief(status,job['start'],job['end'],now,job['key'])
     start,end=job['start'],job['end'];first=datetime.fromtimestamp(start).strftime('%Y-%m-%d');last=datetime.fromtimestamp(end-1).strftime('%Y-%m-%d')
     accounting=status.get('accounting',{});history=status.get('native_history',{})
     lines=['HomenSAI Auto VPN · '+job['kind'].title()+' summary','Report id: '+job['key'],

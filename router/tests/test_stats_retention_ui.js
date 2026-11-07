@@ -15,7 +15,8 @@ const luaModel=Function('return '+/M\.MODEL=(\{[\s\S]*?\})\r?\n/.exec(luaText)[1
 for(const language of ['en','ru']){
   const c={locale:language,Date,Math,Number,String,Object,Array,JSON,Promise,calls:[],notes:[]};
   c.bi=(en,ru)=>language==='ru'?ru:en;c.E=node;
-  vm.createContext(c);vm.runInContext(fs.readFileSync('router/stats_page.inc.js','utf8'),c);
+  vm.createContext(c);vm.runInContext(/function hvCss\(el,css\)\{[\s\S]*?\n\}/.exec(fs.readFileSync('router/element_guard.inc.js','utf8'))[0],c);  // the page's CSSOM style helper (F-77)
+  vm.runInContext(fs.readFileSync('router/stats_page.inc.js','utf8'),c);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(c.RETENTION_MODEL)),pyModel,'page fallback model = retention_settings.MODEL');
   assert.deepStrictEqual(pyModel,luaModel,'retention_settings.MODEL = lua/retention.lua M.MODEL');
   assert.deepStrictEqual(Array.from(c.RETENTION_STOPS),[1,2,3,4,5,6,7,14,30]);

@@ -305,7 +305,11 @@ class Dispatcher(unittest.TestCase):
                         ' ok) printf \'{"lua":true,"request":%s}\' "$(cat "$req")" > "$out"; printf \'{\\n\\t"ok": true\\n}\\n\';;\n'
                         ' fallback) printf \'{\\n\\t"fallback": true\\n}\\n\';;\n'
                         ' missing) exit 4;;\n'
-                        ' timeout) exit 7;;\n'
+                        ' timeout) printf "%s\\n" "$req" >> "$QA_LOG.req"; exit 7;;\n'
+                        ' system001) printf "%s\\n" "$req" >> "$QA_LOG.req"; printf \'{\\n\\t"error": "SYSTEM-001"\\n}\\n\';;\n'
+                        ' path) printf \'{\\n\\t"error": "RPC-BRIDGE-PATH"\\n}\\n\';;\n'
+                        ' stale) printf \'{\\n\\t"error": "RPC-BRIDGE-STALE"\\n}\\n\';;\n'
+                        ' broken) exit 9;;\n'
                         'esac\n')
         ubus.chmod(ubus.stat().st_mode | stat.S_IEXEC)
         if not os.access(str(ubus), os.X_OK):
@@ -353,15 +357,52 @@ class Dispatcher(unittest.TestCase):
         reply = self.run_plugin('call', 'setup_probe', request=b'{"level":3,"boost":true}', mode='timeout')
         self.assertEqual(reply, {'saved': False, 'code': 'SETUP-SAVE-UNCONFIRMED'})
 
-    def test_buttons_fall_back_to_agent_with_the_same_bytes(self):
-        # plan item 4: Start/Stop/failure test - a FALLBACK, a missing object or an unclear Lua outcome is answered
-        # by agent.py with the request bytes the page sent (a repeated Start finds its own intent, Stop latches again)
-        for method in ('native_start', 'native_stop', 'fault_start', 'fault_cancel'):
-            for mode in ('fallback', 'missing', 'timeout'):
+    BUTTONS = ('pair_manual', 'native_start', 'native_stop', 'fault_start', 'fault_cancel', 'speed_start', 'speed_cancel',
+               'telegram_retry')
+
+    def test_buttons_fall_back_to_agent_only_when_lua_did_not_read_the_request(self):
+        # plan item 4: a FALLBACK, a missing object, or Lua saying it did not read the request (bad path, unknown method,
+        # BH3-02 stale message) is answered by agent.py with the request bytes the page sent
+        for method in self.BUTTONS:
+            for mode in ('fallback', 'missing', 'path', 'stale'):
                 with self.subTest(method=method, mode=mode):
                     reply = self.run_plugin('call', method, request=b'{"request_source":"manual"}', mode=mode)
                     self.assertEqual(reply, {'agent': ['call', method], 'stdin': '{"request_source":"manual"}'})
         self.assertEqual(self.leftovers(), [])
+
+    def test_a_button_with_an_unclear_lua_outcome_is_never_replayed_through_agent(self):
+        # BH3-02: ubus timeout (rc 7), SYSTEM-001 after a failed reply write, or any other rc - the queued message may
+        # still reach Lua and act, so agent.py must not run the same click; the page gets RPC-BRIDGE-UNCONFIRMED (a lost
+        # answer: it re-reads the state and offers Retry) and the request file is gone before the dispatcher answers.
+        for method in self.BUTTONS:
+            for mode in ('timeout', 'system001', 'broken'):
+                with self.subTest(method=method, mode=mode):
+                    reply = self.run_plugin('call', method, request=b'{"request_source":"manual"}', mode=mode)
+                    self.assertEqual(reply, {'accepted': False, 'queued': False, 'code': 'RPC-BRIDGE-UNCONFIRMED',
+                                             'blockers': ['RPC-BRIDGE-UNCONFIRMED']})
+        self.assertEqual(self.leftovers(), [], 'request and reply files removed: a late Lua delivery reads nothing')
+        seen = Path(str(self.log)+'.req').read_text().split()
+        self.assertTrue(seen and all(p.startswith(str(self.runtime)+'/rpc-in.') and not Path(p).exists() for p in seen), seen)
+
+    def test_reads_keep_the_agent_fallback_on_any_unclear_outcome(self):
+        for method in ('status', 'events', 'history', 'auto_live', 'inventory', 'speed_live', 'probe_targets'):
+            for mode in ('timeout', 'system001', 'broken'):
+                with self.subTest(method=method, mode=mode):
+                    self.assertEqual(self.run_plugin('call', method, request=b'{}', mode=mode)['agent'], ['call', method])
+        self.assertEqual(self.leftovers(), [])
+
+    def test_the_bridge_message_carries_the_uptime_second_it_was_sent(self):
+        # BH3-02: Lua drops a message handled more than rpc.BRIDGE_STALE seconds after this stamp
+        uptime = Path('/proc/uptime')
+        before = float(uptime.read_text().split()[0]) if uptime.exists() else None
+        self.run_plugin('call', 'native_stop', request=b'{"request_source":"manual"}')
+        line = self.log.read_text().splitlines()[-1]
+        msg = json.loads(line.split(' ', 5)[5])
+        keys = ['method', 'reply_file', 'request_file']+(['sent'] if before is not None else [])
+        self.assertEqual(sorted(msg), keys)
+        if before is not None:
+            self.assertIsInstance(msg['sent'], int)
+            self.assertTrue(int(before) <= msg['sent'] <= before+30, (before, msg['sent']))
 
     def test_buttons_without_the_lua_monitor_use_the_python_socket_or_agent(self):
         for method in ('native_start', 'native_stop', 'fault_start', 'fault_cancel', 'pair_manual'):

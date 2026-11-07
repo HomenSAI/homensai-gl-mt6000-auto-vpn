@@ -1,0 +1,3 @@
+usign binary sha256: b301aed2b315f86c7828b90b86df73cdac7b73bd72344c51b7b3dae828facb2a
+repository chain entries verified by real usign: 153
+RESULT pass=313 fail=0

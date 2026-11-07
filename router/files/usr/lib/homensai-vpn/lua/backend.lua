@@ -334,6 +334,31 @@ function M.new(sys)
     return row.value,row.names
   end
 
+  -- server_pin.lua (option server_key_pin 'enforce'): SERVER-KEY-UNACCEPTED when one of the profiles has a changed, not yet
+  -- accepted server key, else nil. No blocker of diagnostic() any more (review 04.11.2026, findings 1, 2): see
+  -- native_switch.key_unaccepted, the twin with the reasons. Refused only for a move onto the channel (T.key_unaccepted).
+  function B.key_unaccepted(profiles)
+    local okpin,pinned=pcall(require('server_pin').gate,function(path)
+      local okr,text=pcall(sys.read,path,2*1024*1024);if okr then return text end;return nil
+    end,sys.RUNTIME,M.PERSIST,profiles)
+    if okpin then return pinned end
+    return nil
+  end
+  -- native_switch.key_blockers: for the display of the legacy one-shot buttons either channel counts
+  function B.key_blockers(blockers,selection)
+    if not canon.is_object(selection) then return blockers end
+    local profiles={}
+    for _,role in ipairs({'source','target'}) do
+      if selection[role] and type(selection[role].id)=='string' then profiles[#profiles+1]=selection[role].id end
+    end
+    local pinned=B.key_unaccepted(profiles)
+    if pinned then
+      for _,b in ipairs(blockers) do if b==pinned then return blockers end end
+      blockers[#blockers+1]=pinned
+    end
+    return blockers
+  end
+
   function B.diagnostic()
     local blockers={}
     local function add(code) blockers[#blockers+1]=code end
@@ -476,6 +501,7 @@ function M.new(sys)
   end
   local function parsed_text(text) parsed(text);return caches.parsed.text end
 
+  function B.vendor_busy_seen(scan) return platform.vendor_busy_seen(sys,scan) end
   function B.kernel_fingerprint()
     local ok,result=pcall(function()
       local before=mangle_text()
@@ -588,15 +614,127 @@ function M.new(sys)
   end
   B.run_write=run_write
 
+  -- review F-23 (06.11.2026): the UCI commands of a switch are started under the fence and awaited outside it with a
+  -- bound (Python forward_dispatch, timeout 5 s): a hung `uci` never holds the control lock, so Stop goes through.
+  -- The caller (run_write, transaction.write_command, rollback/recovery/forward_resume) calls the returned function.
+  local UCI_TIMEOUT=5
+  -- R2-01: a dispatched writer (uci reorder/commit, rtp2.sh) that did not finish in time is terminated and its exit
+  -- confirmed (sys.terminate) before anyone may roll back. When its exit cannot be established, the writer may
+  -- still run: the handle is recorded in the RAM marker and the error carries unresolved=true. transaction.attempt
+  -- then leaves the journal APPLYING (no rollback), and rollback.rollback refuses (WRITER-UNRESOLVED) while
+  -- B.writer_unresolved() still sees no exit status, so a late `uci commit` can never land after a restore.
+  B.UNRESOLVED_MARKER='writer-unresolved'
+  -- R4-01: the ownership record of a dispatched writer goes to flash (durable write) BEFORE the writer starts and is
+  -- removed only once its exit is established. A record that cannot be written means no writer starts. Recovery
+  -- consults the record: while it exists, the writer is unresolved unless its status file (the RAM marker or the
+  -- record names it) proves its exit, or the record is from another boot (no writer survives a reboot). A record or
+  -- marker that cannot be read back, or cannot be parsed, is never read as 'no unresolved writer'.
+  B.WRITER_RECORD='writer-pending.json'
+  B.BOOT_ID='/proc/sys/kernel/random/boot_id'
+  local function marker_path() return (env and env.runtime or sys.RUNTIME)..'/'..B.UNRESOLVED_MARKER end
+  local function record_path() return (env and (env.persist or env.runtime) or sys.RUNTIME)..'/'..B.WRITER_RECORD end
+  local function boot_id()
+    local ok,text=pcall(sys.read,B.BOOT_ID,256)
+    if not ok or type(text)~='string' then return '' end
+    return string.match(text,'^%s*(.-)%s*$')
+  end
+  local function record_writer(argv)
+    local status=(env and env.runtime or sys.RUNTIME)..'/.spawn-'..canon.unique()..'.status'
+    local record=canon.encode(canon.object({argv=canon.array(argv),status=status,boot_id=boot_id(),time=canon.float(sys.wall())}))
+    local ok=pcall(sys.write_atomic,record_path(),record)
+    if not ok then
+      pcall(function() require('durable').log('WRITER-RECORD-FAILED: the writer ownership record could not be saved, no command started') end)
+      refuse('COMMAND-FAILED')
+    end
+    return status
+  end
+  local function writer_done() pcall(sys.remove,record_path());pcall(sys.remove,marker_path()) end
+  local function unresolved(handle)
+    pcall(sys.write_private,marker_path(),tostring(handle))
+    error(setmetatable({code='WRITER-UNRESOLVED',unresolved=true,handle=handle},ctl.Refused),0)
+  end
+  -- the awaited exit status of a spawned writer: nil never leaves this function
+  local function await_writer(handle,seconds)
+    local rc=sys.wait(handle,seconds)
+    if rc==nil then
+      local confirmed=type(sys.terminate)=='function' and sys.terminate(handle,seconds) or false
+      B.invalidate()
+      if not confirmed then unresolved(handle) end
+      writer_done()
+      refuse('COMMAND-FAILED')
+    end
+    B.invalidate()
+    writer_done()
+    return rc
+  end
+  B.await_writer=await_writer
+  -- true while a recorded writer's exit is still unknown (record and marker are dropped once its exit is established)
+  function B.writer_unresolved()
+    local rok,record=pcall(sys.read,record_path(),65536)
+    if not rok then return true end
+    local mok,marker=pcall(sys.read,marker_path(),4096)
+    if not mok then return true end
+    if record==nil and (marker==nil or marker=='') then return false end
+    local handle=type(marker)=='string' and string.match(marker,'^%s*(.-)%s*$') or ''
+    local recorded_boot=nil
+    if record~=nil then
+      local pok,value=pcall(canon.decode,record)
+      if not pok or type(value)~='table' then return true end
+      if handle=='' and type(value.status)=='string' then handle=value.status end
+      if type(value.boot_id)=='string' then recorded_boot=value.boot_id end
+    end
+    if handle~='' and type(sys.finished)=='function' and sys.finished(handle) then writer_done();return false end
+    if recorded_boot~=nil and recorded_boot~='' then
+      local now=boot_id()
+      if now~='' and now~=recorded_boot then writer_done();return false end
+    end
+    return true
+  end
+  local function uci_dispatch(argv)
+    return function()
+      local status=record_writer(argv)
+      local handle=sys.spawn(argv,{timeout=UCI_TIMEOUT,status=status})
+      if not handle then writer_done();refuse('COMMAND-FAILED') end
+      return function()
+        local rc=await_writer(handle,UCI_TIMEOUT+5)
+        if rc~=0 then refuse('COMMAND-FAILED') end
+      end
+    end
+  end
+
   function B.forward_dispatch(argv,revision,timeout)
     local handle
     env.run.lock(function()
       require('transaction').require_control_revision(env,revision)
-      handle=sys.spawn(argv,{timeout=timeout})
+      local status=record_writer(argv)
+      handle=sys.spawn(argv,{timeout=timeout,status=status})
+      if not handle then writer_done() end
     end,env.runtime)
     if not handle then refuse('COMMAND-FAILED') end
-    local rc=sys.wait(handle,(timeout or 5)+5)
-    B.invalidate()
+    local rc=await_writer(handle,(timeout or 5)+5)
+    if rc~=0 then refuse('COMMAND-FAILED') end
+  end
+  -- F-24 / D11: the pair network write (net.set_disabled) as a bounded child, like Python's 8 s subprocess.run of
+  -- NETWORK_WRITE: the writer record on flash first, the spawn under the control lock with pair_auto's own revision
+  -- check (CONTROL-REVISION-STALE) - or without the lock when no revision is given, as in Python - and the wait
+  -- outside the lock, through await_writer (confirmed termination or WRITER-UNRESOLVED). A non-zero exit is
+  -- COMMAND-FAILED; the caller maps it to its own code.
+  function B.network_dispatch(argv,revision,timeout)
+    local handle
+    local function start()
+      local status=record_writer(argv)
+      handle=sys.spawn(argv,{timeout=timeout,status=status})
+      if not handle then writer_done() end
+    end
+    if revision==nil then start()
+    else
+      env.run.lock(function()
+        if ctl.revision_locked(env)~=revision then value_error('CONTROL-REVISION-STALE') end
+        start()
+      end,env.runtime)
+    end
+    if not handle then refuse('COMMAND-FAILED') end
+    local rc=await_writer(handle,(timeout or 5)+5)
     if rc~=0 then refuse('COMMAND-FAILED') end
   end
 
@@ -623,7 +761,7 @@ function M.new(sys)
         if not safe_section(section) then refuse('UNSAFE-SECTION') end
         if before_write then before_write() end
         local position=string.format('%d',index-1)
-        run_write(write_command,'uci',function() sys.command({'uci','reorder','route_policy.'..section..'='..position}) end,
+        run_write(write_command,'uci',uci_dispatch({'uci','reorder','route_policy.'..section..'='..position}),
           {op='reorder',section=section,index=index-1})
         for i=#expected,1,-1 do if expected[i]==identifier then table.remove(expected,i) end end
         table.insert(expected,index,identifier);moved=true
@@ -635,12 +773,13 @@ function M.new(sys)
       local o,h=B.order()
       if not same_list(o,order) or h~=fingerprint then refuse('POLICY-IDENTITY-CHANGED') end
       if before_write then before_write() end
-      run_write(write_command,'uci',function() sys.command({'uci','commit','route_policy'}) end,{op='commit'})
+      run_write(write_command,'uci',uci_dispatch({'uci','commit','route_policy'}),{op='commit'})
     end
     local o,h=B.order()
     if not same_list(o,order) or h~=fingerprint then refuse('POLICY-REORDER-UNVERIFIED') end
   end
-  function B.uci_commit() sys.command({'uci','commit','route_policy'});B.invalidate() end
+  -- the restore commit of rollback/recovery: synchronous, bounded by the same timeout (F-23)
+  function B.uci_commit() sys.command({'uci','commit','route_policy'},{timeout=UCI_TIMEOUT});B.invalidate() end
 
   -- process_policy.synchronization_script, run in this process: CAS of the two derived gl_process_vpn fields
   local function synchronize(system,first)
@@ -726,7 +865,7 @@ function M.new(sys)
         local handle=sys.spawn({'/usr/bin/rtp2.sh','not_reload_network'},{timeout=timeout})
         if not handle then refuse('COMMAND-FAILED') end
         return function()
-          local rc=sys.wait(handle,timeout+5)
+          local rc=await_writer(handle,timeout+5)
           if rc~=0 then refuse('COMMAND-FAILED') end
         end
       end,{op='rtp'})
@@ -950,7 +1089,7 @@ function M.new(sys)
   local live=nil
   local function live_probe()
     if not live then
-      live=require('live_probe').new({wall=sys.wall,clock=sys.clock,random=sys.random,probe_io=sys.probe_io,
+      live=require('live_probe').new({wall=sys.wall,clock=sys.clock,random=sys.random,probe_io=sys.probe_io,probe_begin=sys.probe_begin,probe_finish=sys.probe_finish,
         route_binding=function(logical) return B.route_binding(logical) end,
         -- option probe_dns (probe_trust.dns_mode): the configuration text keyed by its size and change time
         config_key=function() local st=sys.stat and sys.stat('/etc/config/homensai_vpn');return st and (tostring(st.mtime)..':'..tostring(st.size)..':'..tostring(st.ino)) or nil end,
@@ -986,15 +1125,31 @@ function M.new(sys)
     end
     return bridge_trace(profile)
   end
+  -- F-40: one remembered answer per identifier, valid only for the same channel generation (profile identity, vendor
+  -- tunnel and generation, the process binding of the policy). A rebound or rebuilt channel is probed afresh and never
+  -- inherits the former binding's healthy (or failed) answer. Bounded: at most one row per inventory identifier.
   local negative={}
   local positive={}
+  local function health_key(identifier,profile)
+    if not profile then return 'missing' end
+    local parts={}
+    for _,k in ipairs({'id','section','protocol','interface','vendor_tunnel_id','vendor_generation','generation','vendor_changed_at','administrative_state'}) do
+      local v=profile[k]
+      parts[#parts+1]=k..'='..((v==nil or isnone(v)) and '-' or canon.encode(v))
+    end
+    local binding=B.process_bindings and B.process_bindings[identifier]
+    parts[#parts+1]='binding='..(binding==nil and '-' or canon.encode(binding))
+    return table.concat(parts,'|')
+  end
+  B.health_key=health_key
   function B.health(identifier,reuse)
-    local row=negative[identifier]
-    if row and sys.clock()-row.time>=0 and sys.clock()-row.time<M.HEALTH_NEGATIVE_SECONDS then return row.value end
-    local good=positive[identifier]
-    if reuse and good and sys.clock()-good>=0 and sys.clock()-good<reuse then return true end
     local profile=nil
     for _,p in ipairs(B.inventory().profiles) do if p.id==identifier then profile=p;break end end
+    local key=health_key(identifier,profile)
+    local row=negative[identifier]
+    if row and row.key==key and sys.clock()-row.time>=0 and sys.clock()-row.time<M.HEALTH_NEGATIVE_SECONDS then return row.value end
+    local good=positive[identifier]
+    if reuse and good and good.key==key and sys.clock()-good.time>=0 and sys.clock()-good.time<reuse then return true end
     local value
     if not profile or not py.truthy(profile.interface) then value=false
     else
@@ -1004,8 +1159,8 @@ function M.new(sys)
       elseif result.code=='VPN-001' or result.code=='VPN-003' or result.code=='DNS-001' or result.code=='PROFILE-INACTIVE' then value=false
       else value=nil end
     end
-    if value==true then negative[identifier]=nil;positive[identifier]=sys.clock()
-    else negative[identifier]={time=sys.clock(),value=value};positive[identifier]=nil end
+    if value==true then negative[identifier]=nil;positive[identifier]={time=sys.clock(),key=key}
+    else negative[identifier]={time=sys.clock(),value=value,key=key};positive[identifier]=nil end
     return value
   end
   -- recheck(identifier, seconds) -> true (the source passes DNS + 2 of 3 HTTPS now) | false | nil (no answer):
@@ -1017,6 +1172,23 @@ function M.new(sys)
     for _,p in ipairs(B.inventory().profiles) do if p.id==identifier then profile=p;break end end
     if not profile or not py.truthy(profile.interface) then return false end
     local ok,result=native('probe',live_probe().probe,profile,false,seconds)
+    if not ok then return nil end
+    local hs=result.https_success;if hs==nil then hs=0 end
+    return isnone(result.code) and result.dns_ok==true and (canon.number(hs) or 0)>=2
+  end
+  -- recheck_begin / recheck_finish: B.recheck in two halves (L2, pair.recheck_begin): the checks run in the background
+  -- beside the preparation. begin -> pending, or nil when the native probe cannot run (the caller then probes in one go).
+  function B.recheck_begin(identifier,seconds)
+    if not B.native_probe_enabled() or not sys.probe_begin then return nil end
+    local profile=nil
+    for _,p in ipairs(B.inventory().profiles) do if p.id==identifier then profile=p;break end end
+    if not profile or not py.truthy(profile.interface) then return nil end
+    local ok,pending=native('probe',live_probe().probe_begin,profile,seconds)
+    if ok then return pending end
+    return nil
+  end
+  function B.recheck_finish(pending)
+    local ok,result=native('probe',live_probe().probe_finish,pending)
     if not ok then return nil end
     local hs=result.https_success;if hs==nil then hs=0 end
     return isnone(result.code) and result.dns_ok==true and (canon.number(hs) or 0)>=2
@@ -1115,6 +1287,21 @@ function M.new(sys)
   ------------------------------------------------------------------------------------------------------
   M.PREPARATION_CONTROL='/usr/lib/homensai-vpn/preparation_control.py'
   local after_stop_last=nil
+  -- Review 04.11.2026 (finding 3): of the session record only what restore-autostart decides from
+  -- (preparation_control.SESSION_FIELDS). Its file identity changed on every STOPPING/HELD pair of writes of a HELD session
+  -- (a held journal, a damped return): python3 started on every pass although nothing it decides from had changed.
+  local function session_key(path)
+    local ok,data=pcall(function() return canon.decode(sys.read(path) or '{}').data end)
+    if not ok then return 'unreadable' end
+    if data==nil then return 'empty' end
+    if not canon.is_object(data) then return 'unreadable' end
+    local parts={}
+    for i,name in ipairs({'id','phase','recovery_error','started','owned','kept','handover'}) do
+      local value=data[name]
+      if value==nil then parts[i]='-' else parts[i]=canon.encode(value) end
+    end
+    return table.concat(parts,',')
+  end
   local function after_stop_key()
     local directory=env.persist..'/preparation-changes'
     local names=sys.dir(directory)
@@ -1123,7 +1310,8 @@ function M.new(sys)
     if ok and canon.is_object(intent) and intent.mode=='on' then return nil end  -- Auto runs: nothing to restore
     local parts={}
     for i,path in ipairs({directory,'/etc/config/network','/etc/rc.d',env.persist..'/native-stop.json',env.runtime..'/pair-auto-control.json',
-                          env.persist..'/pair-auto-state.json',env.persist..'/native-transaction.json'}) do parts[i]=sys.key(path) end
+                          env.persist..'/native-transaction.json'}) do parts[i]=sys.key(path) end
+    parts[#parts+1]=session_key(env.persist..'/pair-auto-state.json')
     return table.concat(parts,'|')
   end
   B.after_stop_key=after_stop_key

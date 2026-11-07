@@ -13,6 +13,11 @@ option failure_model (inventory.lua):
                  ~70 % of 20 s blackouts);
   'consecutive'  the previous rule: recovery_failures (3) failed samples in a row (failover_plan.streak).
 
+Fast end of the master slider (owner plan 04.11.2026, docs/architecture/FAST-SWITCH-2026-11-04.ru.md), HMM modes only,
+only for LEAVING the primary (leave_rule): option hmm_or_failures N (2..10, absent/0 = off) adds "or N failed samples
+in a row"; the expert opt-in slider_turbo + turbo_beats k (3..8) adds "or k lost ICMP heartbeats in a row" (fast_detect).
+The model stays on, so the P(G) gate of a return (return_ready) and the verdict about the reserve are unchanged.
+
 States G healthy | L light loss (stay) | M heavy loss (leave) | B short blackout (transient) | X long outage (leave)
 | N DNS dead, HTTPS works (leave). Star-shaped continuous-time chain: G -> s at LAM[s] per second, s -> G with mean
 duration DUR[s]. Between two observations dt seconds apart (dt = clamp(known - last known, 0, 600), the first one 10;
@@ -53,7 +58,7 @@ DUR=(1800.0,1800.0,4.0,900.0,1800.0)                          # L M B X N, secon
 PRESETS={'hmm':{'theta':0.8,'dur_b':4.0},'hmm-fast':{'theta':0.7,'dur_b':3.0}}
 COST=20.0          # seconds a switch costs: leave only for a failure expected to outlast it
 SUSPECT=0.2        # 1 - pi_G - pi_L: the monitor runs dense confirmation passes from here on
-HEALTHY=0.90       # pi_G a primary needs before a planned return from a healthy reserve (owner 03.11.2026: 0.95 -> 0.9)
+HEALTHY=0.90       # default pi_G (option return_pg overrides it) a primary needs before a planned return from a healthy reserve (owner 03.11.2026: 0.95 -> 0.9)
 CLEAN=300          # ... or that many seconds of consecutive healthy samples (bounds the wait after heavy loss)
 FLOOR=1e-9
 WINDOW=600.0       # seconds of samples replayed
@@ -61,6 +66,10 @@ FIRST_DT=10.0
 DT_MAX=600.0
 DENSE_GAP=7.0      # normal passes are >= 10 s apart, dense ones 4-6.5 s
 HTTP_NORMAL=6.0;HTTP_DENSE=3.0;DNS_WAIT=3.0;PUBLISHED=2.5   # probe_deadline / agent.dns_probe waits; usual publication
+OR_FAILURES=(2,10)          # option hmm_or_failures
+TURBO_BEATS=(3,8)           # option turbo_beats
+WAKE_NAME='pair-wake.json'  # RAM: the monitor's hint to the supervisor (probe_policy.wake_row), no authority of its own
+BEAT_FRESH=2.5              # seconds: a heartbeat row older than this proves nothing (the monitor rewrites it every beat)
 
 
 def name(settings):
@@ -72,10 +81,49 @@ def params(model):
     """The constants of one HMM preset (None for 'consecutive')."""
     preset=PRESETS.get(model)
     if preset is None:return None
-    dur=(DUR[0],DUR[1],preset['dur_b'],DUR[3],DUR[4])
+    return custom(preset['theta'],preset['dur_b'],model)
+
+
+# Numeric options (2.1.0-alpha9, master slider / network advisor, docs/architecture/NETWORK-ADVISOR-2026-11-04.ru.md):
+# option hmm_theta, hmm_dur_b, return_pg (inventory.lua; absent = the preset of failure_model, i.e. exactly alpha8).
+# A preset is a named point of these numbers: 'hmm' = theta 0.8 / dur_B 4, 'hmm-fast' = 0.7 / 3; return P(G) 0.90.
+NUMERIC={'hmm_theta':(0.5,0.99),'hmm_dur_b':(1.0,15.0),'return_pg':(0.5,0.99)}
+_CUSTOM={}
+
+
+def custom(theta,dur_b,model='hmm',healthy=None):
+    """HMM constants for a numeric theta / dur_B (and the return threshold P(G), default HEALTHY); cached."""
+    healthy=HEALTHY if healthy is None else healthy
+    key=(model,theta,dur_b,healthy)
+    if key in _CUSTOM:return _CUSTOM[key]
+    dur=(DUR[0],DUR[1],dur_b,DUR[3],DUR[4])
     total=LAM[0]+LAM[1]+LAM[2]+LAM[3]+LAM[4]
-    return {'model':model,'theta':preset['theta'],'dur':dur,'lam':LAM,'total':total,
-            'ratio':tuple(x/total for x in LAM),'weight':tuple(math.exp(-COST/d) for d in dur)}
+    preset=PRESETS.get(model)
+    plain=preset is not None and preset['theta']==theta and preset['dur_b']==dur_b and healthy==HEALTHY
+    p={'model':model,'theta':theta,'dur':dur,'lam':LAM,'total':total,'healthy':healthy,
+       'key':model if plain else '%s|%.17g|%.17g|%.17g'%(model,theta,dur_b,healthy),
+       'ratio':tuple(x/total for x in LAM),'weight':tuple(math.exp(-COST/d) for d in dur)}
+    if len(_CUSTOM)>=64:_CUSTOM.clear()
+    _CUSTOM[key]=p
+    return p
+
+
+def numeric(settings,key):
+    """The owner's numeric option within its range, or None (absent, malformed or out of range = the preset)."""
+    value=settings.get(key) if isinstance(settings,dict) else None
+    if type(value) not in (int,float) or not math.isfinite(value):return None
+    low,high=NUMERIC[key]
+    return float(value) if low<=value<=high else None
+
+
+def resolve(settings):
+    """The detector constants Auto decides with: the preset of failure_model, overridden by the numeric options
+    hmm_theta / hmm_dur_b / return_pg when they are set (None for 'consecutive')."""
+    model=name(settings)
+    preset=PRESETS.get(model)
+    if preset is None:return None
+    theta=numeric(settings,'hmm_theta');dur_b=numeric(settings,'hmm_dur_b');healthy=numeric(settings,'return_pg')
+    return custom(preset['theta'] if theta is None else theta,preset['dur_b'] if dur_b is None else dur_b,model,healthy)
 
 
 def observation(sample):
@@ -179,14 +227,15 @@ def evaluate(samples,identifier,now,max_age,model,profile=None):
     failed/suspect/healthy are False when the newest observation is older than max_age or the channel's newest
     sample is no observation (like streak)."""
     from failure_diagnosis import finite,scoped_samples
-    p=params(model)
+    p=model if isinstance(model,dict) else params(model)   # a preset name or resolve(settings)
     if p is None or not finite(max_age) or max_age<=0:return None
+    model=p['model']
     if profile is not None:samples=scoped_samples(samples,profile)
     points=window(samples,identifier,now)
     if points is None:return None
     # Auto ticks every 2 s, samples arrive every 4-10 s: the replay of an unchanged window is remembered
     # (published samples never change; the key changes with every new or expired sample).
-    key=(model,identifier,len(points),sum(s['time'] for s in points),
+    key=(p['key'],identifier,len(points),sum(s['time'] for s in points),
          sum(i*(4+(observation(s) if observation(s) is not None else 3)+(8 if s.get('dense') is True else 0)+16*delay(s.get('code'),True)) for i,s in enumerate(points,1)))
     if key in _MEMO:pi,last,count=_MEMO[key]
     else:
@@ -199,7 +248,7 @@ def evaluate(samples,identifier,now,max_age,model,profile=None):
     chance=persist(pi,p);bad=1-pi[0]-pi[1]
     return {'model':model,'pi':pi,'time':last,'observations':count,'persist':chance,'p_bad':bad,
             'p_healthy':pi[0],'remaining':remaining(pi,p),
-            'failed':fresh and chance>=p['theta'],'suspect':fresh and bad>=SUSPECT,'healthy':fresh and pi[0]>=HEALTHY}
+            'failed':fresh and chance>=p['theta'],'suspect':fresh and bad>=SUSPECT,'healthy':fresh and pi[0]>=p['healthy']}
 
 
 def channel_failed(samples,identifier,count,now,max_age,settings,profile=None):
@@ -208,8 +257,56 @@ def channel_failed(samples,identifier,count,now,max_age,settings,profile=None):
     if model=='consecutive':
         from failover_plan import streak
         return streak(samples,identifier,count,now,max_age,False,profile)
-    view=evaluate(samples,identifier,now,max_age,model,profile)
+    view=evaluate(samples,identifier,now,max_age,resolve(settings),profile)
     return bool(view and view['failed'])
+
+
+def _whole(v):
+    if isinstance(v,str) and v.isascii() and v.isdigit():v=int(v)
+    return v if type(v) is int else None
+
+
+def or_failures(settings):
+    """N of the rule "the model OR N failed samples in a row", or None (off, malformed, out of range, 'consecutive')."""
+    v=_whole(settings.get('hmm_or_failures')) if isinstance(settings,dict) else None
+    if v is None or not OR_FAILURES[0]<=v<=OR_FAILURES[1] or name(settings)=='consecutive':return None
+    return v
+
+
+def turbo_on(settings):
+    """The expert opt-in «минимум простоя, допускаю до ~8 лишних уходов в сутки» (option slider_turbo, default off)."""
+    return isinstance(settings,dict) and settings.get('slider_turbo') in (True,'1') and name(settings)!='consecutive'
+
+
+def heartbeat_k(settings):
+    """k lost heartbeats in a row that leave the primary, or None (no opt-in, or turbo_beats outside 3..8)."""
+    if not turbo_on(settings):return None
+    v=_whole(settings.get('turbo_beats'))
+    return v if v is not None and TURBO_BEATS[0]<=v<=TURBO_BEATS[1] else None
+
+
+def heartbeat_failed(beat,source,target,k,now):
+    """The Lua monitor's row (probe_policy.beat_row): source lost >= k beats in a row while the reserve answers its own.
+    Both channels silent is a WAN outage, never a reason to move; an old or foreign row proves nothing."""
+    if k is None or not isinstance(beat,dict) or beat.get('reason')!='heartbeat':return False
+    t=beat.get('time');lost=beat.get('lost')
+    if type(t) not in (int,float) or not math.isfinite(t) or not 0<=now-t<=BEAT_FRESH:return False
+    return beat.get('id')==source and beat.get('target')==target and beat.get('target_ok') is True and type(lost) is int and lost>=k
+
+
+def leave_rule(samples,identifier,count,now,max_age,settings,profile=None,target=None,beat=None):
+    """Why Auto leaves the primary now: 'model', 'streak', 'heartbeat', or None. A heartbeat verdict also needs the
+    channel's own fresh observation (it is the evidence of the late recheck, which is never skipped)."""
+    if channel_failed(samples,identifier,count,now,max_age,settings,profile):
+        return 'streak' if name(settings)=='consecutive' else 'model'
+    extra=or_failures(settings)
+    if extra is not None:
+        from failover_plan import streak
+        if streak(samples,identifier,extra,now,max_age,False,profile):return 'streak'
+    if heartbeat_failed(beat,identifier,target,heartbeat_k(settings),now):
+        view=evaluate(samples,identifier,now,max_age,resolve(settings),profile)
+        if view and view['time'] is not None and now-view['time']<=max_age:return 'heartbeat'
+    return None
 
 
 def return_ready(samples,identifier,count,now,max_age,settings,profile=None):
@@ -220,7 +317,7 @@ def return_ready(samples,identifier,count,now,max_age,settings,profile=None):
     model may still see "light loss", so CLEAN bounds that wait (docs/architecture/HMM-DETECTOR-2026-11-03.ru.md)."""
     model=name(settings)
     if model=='consecutive':return True
-    view=evaluate(samples,identifier,now,max_age,model,profile)
+    view=evaluate(samples,identifier,now,max_age,resolve(settings),profile)
     if view and view['healthy']:return True
     from failure_diagnosis import scoped_samples
     from recovery_settings import stable_success
@@ -238,7 +335,7 @@ def row_view(samples,row,now,max_age,settings):
     if model=='consecutive' or not isinstance(row,dict) or not isinstance(samples,list):return None
     identifier=row.get('id')
     points=[s for s in samples if isinstance(s,dict) and s.get('id')==identifier and all(s.get(k)==row.get(k) for k in IDENTITY)]
-    return public(evaluate(points,identifier,now,max_age,model))
+    return public(evaluate(points,identifier,now,max_age,resolve(settings)))
 
 
 def public(view):

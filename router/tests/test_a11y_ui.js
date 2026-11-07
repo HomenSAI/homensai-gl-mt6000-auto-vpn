@@ -1,5 +1,6 @@
 require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const {luciE}=require('./luci_dom_model'),SINKS=[];  // BH3-01: E follows LuCI (a single scalar child -> innerHTML, recorded)
 // Accessibility checks of the generated page and of the A/B/C overviews (structure only; a real screen reader is not available offline).
 class N{constructor(t,a,c){this.tag=t;this.attrs=a||{};this.children=[].concat(c===undefined?[]:c).flat().filter(x=>x!=null);}
   all(){return [this].concat(...this.children.filter(c=>typeof c!=='string').map(c=>c.all()));}
@@ -11,7 +12,7 @@ const page=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
 const base='router/files/www/luci-static/resources/view/homensai-vpn/';
 const source=fs.readFileSync(base+page+'.js','utf8');
 const prefix=source.slice(0,source.lastIndexOf('return view.extend({'));
-const ctx={window:{localStorage:{getItem(){return null},setItem(){}},HomenS:{},location:{search:'',href:'http://x/',hash:''}},document:{createElementNS:(ns,t)=>new N(t,{},[]),createElement:t=>new N(t),addEventListener(){}},localStorage:{getItem(){return null}},E:(t,a,c)=>new N(t,a,c),URLSearchParams,URL,Intl,console,L:{},rpc:{declare:()=>()=>Promise.resolve({})},ui:{},poll:{},view:{extend:o=>o}};
+const ctx={window:{localStorage:{getItem(){return null},setItem(){}},HomenS:{},location:{search:'',href:'http://x/',hash:''}},document:{createElementNS:(ns,t)=>new N(t,{},[]),createElement:t=>new N(t),addEventListener(){}},localStorage:{getItem(){return null}},E:luciE((t,a)=>new N(t,a,[]),SINKS),URLSearchParams,URL,Intl,console,L:{},rpc:{declare:()=>()=>Promise.resolve({})},ui:{},poll:{},view:{extend:o=>o}};
 ctx.location=ctx.window.location;vm.createContext(ctx);vm.runInContext(prefix,ctx);
 // 1. Page structure: skip link, focusable heading that receives focus on section change, one main landmark, labelled navigation.
 assert(source.includes("'class':'hv-skip'"),'skip link');
@@ -50,3 +51,4 @@ for(const d of ['a','b','c']){
 const c=ctx.renderDesignOverview('c',{status,inventory:{settings:{}},rows:profiles,month:null,controlCard:new N('section')});
 assert(c.all().filter(n=>n.tag==='th').every(n=>n.attrs.scope==='col'),'table headers carry scope=col');
 console.log('PASS: skip link, heading focus, visible focus, control names, lamps with words, table scope, no live-region spam');
+assert.deepStrictEqual(SINKS,[],'BH3-01: no element got a router string through innerHTML (single scalar E child)');

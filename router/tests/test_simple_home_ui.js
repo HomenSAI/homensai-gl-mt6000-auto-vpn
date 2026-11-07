@@ -31,7 +31,7 @@ for(const language of ['en','ru']){
  let model=c.simpleHomeModel(base,inventory,1000);assert(model.showCard);assert.equal(model.state,'on');assert.equal(model.selectedRole,'source');
  const blocked=clone(base);blocked.native_failover.state='BLOCKED';blocked.native_failover.blockers=['HARDWARE-ACCELERATOR-UNVERIFIED'];blocked.auto_control.requested='off';blocked.auto_control.pair_phase='HELD';
  const blockedModel=c.simpleHomeModel(blocked,inventory,1000);assert.equal(blockedModel.state,'error');assert.equal(blockedModel.blockers[0],'HARDWARE-ACCELERATOR-UNVERIFIED');
- blocked.auto_control.requested='on';blocked.auto_control.pair_phase='RUNNING';assert.equal(c.simpleHomeAutoEnabled(blocked,1000),false,'old RUNNING intent cannot claim a blocked controller works');
+ blocked.auto_control.requested='on';blocked.auto_control.pair_phase='RUNNING';assert.equal(c.simpleHomeAutoEnabled(blocked,1000),true,'a confirmed RUNNING session stays enabled when its controller reports failure');
  blocked.auto_control.requested='off';blocked.auto_control.pair_phase='FAILED';blocked.auto_control.requested_at=950;
  c.autoCommandPending={stop:false,acknowledged:true,baseline:900};
  assert.equal(c.autoCommandOperation(blocked,1000),null,'refused preflight ends queued Start');

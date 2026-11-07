@@ -4,9 +4,9 @@
 -- firewall_bytes(), static_firewall_digest([data]), set_disabled(state,interface,value,revision),
 -- client_down(interface), ifup(interface,revision), ifdown(interface), quiet(seconds,revision),
 -- interface_exists(interface).
--- The UCI network read and write are the exact Python Lua sources (NETWORK_READ / NETWORK_WRITE), run in this
--- process. Config digests are cached by (inode, size, mtime, ctime) of each file: an unchanged file is never
--- re-read or re-hashed on a tick.
+-- The UCI network read and write are the exact Python Lua sources (NETWORK_READ / NETWORK_WRITE): the read runs in
+-- this process, the write as a bounded child (F-24, 8 s like Python). Config digests are cached by the CONTENT of
+-- each file (F-41): an unchanged file is read (bounded) but never re-hashed on a tick.
 local canon=require('canon')
 local py=require('py')
 local identity=require('identity')
@@ -45,6 +45,7 @@ assert(q.value=='0'or q.value=='1','value')
 assert(c:set('network',q.interface,'disabled',q.value));assert(c:save('network'));assert(c:commit('network'))
 ]]
 M.CONFIGS={'wireguard','ovpnclient','firewall','route_policy','wireless','dhcp','gl-dns-v2'}
+M.WRITE_TIMEOUT=8  -- pair_auto.set_disabled: subprocess.run(..., timeout=8)
 
 local function safe_interface(name) return type(name)=='string' and #name>=1 and #name<=15 and string.find(name,'^[A-Za-z0-9_]+$')~=nil end
 
@@ -83,12 +84,89 @@ local function split_blocks(data,tab)
 end
 local function lines_of(data) local out={};for line in string.gmatch(data..'\n','([^\n]*)\n') do out[#out+1]=line end;return out end
 
--- VENDOR_EXIT_OPTIONS.fullmatch(line.rstrip('\r')): [ \t]*option[ \t]+gl_(wan_like|bwa_managed|bwa_exit_id|bwa_bridge_reject)[ \t].*
+-- F-34 (pair_auto.firewall_without_vendor_exit): the stock client's exit bookkeeping options are not an external
+-- edit only on a zone that names a VPN client interface and only with the values the stock client writes; the same
+-- option on any other section (the WAN or LAN zone) or with another value counts.
+local function strip_cr(line) return (string.gsub(line,'\r+$','')) end
+-- VPN_CLIENT_NAME.fullmatch: (?:wgclient|ovpnclient)(?:[1-9][0-9]{0,3})?
+local function vpn_client_name(x)
+  if type(x)~='string' then return false end
+  local kind,number=string.match(x,'^(%a+)(%d*)$')
+  if kind~='wgclient' and kind~='ovpnclient' then return false end
+  return number=='' or (string.match(number,'^[1-9]%d*$')~=nil and #number<=4)
+end
+-- R4-05 (pair_auto.UCI_SECTION_START): ANY line that begins with the word config starts a new section, parsed or not
+local function section_start(line)
+  line=strip_cr(line)
+  return string.match(line,'^[ \t]*config$')~=nil or string.match(line,'^[ \t]*config[ \t]')~=nil
+end
+-- pair_auto.UCI_SECTION.fullmatch: type and name each bare, 'quoted' or "quoted", an optional trailing # comment
+-- -> kind, name|nil (or nil when the header cannot be parsed: a section of someone else)
+local function word(text,class)
+  local w=string.match(text,"^'(["..class.."]+)'$") or string.match(text,'^"(['..class..']+)"$') or string.match(text,'^(['..class..']+)$')
+  return w
+end
+local function section_header(line)
+  line=strip_cr(line)
+  local rest=string.match(line,'^[ \t]*config[ \t]+(.*)$')
+  if not rest then return nil end
+  rest=string.gsub(rest,'[ \t]*#.*$','')
+  rest=string.gsub(rest,'[ \t]+$','')
+  local kind_text,name_text=string.match(rest,'^(%S+)[ \t]+(%S+)$')
+  if not kind_text then kind_text=string.match(rest,'^(%S+)$') end
+  if not kind_text then return nil end
+  local kind=word(kind_text,'%w_%-')
+  if not kind then return nil end
+  if name_text==nil then return kind,nil end
+  local name=word(name_text,'%w_')
+  if not name then return nil end
+  return kind,name
+end
+-- ZONE_MEMBER.fullmatch: [ \t]*(?:option[ \t]+(?:name|network)|list[ \t]+network)[ \t]+'([^'\r\n]*)'[ \t]*
+local function zone_member(line)
+  line=strip_cr(line)
+  local word,key,value=string.match(line,"^[ \t]*(%a+)[ \t]+(%a+)[ \t]+'([^'\r\n]*)'[ \t]*$")
+  if (word=='option' and (key=='name' or key=='network')) or (word=='list' and key=='network') then return value end
+  return nil
+end
+local function vpn_client_zone(lines)
+  local kind,name=section_header(lines[1])
+  if kind~='zone' then return false end
+  local names={}
+  if name then names[#names+1]=name end
+  for i=2,#lines do
+    local value=zone_member(lines[i])
+    if value then for token in string.gmatch(value,'%S+') do names[#names+1]=token end end
+  end
+  for _,x in ipairs(names) do if vpn_client_name(x) then return true end end
+  return false
+end
+-- VENDOR_EXIT_OPTION.fullmatch with a value the stock client writes
 local function vendor_exit_option(line)
-  line=string.gsub(line,'\r+$','')
-  if string.find(line,'\n',1,true) then return false end
-  local name,sep=string.match(line,'^[ \t]*option[ \t]+gl_([a-z_]+)([ \t])')
-  return name=='wan_like' or name=='bwa_managed' or name=='bwa_exit_id' or name=='bwa_bridge_reject'
+  line=strip_cr(line)
+  local name,value=string.match(line,"^[ \t]*option[ \t]+gl_([a-z_]+)[ \t]+'([^'\r\n]*)'[ \t]*$")
+  if name=='wan_like' or name=='bwa_managed' or name=='bwa_bridge_reject' then return value=='0' or value=='1' end
+  if name=='bwa_exit_id' then return vpn_client_name(value) end
+  return false
+end
+local function firewall_sections(data)
+  local sections,current={},{}
+  for _,line in ipairs(lines_of(data)) do
+    if section_start(line) and #current>0 then sections[#sections+1]=current;current={} end
+    current[#current+1]=line
+  end
+  sections[#sections+1]=current
+  return sections
+end
+function M.firewall_without_vendor_exit(data)
+  local kept={}
+  for _,lines in ipairs(firewall_sections(data)) do
+    local owned=vpn_client_zone(lines)
+    for _,line in ipairs(lines) do
+      if not (owned and vendor_exit_option(line)) then kept[#kept+1]=line end
+    end
+  end
+  return table.concat(kept,'\n')
 end
 
 function M.config_digest(name,data,managed)
@@ -103,11 +181,7 @@ function M.config_digest(name,data,managed)
     end
     data=table.concat(kept,'\n')
   end
-  if name=='firewall' then
-    local kept={}
-    for _,line in ipairs(lines_of(data)) do if not vendor_exit_option(line) then kept[#kept+1]=line end end
-    data=table.concat(kept,'\n')
-  end
+  if name=='firewall' then data=M.firewall_without_vendor_exit(data) end
   return canon.sha256(data)
 end
 
@@ -126,18 +200,32 @@ end
 
 function M.new(env,sys)
   local N={}
-  local cache={}  -- config name -> {key=, managed=, sha=}
+  local cache={}  -- config name -> {text=, managed=, sha=}
 
+  -- F-41 / D07: the version of a config file is its CONTENT, never its metadata (type, inode, size, mtime, ctime):
+  -- two same-size in-place edits within one timestamp tick share the metadata tuple and would keep a stale digest
+  -- (Python reads and hashes the contents on every tick). The read is bounded by the 1 MB config limit; a file that
+  -- cannot be read as a regular file of that size has no version and is never served from the cache. Lua interns
+  -- strings, so the comparison of two equal 1 MB texts is a pointer comparison.
+  local function content_key(path)
+    local st=sys.lstat(path)
+    if not st then return 'absent' end
+    if st.type~='reg' or st.size>1048576 then return nil end
+    local ok,text=pcall(sys.read,path,1048576)
+    if not ok or text==nil then return nil end
+    return text
+  end
   -- the UCI network read, once per version of /etc/config/network and its uncommitted delta
   local network_cache=nil
   function N.network()
-    local key=sys.key('/etc/config/network')..'|'..sys.key('/tmp/.uci/network')
-    if network_cache and network_cache.key==key then return py.copy(network_cache.data) end
+    local config,delta=content_key('/etc/config/network'),content_key('/tmp/.uci/network')
+    local key=(config and delta) and (#config..':'..config..'|'..#delta..':'..delta) or nil
+    if key and network_cache and network_cache.key==key then return py.copy(network_cache.data) end
     local ok,text=pcall(sys.chunk,'pair_network_read',M.NETWORK_READ)
     if not ok then value_error('PAIR-NETWORK-UNVERIFIED') end
     local dok,data=pcall(canon.decode,text)
     if not dok or not canon.is_array(data) or #data<1 or #data>400 then value_error('PAIR-NETWORK-UNVERIFIED') end
-    network_cache={key=key,data=data}
+    network_cache=key and {key=key,data=data} or nil
     return py.copy(data)
   end
   function N.forget() network_cache=nil;cache={} end
@@ -155,12 +243,12 @@ function M.new(env,sys)
     local mkey=managed and canon.encode(managed) or ''
     for _,name in ipairs(M.CONFIGS) do
       local path='/etc/config/'..name
-      local key=sys.key(path)
+      local text=config_bytes(path)
       local row=cache[name]
-      if row and row.key==key and row.managed==mkey and key~='absent' then result[name]=row.sha
+      if row and row.text==text and row.managed==mkey then result[name]=row.sha
       else
-        local sha=M.config_digest(name,config_bytes(path),managed)
-        cache[name]={key=key,managed=mkey,sha=sha};result[name]=sha
+        local sha=M.config_digest(name,text,managed)
+        cache[name]={text=text,managed=mkey,sha=sha};result[name]=sha
       end
     end
     return result
@@ -196,18 +284,26 @@ function M.new(env,sys)
     local stage=sys.RUNTIME..'/pair-uci-'..sys.unique()
     if not sys.mkdir(stage,448) then value_error('PAIR-NETWORK-WRITE-FAILED') end
     local payload=canon.encode(canon.object({stage=stage,expected=data,interface=interface,value=value,managed=managed}))
+    -- F-24 / D11: Python runs NETWORK_WRITE as `lua -e <source>` with its job on stdin and an 8 s timeout. Here the
+    -- same source and job are files of the private stage directory (0700, RAM) and a bounded child of the supervisor
+    -- runs them (backend.network_dispatch: writer record, spawn under the lock, wait outside it, confirmed
+    -- termination) - never in this process while the control lock is held. Its failure keeps the old code.
+    local script,job=stage..'/write.lua',stage..'/job.json'
+    local argv={'sh','-c','exec lua '..script..' <'..job}
     local function write()
-      local ok=pcall(sys.chunk,'pair_network_write',M.NETWORK_WRITE,payload)
-      if not ok then value_error('PAIR-NETWORK-WRITE-FAILED') end
+      local wok=pcall(function() sys.write_private(script,M.NETWORK_WRITE);sys.write_private(job,payload) end)
+      if not wok then value_error('PAIR-NETWORK-WRITE-FAILED') end
+      local ok,err=pcall(env.backend.network_dispatch,argv,revision,M.WRITE_TIMEOUT)
+      if not ok then
+        if type(err)=='table' and err.code=='COMMAND-FAILED' then value_error('PAIR-NETWORK-WRITE-FAILED') end
+        error(err,0)
+      end
     end
     local ok,err=pcall(function()
       if revision==nil then write()
       else
         pair().require_running(env,revision)
-        env.run.lock(function()
-          if require('auto_control').revision_locked(env)~=revision then value_error('CONTROL-REVISION-STALE') end
-          write()
-        end,env.runtime)
+        write()
         pair().require_running(env,revision)
       end
     end)

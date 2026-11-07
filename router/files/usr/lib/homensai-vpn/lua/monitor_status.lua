@@ -59,8 +59,9 @@ function M.switch_timing(env)
   local ok,value=pcall(read_json,env,env.persist..'/switch-timing.json',nil)
   if not ok or not is_dict(value) then return NULL end
   local c,avg=value.count,num(value.avg_seconds)
-  if type(c)~='number' or c%1~=0 or c<1 or not avg or not (1<=avg and avg<=600) then return NULL end
-  return canon.object({avg_seconds=canon.float(math.floor(avg*10+0.5)/10),count=c,last_seconds=n0(value.last_seconds),updated=n0(value.updated)})
+  if type(c)~='number' or c%1~=0 or c<1 or not avg or not (avg==avg and 0<avg and avg<=600) then return NULL end
+  -- sub-second averages are real (F-51); milliseconds for the page only, as switch_timing.display
+  return canon.object({avg_seconds=canon.float(math.floor(avg*1000+0.5)/1000),count=c,last_seconds=n0(value.last_seconds),updated=n0(value.updated)})
 end
 
 ------------------------------------------------------------------------------------------------------

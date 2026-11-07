@@ -162,4 +162,73 @@ t.test('datagram: raw ICMP is sent with sendto (the router nixio refuses connect
   if not ok then error(err,0) end
 end)
 
+-- A level-triggered socket stays readable until it is read or removed. Under the guarded loop (loop_guard.lua) a read
+-- that raises would come back at once for ever: one core at 100 % until the deadline, and a log line each time.
+t.test('datagram: a read or an accept that raises ends the check as a failed one; the socket goes once, nothing spins',function()
+  for _,fault in ipairs({'recvfrom','accept'}) do
+    local deleted,closed,fired=0,0,0
+    local watch
+    local function sock()
+      local s={}
+      function s:setopt() return true end
+      function s:setblocking() return true end
+      function s:connect() return true end
+      function s:send(packet) return #packet end
+      function s:fileno() return 7 end
+      function s:recvfrom() if fault=='recvfrom' then error('read failed') end;return 'reply','1.1.1.1' end
+      function s:close() closed=closed+1 end
+      return s
+    end
+    local saved={nixio=package.loaded['nixio'],mio=package.loaded['monitor_io']}
+    package.loaded['nixio']={socket=function() return sock() end}
+    local loop={ULOOP_READ=1,fd_add=function(fd,cb)
+        watch=cb
+        return {delete=function() deleted=deleted+1;watch=nil end}
+      end,
+      timer=function(cb) return {set=function() end,cancel=function() end} end}
+    package.loaded['monitor_io']=nil
+    local ok,err=pcall(function()
+      local m=require('monitor_io')
+      m.log=function() end
+      m.attach_loop(loop)
+      local results={}
+      m.datagram('udp','wgclient1','9.9.9.9',53,'q',3,function() if fault=='accept' then error('accept failed') end;return true end,
+        function(data,kind) results[#results+1]=kind end)
+      while watch and fired<1000 do fired=fired+1;watch() end  -- the descriptor stays readable
+      t.eq(fired,1,fault..': fired once');t.eq(results,{'transport'},fault);t.eq({deleted,closed},{1,1},fault)
+    end)
+    package.loaded['nixio'],package.loaded['monitor_io']=saved.nixio,saved.mio
+    if not ok then error(err,0) end
+  end
+end)
+
+t.test('datagram: a failing continuation is not a failed read: the socket is gone before it runs, once',function()
+  local deleted,watch=0,nil
+  local function sock()
+    local s={}
+    function s:setopt() return true end
+    function s:setblocking() return true end
+    function s:connect() return true end
+    function s:send(packet) return #packet end
+    function s:fileno() return 7 end
+    function s:recvfrom() return 'reply','1.1.1.1' end
+    function s:close() end
+    return s
+  end
+  local saved={nixio=package.loaded['nixio'],mio=package.loaded['monitor_io']}
+  package.loaded['nixio']={socket=function() return sock() end}
+  local loop={ULOOP_READ=1,fd_add=function(fd,cb) watch=cb;return {delete=function() deleted=deleted+1;watch=nil end} end,
+    timer=function(cb) return {set=function() end,cancel=function() end} end}
+  package.loaded['monitor_io']=nil
+  local ok,err=pcall(function()
+    local m=require('monitor_io')
+    m.attach_loop(loop)
+    m.datagram('udp','wgclient1','9.9.9.9',53,'q',3,function() return true end,function() error('continuation failed') end)
+    t.eq(pcall(watch),false,'the loop guard reports it, the real place of the error stays')
+    t.eq(deleted,1);t.eq(watch,nil)
+  end)
+  package.loaded['nixio'],package.loaded['monitor_io']=saved.nixio,saved.mio
+  if not ok then error(err,0) end
+end)
+
 t.run()

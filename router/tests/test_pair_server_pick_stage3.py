@@ -45,6 +45,14 @@ class Stage3(unittest.TestCase):
         self.peer='3';self.wgconfig='peer_3';self.wg_digest='0'*64;self.staged={};self.exec=[];self.files={};self.logs=[];self.ready=[]
         self.healthy={SOURCE:False,TARGET:True}
         self.backend.health.side_effect=lambda identifier:self.healthy.get(identifier)
+        # F-27: server_apply compares the route_policy sections before and after its own write (a Mock answered a Mock
+        # here, which the delta check rightly refused). The rules as the helper reports them; foreign_rule is a change
+        # somebody else makes to the reserve's rule while the commit lands.
+        self.foreign_rule={}
+        self.backend.policy.side_effect=lambda:{'settings':dict(self.settings),'sections':[
+            {'.name':'global','.type':'policy','enabled':'1'},
+            {'.name':'cfg0456cd','.type':'rule','via':'ovpnclient1','via_type':'openvpn','group_id':'1','client_id':'2','tunnel_id':'4192',**self.foreign_rule},
+            {'.name':'cfg0123ab','.type':'rule','via':'wgclient1','via_type':'wireguard','group_id':'10004','peer_id':self.peer,'tunnel_id':'5841'}]}
         self.backend.recovery_ready.side_effect=lambda identifier,settings=None:(self.ready.append(identifier),self.healthy.get(identifier) is True)[1]
         self.io={'runtime':'/run','read':self.files.get,'write':self.write,'alive':lambda pid:False,'log':self.logs.append,'exec':self.uci}
         self.settings.update(server_pick='1',plan_source_tunnel='wireguard:wgclient1',plan_target_tunnel='openvpn:ovpnclient1')
@@ -166,6 +174,26 @@ class Stage3(unittest.TestCase):
         self.assertEqual((last['state'],last['reason'],last['source']),('OBSERVING','PAIR-WATCHING',NEW),'no EXTERNAL code after the return')
         self.assertEqual(pair.read_state()['phase'],'RUNNING');self.assertEqual(pair.read_state()['selected_policy']['role'],'source')
         self.no_readopt();self.reserve_untouched()
+
+    def test_a_foreign_edit_of_the_reserve_rule_during_the_change_is_never_adopted(self):
+        # F-27: the reserve's rule changes with our commit (somebody else's edit): neither the change nor its rollback
+        # is explainable, so the session keeps its baseline and the normal checks see the external change
+        self.on_reserve();self.request()
+        uci=self.uci
+        def foreign(argv,seconds):
+            rc,out=uci(argv,seconds)
+            if ' '.join(argv)=='uci commit route_policy' and not self.foreign_rule:self.foreign_rule={'client_id':'9'}
+            return rc,out
+        self.io['exec']=foreign
+        before=pair.read_state();journal_before=n.journal_read()
+        self.assertTrue(self.tick())
+        state=pair.read_state();journal=n.journal_read()
+        self.assertEqual(state['policy_roles']['source_id'],SOURCE,'not rebound to the new server');self.assertEqual(state['order'],before['order'])
+        self.assertEqual(state['network_identity'],before['network_identity']);self.assertEqual(state['protected'],before['protected'])
+        self.assertEqual((journal['source'],journal['hash'],journal['after']),(journal_before['source'],journal_before['hash'],journal_before['after']),'the open journal is not re-bound')
+        self.assertTrue(state['server_change']['rolled_back'])
+        self.assertTrue(self.logs[-1].startswith('SERVER-PICK-FAILED:'),self.logs[-1]);self.assertTrue(self.logs[-1].endswith('rollback failed'),self.logs[-1])
+        self.assertEqual(self.peer,'3','uci itself holds the old server again');self.no_readopt()
 
     def test_refused_during_transitions_holds_or_without_the_tunnel_anchor(self):
         self.on_reserve();self.request()

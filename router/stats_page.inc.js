@@ -132,7 +132,7 @@ function retentionDays(n){
   return n+' '+bi(n===1?'day':'days',ru);
 }
 function retentionMB(bytes){var v=bytes/RETENTION_MIB,t=v>=10?String(Math.round(v)):v>=.1?v.toFixed(1):'0.1';return bi(t+' MB',t.replace('.',',')+' МБ');}
-function retentionFill(input,min,max){input.setAttribute('style','--hv-fill:'+Math.round((Number(input.value)-min)/(max-min)*100)+'%');}
+function retentionFill(input,min,max){hvCss(input,'--hv-fill:'+Math.round((Number(input.value)-min)/(max-min)*100)+'%');}
 function renderRetention(model){
   var r=Object.assign({},model.retention||{}),cap=model.capacity||{},storage=model.storage||{},busy=false;
   var savedMode=r.mode==='size'?'size':'time',savedDays=RETENTION_STOPS.indexOf(Number(r.days))>=0?Number(r.days):7;
@@ -166,7 +166,7 @@ function renderRetention(model){
   function chosenDays(){return mode==='time'?RETENTION_STOPS[dayIndex]:retentionSizeDays(r,mb);}
   function level(value,room,warnShare,badShare){return room===null?'unknown':value>room*badShare?'bad':value>room*warnShare?'warn':'ok';}
   function show(bar,room,value,state,node){
-    bar.setAttribute('style','width:'+(room===null||room<=0?0:Math.min(100,Math.round(value/room*100)))+'%');bar.setAttribute('data-level',state);
+    hvCss(bar,'width:'+(room===null||room<=0?0:Math.min(100,Math.round(value/room*100)))+'%');bar.setAttribute('data-level',state);
     node.textContent=room===null?bi('free space unknown','свободное место неизвестно'):bi('of ','из ')+retentionMB(room)+bi(' available',' доступно');
   }
   function update(){

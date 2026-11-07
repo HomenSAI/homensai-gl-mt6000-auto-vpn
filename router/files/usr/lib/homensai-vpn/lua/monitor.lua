@@ -22,9 +22,16 @@ local resets=require('stats_reset')
 local page=require('monitor_status')
 local vendor=require('vendor')
 local fast=require('fast_detect')
+local gl_sensors=require('gl_sensors')
+local stall=require('stall')
+local quorum=require('quorum')
+local cusum=require('cusum')
+local rtt_log=require('heartbeat_rtt_log')
 local endpoints=require('server_endpoint')
 local mtu_check=require('mtu_check')
 local sqm=require('sqm')
+local target_log=require('probe_target_log')
+local probe_plan=require('probe_plan')
 
 local M={}
 M.VERSION=require('version')
@@ -34,6 +41,14 @@ M.LEVELS=policy.LEVELS
 M.CRITICAL_SAVE_SPACING=60
 M.PROBE_WORKERS=2          -- agent.monitor_loop: ThreadPoolExecutor(max_workers=2) over the profiles
 M.PASS_WATCHDOG=60         -- seconds: a probe that never called back is reported SYSTEM-001 and the pass ends
+-- Nothing outside watches the separate monitor process, and a guarded callback no longer ends it (loop_guard.lua), so
+-- the 1 s watcher checks what an error could silently have lost (Monitor:loop_check). A running pass ends at
+-- PASS_WATCHDOG; PASS_OVERDUE means even that did not happen. A tick is due when the timer was armed for.
+M.PASS_OVERDUE=M.PASS_WATCHDOG+15
+M.TICK_OVERDUE=15          -- seconds a tick may be late before it is armed again
+M.TICK_REARMS=3            -- armed this many times without one firing: the loop is dead
+M.OVERDUE_BEATS=5          -- watcher beats in a row: one long blocking callback is late, not dead
+M.TICK_RETRY=10            -- seconds to the next pass when the next delay could not be computed
 local NULL=canon.null
 
 local function is_dict(v) return type(v)=='table' and v~=NULL and not canon.is_array(v) and not canon.is_float(v) end
@@ -174,12 +189,17 @@ function M.new(runner,options)
     function() return runner.exists(self.runtime..'/speed-pause.json') end)
   self.bridge=page.Bridge(runner,self.runtime)
   -- server_endpoint.lua: the peer address of every probed channel (agent.probe), cached per tunnel epoch
-  self.endpoints=endpoints.Observer(options.endpoint_fs or (runner.endpoint_fs and runner.endpoint_fs()) or nil)
+  self.endpoint_fs=options.endpoint_fs or (runner.endpoint_fs and runner.endpoint_fs()) or nil
+  self.endpoints=endpoints.Observer(self.endpoint_fs)
   -- mtu_check.lua: the large-packet check of each probed channel (low rate; every probe while a black hole is suspected)
   self.mtu=mtu_check.Schedule()
   -- Lua plan item 5: the 1 s pulse of the two Auto channels (off unless option lua_fast_detect '1')
   self.fast=fast.Pulse(runner,function() return runner.exists(self.runtime..'/speed-pause.json') end)
   self.fast_on=false;self.fast_key=nil
+  -- GL sensors (GL-SENSORS-2026-11-04.ru.md): WAN underlay echo + diagnosis, WireGuard hotplug events, crash-log refresh
+  self.gl=gl_sensors.new(runner,self.runtime,self.persist)
+  self.gl_pair=canon.object();self.gl_pass_now=false
+  self.plan_memo={measured={}}
   -- plan item 7: speed test (speed.lua, the quiet window speed_pause.lua) and Telegram reports (telegram.lua)
   self.speed_deps=options.speed_deps or require('speed').router({runtime=self.runtime,persist=self.persist,io=runner,nonblocking=true,
     inventory=function() return self:inventory() end,retention_days=function() return M.retention_days(self.settings) end,
@@ -203,13 +223,20 @@ function M.new(runner,options)
     live_extras=function(result,native,clean) self:live_fields(result,native,clean) end,
     live_manual=function(native) local _,value=page.manual_switch(self.env,native,false);return value end,
     speed_pause=function() return self:speed_pause() end,
-    speed=function(method,arguments) return self:speed_rpc(method,arguments) end,
+    speed=function(method,arguments)
+      -- plan item 54: during a package operation agent.py answers the speed test with MAINTENANCE-IN-PROGRESS
+      if method=='speed_start' and require('maintenance').blocker(runner.read_file,self.persist,runner.wall()) then return rpc.FALLBACK end
+      return self:speed_rpc(method,arguments)
+    end,
     setup=function(method,arguments)
       local reply=require('setup').save(self.setup_deps,method,arguments)
       if reply==require('setup').FALLBACK then return rpc.FALLBACK end
       return reply
     end,
+    probe_targets=function(arguments) return target_log.read(runner.read_file,self.runtime,arguments) end,
     pair_manual=function(arguments)
+      -- plan item 54: during a package operation agent.py answers the manual click with MAINTENANCE-IN-PROGRESS
+      if require('maintenance').blocker(runner.read_file,self.persist,runner.wall()) then return rpc.FALLBACK end
       local manual=require('manual_request')
       local reply=manual.request(self:manual_deps(),arguments)
       if reply==manual.FALLBACK then return rpc.FALLBACK end
@@ -362,7 +389,11 @@ function Monitor:display_diagnostic(now)
       return row.blockers,selection
     end
   end
-  local diagnose=self.diagnostic_override or function() return self:legacy_backend().diagnostic() end
+  local diagnose=self.diagnostic_override or function()
+    local backend=self:legacy_backend()
+    local found,selection=backend.diagnostic()
+    return backend.key_blockers(found,selection),selection
+  end
   local dok,blockers,selection=pcall(diagnose)
   if not dok or not canon.is_array(blockers) then error(require('page_controls').UNAVAILABLE,0) end
   pcall(function()
@@ -420,8 +451,18 @@ function Monitor:manual_controls(status,now)
     status=function() return status end,
     queued=function() return require('manual').read(env) end,
     ledger=function() return self:cached_json(self.persist..'/pair-auto-budget.json',canon.object({events=canon.array()})) end,
+    effective=function(ledger,at) return require('pair').effective_events(env,ledger,at) end,
     kernel=function(state,_,live) return require('channel_path').page_kernel(native_file(),state,live,now) end,
     fast=function() return require('manual_request').fast_switch_enabled(self.runner.config_text and self.runner.config_text() or nil) end,
+    key_unaccepted=function(identifier)
+      if type(identifier)~='string' then return nil end
+      local function read(path)
+        local f=io.open(path,'rb');if not f then return nil end
+        local text=f:read(2*1024*1024);f:close();return text
+      end
+      local ok,pinned=pcall(require('server_pin').gate,read,self.runtime,self.persist,{identifier})
+      return ok and pinned or nil
+    end,
   },{__index=common})
   local legacy_deps=setmetatable({diagnostic=function() return self:display_diagnostic(now) end},{__index=common})
   local manual=nil
@@ -573,6 +614,30 @@ function Monitor:stats_reset()
   return true
 end
 
+-- Per-target probe log (probe_target_log.lua, option probe_target_log, default on): one RAM line per Auto channel per
+-- pass with the result and latency of each target of that very pass and the heartbeat misses since the previous line.
+-- It reads what the pass measured; it never fails the pass (a full or unwritable RAM disk is logged once).
+function Monitor:target_log(measured,pair,settings,dense)
+  if not target_log.enabled(settings) then return end
+  local runner=self.runner
+  local ok,err=pcall(function()
+    if not self.target_writer then self.target_writer=target_log.Writer(runner,self.runtime) end
+    local results,hb={},{}
+    for _,row in ipairs(measured) do
+      if pair.source~=nil and (row.id==pair.source or row.id==pair.target) then
+        results[#results+1]=row
+        hb[row.id]=self.fast:take_heartbeat(row.id)
+      end
+    end
+    self.target_writer:record(results,hb,dense,runner.wall())
+  end)
+  if ok then self.target_log_error=nil
+  elseif self.target_log_error~=tostring(err) then
+    self.target_log_error=tostring(err)
+    if runner.log then runner.log('probe target log: '..tostring(err)) end
+  end
+end
+
 ------------------------------------------------------------------------------------------------------
 -- one pass, asynchronous
 ------------------------------------------------------------------------------------------------------
@@ -580,16 +645,9 @@ end
 function Monitor:start_pass(done)
   done=done or function() end
   if self.passing then return false end
-  self.passing=true
+  self.passing=true  -- from here on only finish() clears it, and every path reaches finish(): passes never stop for good
   local runner=self.runner
-  pcall(function() self:stats_reset() end)
-  local now_diagnosing=accounting.stats.diagnostic(runner,runner.wall())
-  if now_diagnosing~=self.diagnosing then
-    if self.diagnosing then pcall(function() self:checkpoint();self.last_save=runner.clock() end) end
-    self.diagnosing=now_diagnosing
-    self.ping_history=self:load_ping_history(now_diagnosing)
-  end
-  self.pass_started=runner.clock()
+  self.pass_started=nil
   local finished=false
   local watchdog
   local function finish(ctx,err)
@@ -599,12 +657,22 @@ function Monitor:start_pass(done)
       local ok,ferr=pcall(function() self:finish_pass(ctx) end)
       if not ok then err=ferr end
     end
-    if err then self:publish_failure(err) end
-    self.pass_seconds=runner.clock()-self.pass_started
+    if err then pcall(function() self:publish_failure(err) end) end
+    pcall(function() self.pass_seconds=runner.clock()-self.pass_started end)
     self.passing=false
+    self.spread_release=nil
     done(self.status)
   end
   local ok,err=pcall(function()
+    self.pass_started=runner.clock()
+    pcall(function() self:stats_reset() end)
+    local now_diagnosing=accounting.stats.diagnostic(runner,runner.wall())
+    if now_diagnosing~=self.diagnosing then
+      if self.diagnosing then pcall(function() self:checkpoint();self.last_save=runner.clock() end) end
+      self.diagnosing=now_diagnosing
+      self.ping_history=self:load_ping_history(now_diagnosing)
+    end
+    self.pass_started=runner.clock()
     local data=self:inventory()
     local settings=data.settings
     self.settings=settings
@@ -615,12 +683,33 @@ function Monitor:start_pass(done)
     local pass_dense=false  -- published with each sample: the failure model's cadence (channel_model.lua)
     do local okd,dense=pcall(function() return self.booster:dense(now) end);pass_dense=okd and dense~=nil;probe.set_dense(pass_dense) end
     do local ids={};for _,p in ipairs(bound) do ids[p.id]=true end;self.endpoints:retain(ids) end
+    self.pass_slot=probe_plan.begin_slot(self.grid_slot,runner.clock())
+    local planned
+    bound,planned=self:pass_plan(bound,settings)  -- after retain: a skipped reserve keeps its endpoint reading
     local function endpoint(profile,now) return self.endpoints:observe(profile,now) end
     local function mtu(profile_id,binding,cb) mtu_check.run(runner,self.mtu,profile_id,binding,cb) end
-    local ctx={data=data,settings=settings,observed=observed,selected=selected,bound=bound,results={},dense=pass_dense}
+    local ctx={data=data,settings=settings,observed=observed,selected=selected,bound=bound,results={},dense=pass_dense,planned=planned}
     local next_index,running,completed=1,0,0
-    local function launch()
+    local launch
+    -- the i-th measurement starts at its phase (probe_plan: the carrying primary last); a suspicion releases the wait
+    local function spread_wait(index)
+      local offset=planned.offsets[index] or 0
+      if ctx.released or offset<=0 or not runner.after then return false end
+      local wait=offset-(runner.clock()-self.pass_started)
+      if wait<=0.01 then return false end
+      if not ctx.spread_timer then
+        ctx.spread_timer=runner.after(math.ceil(wait*1000),function() ctx.spread_timer=nil;if not finished then launch() end end)
+      end
+      return true
+    end
+    self.spread_release=function()
+      ctx.released=true
+      if ctx.spread_timer then ctx.spread_timer.cancel();ctx.spread_timer=nil end
+      if not finished then launch() end
+    end
+    launch=function()
       while running<M.PROBE_WORKERS and next_index<=#bound do
+        if spread_wait(next_index) then return end
         local index=next_index;next_index=next_index+1;running=running+1
         local okp=pcall(probe.probe,runner,bound[index],function(result)
           if ctx.results[index] then return end
@@ -635,19 +724,71 @@ function Monitor:start_pass(done)
     end
     if runner.after then
       watchdog=runner.after(M.PASS_WATCHDOG*1000,function()
-        local pending={}
-        for index,p in ipairs(bound) do
-          if not ctx.results[index] then pending[#pending+1]=tostring(p.id);ctx.results[index]={id=p.id,time=runner.wall(),code='SYSTEM-001'} end
-        end
-        local live=runner.live_count and runner.live_count() or -1
-        if runner.log then runner.log('pass watchdog: probes did not finish in '..M.PASS_WATCHDOG..' s: '..table.concat(pending,',')..'; armed loop objects '..live) end
-        finish(ctx)
+        local okw,werr=pcall(function()
+          local pending={}
+          for index,p in ipairs(bound) do
+            if not ctx.results[index] then pending[#pending+1]=tostring(p.id);ctx.results[index]={id=p.id,time=runner.wall(),code='SYSTEM-001'} end
+          end
+          local live=runner.live_count and runner.live_count() or -1
+          if runner.log then runner.log('pass watchdog: probes did not finish in '..M.PASS_WATCHDOG..' s: '..table.concat(pending,',')..'; armed loop objects '..live) end
+        end)
+        if okw then finish(ctx) else finish(nil,werr) end  -- the pass ends whatever failed here
       end)
     end
     launch()
   end)
   if not ok then finish(nil,err) end
   return true
+end
+
+-- agent.pass_plan: probe_plan.plan over the previous pass; a failure measures everything. -> bound in start order, plan
+function Monitor:pass_plan(bound,settings)
+  local runner=self.runner
+  local ids={};for index,p in ipairs(bound) do ids[index]=p.id end
+  local ok,planned=pcall(function()
+    local memo=self.plan_memo
+    local pair=memo.pair or {};local rows=memo.rows or {}
+    local source,target=pair.source,pair.target
+    if source==NULL then source=nil end
+    if target==NULL then target=nil end
+    local now=runner.wall()
+    local row=target~=nil and rows[target] or nil
+    return probe_plan.plan(ids,{interval=self.booster:interval(settings,now),valid_for=M.observation_valid_for(settings),now=now,
+      source=source,target=target,native=memo.native,dense=self.booster:dense(now)~=nil,boost=self.booster:active(),
+      waiting=self.booster:waiting(now),source_clean=source~=nil and probe_plan.clean(rows[source]),
+      target_clean=target~=nil and probe_plan.clean(rows[target]),reserve_time=row and canon.number(row.time) or nil},settings)
+  end)
+  if not ok then
+    local offsets={};for index=1,#ids do offsets[index]=0.0 end
+    planned={skip={},order=ids,offsets=offsets}
+  end
+  local by_id={};for _,p in ipairs(bound) do by_id[p.id]=p end
+  local ordered={};for index,id in ipairs(planned.order) do ordered[index]=by_id[id] end
+  return ordered,planned
+end
+
+-- A suspicion during the phase wait of a running pass: the rest of the pass starts now.
+function Monitor:spread_now()
+  if self.spread_release then self.spread_release() end
+end
+-- A suspicion wants a full check now: the rest of a running pass, or the next pass in a tick.
+function Monitor:suspected_now(timer)
+  if self.passing then self:spread_now() else timer:set(1) end
+end
+
+-- loop_check(now): called every second by the watcher. nil, 'tick' (the armed next pass did not come) or 'pass' (a
+-- running pass outlived its own watchdog). OVERDUE_BEATS beats in a row: a callback that blocked the loop for a while
+-- makes everything late at once, and the pass watchdog must get its chance to fire first.
+function Monitor:loop_check(now)
+  local late=nil
+  if self.passing then
+    if self.pass_started and now-self.pass_started>M.PASS_OVERDUE then late='pass' end
+  elseif self.tick_due and now-self.tick_due>M.TICK_OVERDUE then late='tick' end
+  if not late then self.overdue_beats=0;return nil end
+  self.overdue_beats=(self.overdue_beats or 0)+1
+  if self.overdue_beats<M.OVERDUE_BEATS then return nil end
+  self.overdue_beats=0
+  return late
 end
 
 function Monitor:publish_failure(err)
@@ -670,6 +811,11 @@ function Monitor:finish_pass(ctx)
   local observation,measured=self.vendor:observe(data,after,raw,runner.wall())
   local mapped={}
   for _,p in ipairs(measured) do mapped[p.id]=p end
+  local planned=ctx.planned or {skip={},order={},offsets={}}
+  for _,id in ipairs(planned.skip) do
+    local kept=probe_plan.carried(self.plan_memo.measured[id],observation)
+    if kept~=nil then mapped[id]=kept end
+  end
   local rows=canon.array()
   for _,p in ipairs(observed) do
     local row=shallow(p)
@@ -707,6 +853,7 @@ function Monitor:finish_pass(ctx)
   end
   local native=self:read_json(self.runtime..'/native-status.json',canon.object())
   now=runner.wall()
+  local pass_samples={}
   for _,row in ipairs(measured) do
     self.accounting:observe(M.typed_result(row),interval*3,native,pair)
     local sample=canon.object()
@@ -715,7 +862,9 @@ function Monitor:finish_pass(ctx)
     end
     sample.dense=ctx.dense==true
     self.samples[#self.samples+1]=sample
+    pass_samples[#pass_samples+1]=sample
   end
+  self:target_log(measured,pair,settings,ctx.dense==true)
   local kept=self.diagnosing and 86400*M.retention_days(settings) or accounting.WORK_SAMPLE_SECONDS
   local samples=canon.array()
   for _,s in ipairs(self.samples) do
@@ -771,6 +920,15 @@ function Monitor:finish_pass(ctx)
   status.observation_valid_for=valid_for
   for _,row in ipairs(rows) do row.observation_valid_for=valid_for end
   status.uplink_observation=data.uplink_observation or canon.object({state='UNKNOWN'})
+  -- WAN down versus tunnel down (wan_diag.lua): Auto reads its hold through diagnosis.diagnose
+  do
+    local okw,diagnosis=pcall(function()
+      self.gl:configure(settings,wan_devices,rows,pair)
+      return self.gl:pass(rows,pair,now,valid_for,settings,status.uplink_observation)
+    end)
+    if okw then status.wan_diagnosis=diagnosis;self.gl_pair=pair
+    elseif runner.log then runner.log('wan diagnosis: '..tostring(diagnosis)) end
+  end
   status.vendor_observation=observation
   status.package=runner.package_version and runner.package_version() or NULL
   if status.package==nil then status.package=NULL end
@@ -778,8 +936,25 @@ function Monitor:finish_pass(ctx)
   status.native_failover=native
   if native.state==nil then status.native_failover=canon.object({state='SERVICE-STOPPED'}) end
   pcall(function() return self.booster:note_wait(settings,status.vendor_observation,pair,status.native_failover,runner.wall()) end)
+  self.failure_models=failure_models
   local okb=pcall(function() return self.booster:observe(settings,measured,pair,status.native_failover.state,runner.wall(),failure_models) end)
-  local okf=pcall(function() self.fast:configure(self:fast_option(),rows,pair,status.native_failover.state) end)
+  if okb then
+    local memo=self.plan_memo
+    memo.pair=pair;memo.native=status.native_failover.state;memo.rows={}
+    for _,row in ipairs(rows) do memo.rows[row.id]=row end
+    for _,row in ipairs(measured) do memo.measured[row.id]=row end
+    local function list(values) local out=canon.array();for i,v in ipairs(values) do out[i]=v end;return out end
+    status.probe_plan=canon.object({order=list(planned.order),skip=list(planned.skip),offsets=list(planned.offsets)})
+  end
+  -- the WAN is proven up and only the primary fails: its dense confirmation starts now (never a switch by itself)
+  if okb and self.gl.hasten and is_dict(pair) and pair.source then
+    pcall(function() return self.booster:suspect(settings,{canon.object({profile=pair.source,reason='wan-ok-tunnel-down',evidence=canon.object()})},
+      pair,status.native_failover.state,runner.wall()) end)
+  end
+  if self.gl.restored then self.gl_pass_now=true end  -- the WAN came back: check both channels at once
+  local okf=pcall(function() self.fast:configure(self:fast_option(),rows,pair,status.native_failover.state,
+    {stall=stall.enabled(settings),veto=stall.enabled(settings,stall.VETO_OPTION),quorum=quorum.enabled(settings),
+     cusum=cusum.enabled(settings),rtt=cusum.rtt_enabled(settings)}) end)
   if not okf then pcall(function() self.fast:close() end) end
   if self.fast_on then status.fast_detect=self.fast:public(runner.clock(),true) end
   -- The response metric is the owner's setting, published even when the booster failed: without it the page
@@ -818,6 +993,9 @@ function Monitor:finish_pass(ctx)
   local route_now=runner.wall()
   local okr,kind=pcall(reliability.observed_route,status,route_now)
   if rel.routes:observe(okr and kind or 'unknown',canon.float(route_now),interval*3) then rel.critical=true end
+  -- the network journal (this monitor is its single writer) and the advisor's status field (advisor.monitor_part)
+  local oka,advice=pcall(self.network_advisor,self,pass_samples,pair,okr and kind or 'unknown',status.native_failover.state,settings,route_now)
+  status.network_advisor=oka and advice or canon.object({code='ADVISOR-UNAVAILABLE'})
   status.accounting.reliability=rel:public()
   status.native_history=page.native_history(self.env,M.retention_days(settings),runner.wall())
   status.stats_reset=self:read_json(self.runtime..'/stats-reset-result.json',NULL)
@@ -830,9 +1008,17 @@ function Monitor:finish_pass(ctx)
   status.telegram=self:telegram_field(settings,status)
   local okpick,picked=pcall(self.server_pick_field,self,settings,rows,status)
   status.server_pick=okpick and picked or NULL
+  local okkeys,keys=pcall(self.server_key_field,self,rows,status)
+  status.server_keys=okkeys and keys or NULL
+  if self.loop_summary then status.monitor_loop=self.loop_summary() end  -- only after an error (loop_guard.lua)
   local status_text=canon.encode(status)
   runner.write_atomic(self.runtime..'/status.json',status_text)
   self.status=status;self.published_at=runner.clock()
+  -- L1: a failed sample of an Auto channel wakes the supervisor's nap (only a hint, see probe_policy.wake_row)
+  pcall(function()
+    local wake=policy.wake_row(settings,measured,pair,runner.wall())
+    if wake then (runner.write_ram or runner.write_atomic)(self.runtime..'/'..require('channel_model').WAKE_NAME,canon.encode(wake)) end
+  end)
   -- hv-core (Lua plan item 8): the Auto supervisor in this process takes this pass from memory, not from the file
   if self.on_status then pcall(self.on_status,status,status_text) end
   local since_save=runner.clock()-self.last_save
@@ -847,6 +1033,26 @@ function Monitor:finish_pass(ctx)
     if saved then self.storage_error=nil;self.last_save=runner.clock();rel.critical=false else self.storage_error='STORAGE-001' end
   end
   self.events=tail(self.events,1000)
+end
+
+-- Network journal + advisor (2.1.0-alpha9, docs/architecture/NETWORK-ADVISOR-2026-11-04.ru.md): the journal in RAM
+-- (flash once a day), the nightly `lua advisor.lua run` under nice -n 19, the status field network_advisor.
+M.ADVISOR_JOB='command -v nice >/dev/null 2>&1 && exec nice -n 19 /usr/bin/lua /usr/lib/homensai-vpn/lua/advisor.lua run; exec /usr/bin/lua /usr/lib/homensai-vpn/lua/advisor.lua run'
+function Monitor:network_advisor(samples,pair,route,native_state,settings,now)
+  local runner=self.runner
+  if not self.advisor_part then
+    local job_running=false
+    local io_={read=runner.read_file,write_ram=runner.write_ram or runner.write_atomic,write_flash=runner.write_atomic,
+      spawn=function()
+        if job_running or not runner.spawn then return false end
+        job_running=true
+        runner.spawn({'/bin/sh','-c',M.ADVISOR_JOB},300,function() job_running=false end)
+        return true
+      end}
+    self.advisor_part=require('advisor').monitor_part(io_,self.runtime,self.persist,now)
+  end
+  local J=require('netjournal')
+  return self.advisor_part:pass(samples,pair,route,native_state,settings,now,J.local_offset(now),runner.clock())
 end
 
 -- status.lua_backend: what runs in Lua, the detected router capabilities and the temporary bridges.
@@ -1011,10 +1217,33 @@ function Monitor:telegram_field(settings,status)
   return canon.object({enabled=enabled})
 end
 
+-- Review R3-03: the brief's "reliability now, 5 min" (telegram.channel_reliability) counts the checks of the last five
+-- minutes, so the child needs them. Only a bounded window goes into the job file: checks of the last
+-- TELEGRAM_SAMPLE_SECONDS (five minutes plus room for the delivery delay), at most TELEGRAM_SAMPLE_LIMIT of the newest,
+-- each reduced to the fields the formatter reads. Never the whole history.
+M.TELEGRAM_SAMPLE_SECONDS=600
+M.TELEGRAM_SAMPLE_LIMIT=1000  -- the same cap as the samples of the status (tail 1000), the Python twin passes those
+function M.telegram_samples(samples,now)
+  local recent=canon.array()
+  if type(samples)~='table' or type(now)~='number' then return recent end
+  for i=#samples,1,-1 do
+    local s=samples[i]
+    if #recent>=M.TELEGRAM_SAMPLE_LIMIT then break end
+    local at=type(s)=='table' and canon.number(s.time) or nil
+    if at and at>=now-M.TELEGRAM_SAMPLE_SECONDS and at<=now+5 then
+      recent[#recent+1]=canon.object({id=s.id,time=s.time,code=s.code,dns_ok=s.dns_ok,https_success=s.https_success})
+    end
+  end
+  local ordered=canon.array()
+  for i=#recent,1,-1 do ordered[#ordered+1]=recent[i] end
+  return ordered
+end
+
 function Monitor:telegram_start(status,enabled)
   local runner=self.runner
   local snapshot=canon.object({time=status.time,profiles=status.profiles,events=status.events,native_failover=status.native_failover,
-    native_history=status.native_history,accounting=self.accounting:export()})
+    native_history=status.native_history,accounting=self.accounting:export(),
+    samples=M.telegram_samples(self.samples,runner.wall())})
   local base=self.runtime..'/telegram-job-'..canon.unique()
   local job={input=base..'.in.json',output=base..'.out.json',enabled=enabled,done=false}
   local input=canon.object({status=snapshot,saved=self.telegram_saved,now=canon.float(runner.wall())})
@@ -1082,6 +1311,39 @@ function Monitor:server_pick_field(settings,rows,status)
   return picked or NULL
 end
 
+-- Trust on first use of the servers' keys (server_pin.lua, option server_key_pin, default warn): healthy measured
+-- channels only, at most every server_pin.RECHECK s per profile; events go to the history like every other event.
+function Monitor:pin_io()
+  local runner,efs=self.runner,self.endpoint_fs
+  return {
+    read=function(path,limit)
+      local text
+      if efs and efs.read then text=efs.read(path,limit) elseif runner.read_file then text=runner.read_file(path) end
+      if type(text)~='string' or #text>limit then return nil end
+      return text
+    end,
+    run=function(argv)
+      if not runner.exec then return nil end
+      local ok,rc,out=pcall(runner.exec,argv,{timeout=2})
+      if ok and rc==0 and type(out)=='string' then return out end
+      return nil
+    end,
+    write_ram=function(path,text) (runner.write_ram or runner.write_atomic)(path,text) end,
+    write_flash=function(path,text) runner.write_atomic(path,text) end,
+    remove=function(path) if runner.remove then runner.remove(path) else os.remove(path) end end}
+end
+function Monitor:server_key_field(rows,status)
+  local sp=require('server_pin')
+  if self.pins==nil then self.pins=sp.new(self.runtime,self.persist,self:pin_io()) end
+  local text=self.runner.read_file and self.runner.read_file(sp.CONFIG) or nil
+  local events,public=self.pins:step(rows,sp.mode(text),self.runner.wall())
+  for _,e in ipairs(events) do
+    self.events[#self.events+1]=e;status.events[#status.events+1]=e
+    if e.code~=sp.PINNED then pcall(require('durable').log,e.code..': '..tostring(e.profile or '')..' '..tostring(e.host or '')) end
+  end
+  return public
+end
+
 function Monitor:page_fields(status)
   local runner=self.runner
   local now=runner.wall()
@@ -1097,6 +1359,10 @@ function Monitor:page_fields(status)
   status.boot_resume=self:read_json(self.runtime..'/boot-resume.json',NULL)
   -- the self-check of the installed files at the service start (homensai-vpn-integrity boot; agent.py the same)
   status.integrity=self:read_json(self.runtime..'/integrity.json',NULL)
+  -- a damaged upgrade rolled back to the previous version, or refused without one (postinst; agent.py the same)
+  status.upgrade_result=self:read_json(self.persist..'/upgrade-result.json',NULL)
+  -- plan item 54: a package install/upgrade/removal runs (or was interrupted); agent.py the same (maintenance.public)
+  status.maintenance=require('maintenance').public(runner.read_file,self.persist,runner.wall())
   status.switch_timing=page.switch_timing(env)
   status.auto_control=page.auto_control(env,now)
   -- manual_switch_control in Lua (page_controls.lua). status_bridge.py is only the fallback of a failed Lua
@@ -1169,6 +1435,20 @@ function Monitor:fast_option()
   return self.fast_on
 end
 
+-- The expert opt-in only (channel_model.heartbeat_k): k lost beats of the source, rewritten every beat, so the row is
+-- fresh while the loss goes on; RAM only, nothing at all without the opt-in. `since` (the start of this run of lost beats)
+-- keeps one wake per run: on the reserve a long outage of the primary must not turn the 2 s tick into a 1 s tick.
+function Monitor:beat_wake(now)
+  local CM=require('channel_model')
+  local k=CM.heartbeat_k(self.settings)
+  if not k then return end
+  local seen=self.fast:beat_state(now)
+  if not seen or seen.lost<k then return end
+  local runner=self.runner
+  ;(runner.write_ram or runner.write_atomic)(self.runtime..'/'..CM.WAKE_NAME,canon.encode(canon.object({reason='heartbeat',time=canon.float(runner.wall()),
+    id=seen.id,target=seen.target,target_ok=seen.target_ok,lost=seen.lost,since=seen.since and canon.float(seen.since) or NULL})))
+end
+
 -- One beat (the monitor's 1 s timer). Returns true when a dense confirmation episode just started: the caller
 -- starts a pass now. A suspect never switches: it only asks Booster:suspect for real full checks, which apply
 -- their own rest/back-off and watching-state rules with the CURRENT Auto state (read only when a suspect exists).
@@ -1180,26 +1460,77 @@ function Monitor:fast_tick()
   end
   local now=runner.clock()
   local suspects=self.fast:tick(now)
+  pcall(self.beat_wake,self,now)
+  self:rtt_flush(now)
   if not suspects then return false end
   local native=self:read_json(self.runtime..'/native-status.json',canon.object())
   local state=is_dict(native) and native.state or nil
   for _,ch in ipairs(suspects) do
-    local item={profile=ch.id,reason=fast.REASON,evidence=canon.object(self.fast:evidence(ch,now))}
-    local ok,started=pcall(function() return self.booster:suspect(self.settings,{item},self.fast:pair(),state,runner.wall()) end)
+    local reason=ch.suspect_reason or fast.REASON
+    local item={profile=ch.id,reason=reason,evidence=canon.object(self.fast:evidence(ch,now))}
+    local ok,started=pcall(function() return self.booster:suspect(self.settings,{item},self.fast:pair(),state,runner.wall(),self.failure_models) end)
     if ok and started then
       self.fast:disarm(ch.id)
-      if runner.log then runner.log('fast detect: '..ch.id..' lost '..ch.lost..' beats ('..tostring(ch.reason)..'); dense confirmation started') end
+      if runner.log then runner.log('fast detect: '..ch.id..' '..reason..' (lost '..ch.lost..' beats, '..tostring(ch.reason)..'); dense confirmation started') end
       return true
     end
-    self.fast:hold(ch.id,now+fast.RETRY)
+    -- a declined CUSUM fire is not offered again (its sum restarted) and must not delay the heartbeat's own suspect
+    if reason~=fast.CUSUM_REASON then self.fast:hold(ch.id,now+fast.RETRY) end
   end
   return false
+end
+
+-- Once a minute: the round trips of the pulse into the RAM log heartbeat_rtt_log.lua (option heartbeat_rtt_log, default
+-- on). The log reads what the pulse measured and decides nothing; a full or unwritable RAM disk is logged once.
+function Monitor:rtt_flush(now)
+  if self.rtt_flush_at==nil then self.rtt_flush_at=now+rtt_log.PERIOD;return end
+  if now<self.rtt_flush_at then return end
+  self.rtt_flush_at=now+rtt_log.PERIOD
+  local runner=self.runner
+  local rows={}
+  for _,id in ipairs(self.fast.order) do rows[#rows+1]={id=id,targets=self.fast:take_rtt(id)} end
+  if not rtt_log.enabled(self.settings) then return end
+  local ok,err=pcall(function()
+    if not self.rtt_writer then self.rtt_writer=rtt_log.Writer(runner,self.runtime) end
+    self.rtt_writer:record(rows,runner.wall())
+  end)
+  if ok then self.rtt_log_error=nil
+  elseif self.rtt_log_error~=tostring(err) then
+    self.rtt_log_error=tostring(err)
+    if runner.log then runner.log('heartbeat rtt log: '..tostring(err)) end
+  end
+end
+
+-- GL sensors, every second (gl_sensors.lua): the WAN underlay echo, new WireGuard events of the pair devices (a REKEY
+-- starts the dense confirmation through Booster:suspect, never a switch) and the crash-log refresh. Returns true when
+-- a pass should start now (an episode started, or the WAN came back at the last pass).
+function Monitor:gl_tick()
+  local runner=self.runner
+  local items=self.gl:tick(runner.clock())
+  local now_pass=self.gl_pass_now==true
+  self.gl_pass_now=false
+  if #items==0 then return now_pass end
+  local native=self:read_json(self.runtime..'/native-status.json',canon.object())
+  local state=is_dict(native) and native.state or nil
+  local list={}
+  for _,item in ipairs(items) do
+    list[#list+1]=canon.object({profile=item.profile,reason=item.reason,evidence=canon.object(item.evidence)})
+  end
+  local ok,started=pcall(function() return self.booster:suspect(self.settings,list,self.gl_pair,state,runner.wall()) end)
+  if ok and started and runner.log then runner.log('wg event: '..tostring(items[1].profile)..' '..tostring(items[1].evidence.event)..'; dense confirmation started') end
+  return now_pass or (ok and started==true)
 end
 
 -- Seconds until the next pass: the probe policy interval (boost/dense shorter), never overlapping a pass.
 function Monitor:next_delay()
   local ok,interval=pcall(function() return self.booster:interval(self.settings,self.runner.wall()) end)
   if not ok or not interval then interval=clamp_int(self.settings.interval,1,3600) or 30 end
+  if probe_plan.spread_enabled(self.settings) and self.pass_slot then
+    local delay
+    self.grid_slot,delay=probe_plan.next_slot(self.pass_slot,interval,(self.pass_started or self.runner.clock())+(self.pass_seconds or 0))
+    return delay
+  end
+  self.grid_slot=nil
   return math.max(1,interval-(self.pass_seconds or 0))
 end
 
@@ -1253,9 +1584,14 @@ end
 -- start(runner, options, hooks) wires the monitor into an initialised uloop and returns its handle
 -- {monitor, conn, ready, kick()} (the caller keeps it: libubox-lua cancels unreferenced timers); run() is the
 -- separate monitor process, hv_core.lua (Lua plan item 8) runs the same start() next to the Auto supervisor.
--- hooks.object(object, conn): called before the ubus object is added (hv-core guards every method).
+-- hooks.object(object, conn): called before the ubus object is added (both callers guard every method).
+-- hooks.report(where, err): hears a failure of the tick or the watcher (loop_guard.recorder).
+-- hooks.loop_dead(text): loop_check found the monitor dead although the loop still runs: the caller ends the process
+-- (procd restarts it). Without the hook the text is only logged.
 -- The tick and the watcher re-arm themselves even when their body fails: one failing callback never ends the
--- monitor's loop (and, inside hv-core, never ends the Auto supervisor sharing the process).
+-- monitor's loop (and, inside hv-core, never ends the Auto supervisor sharing the process). Every uloop object of the
+-- monitor is guarded by the caller (package.loaded.uloop): a failing callback is reported and the loop goes on, and
+-- what it left undone is found by the pass watchdog and by loop_check.
 function M.start(runner,options,hooks)
   hooks=hooks or {}
   local uloop=require('uloop');local ubus=require('ubus')
@@ -1302,39 +1638,73 @@ function M.start(runner,options,hooks)
   end
   local timer
   local config_stamp=runner.config_mtime()
+  local function failed(where,err)
+    if hooks.report then hooks.report(where,err)
+    elseif runner.log then pcall(runner.log,where..': '..tostring(err)) end
+  end
+  local function arm(ms)
+    timer:set(ms)
+    pcall(function() monitor.tick_due=runner.clock()+ms/1000 end)
+  end
   local function tick()
+    monitor.tick_rearms=0
     local ok,err=pcall(function()
       -- the speed test's quiet window (speed_pause.gate('monitor')), at the loop boundary like agent.monitor_loop
-      if monitor:speed_gate() then timer:set(1000);return end
+      if monitor:speed_gate() then arm(1000);return end
       local started=monitor:start_pass(function()
-        config_stamp=runner.config_mtime()
-        timer:set(math.floor(monitor:next_delay()*1000))
+        local delay=M.TICK_RETRY*1000
+        local okd,derr=pcall(function()
+          config_stamp=runner.config_mtime()
+          delay=math.floor(monitor:next_delay()*1000)
+        end)
+        if not okd then failed('monitor next pass',derr) end
+        arm(delay)
       end)
-      if not started then timer:set(1000) end
+      if not started then arm(1000) end
     end)
     if not ok then
-      if runner.log then runner.log('monitor tick: '..tostring(err)) end
-      timer:set(1000)
+      failed('monitor tick',err)
+      arm(1000)
     end
   end
   timer=uloop.timer(tick)
-  timer:set(100)
+  arm(100)
   -- A changed configuration or a page scan request starts the next pass now (agent.py's 1 s wait loop).
   -- scan_control is not ported: a new scan.request (its file key changed) only starts one pass now.
   local watcher
   local scan_key=runner.file_key and runner.file_key(monitor.runtime..'/scan.request') or nil
   local watch
+  local function check_loop()
+    local late=monitor:loop_check(runner.clock())
+    if not late then return end
+    local rearms=(monitor.tick_rearms or 0)+1
+    if late=='pass' or rearms>=M.TICK_REARMS then
+      local text=late=='pass' and ('MONITOR-PASS-STUCK: a pass outlived its watchdog of '..M.PASS_WATCHDOG..' s')
+        or ('MONITOR-TICK-LOST: the next pass did not come after '..rearms..' re-arms')
+      if hooks.loop_dead then hooks.loop_dead(text) else failed('monitor loop',text) end
+      return
+    end
+    monitor.tick_rearms=rearms
+    failed('monitor loop','MONITOR-TICK-REARMED: the next pass was lost, armed again')
+    monitor.tick_due=runner.clock()
+    timer:set(1)
+  end
   watcher=uloop.timer(function()
+    watcher:set(1000)  -- first: nothing below can lose the beat
     local ok,err=pcall(watch)
-    if not ok and runner.log then runner.log('monitor watcher: '..tostring(err)) end
-    watcher:set(1000)
+    if not ok then failed('monitor watcher',err) end
+    ok,err=pcall(check_loop)
+    if not ok then failed('monitor loop check',err) end
   end)
   watch=function()
     -- Lua plan item 5: the fast-detection pulse rides this timer (one beat per second while it is switched on);
     -- a started confirmation episode begins its first full pass now (a running pass schedules the dense one).
     local okf,suspected=pcall(monitor.fast_tick,monitor)
     if not okf and runner.log then runner.log('fast detect: '..tostring(suspected)) end
-    if okf and suspected and not monitor.passing then timer:set(1) end
+    if okf and suspected then monitor:suspected_now(timer) end
+    local okg,wanted=pcall(monitor.gl_tick,monitor)
+    if not okg and runner.log then runner.log('gl sensors: '..tostring(wanted)) end
+    if okg and wanted then monitor:suspected_now(timer) end
     if resume then local okr,err=pcall(resume.tick);if not okr and runner.log then runner.log('boot resume: '..tostring(err)) end end
     -- Diagnostics: `touch /var/run/homensai-vpn/lua-monitor-profile.request` (profiler.lua)
     pcall(function() require('profiler').tick(monitor.runtime,'lua-monitor-profile',60) end)
@@ -1356,22 +1726,42 @@ function M.start(runner,options,hooks)
     kick=function() if not monitor.passing then timer:set(1) end end}
 end
 
+-- run(): the separate monitor process. Every callback runs guarded; an error that still leaves the loop (or the start)
+-- is the end of the process, with its full stack in the RAM record, and procd restarts it. The accounting is not saved
+-- on this path: a crash loop must not write flash.
 function M.run(runner,options)
-  local uloop=require('uloop')
-  if runner.setup_timezone then runner.setup_timezone() end
-  uloop.init()
-  local handle=M.start(runner,options)
-  -- Interruption codes (owner request 01.11.2026, interruption.lua): a monitor restarted by procd without a service
-  -- stop (crash, kill) is one event and one system log line. Python: agent.monitor_loop. (hv-core: auto.start_cause.)
-  pcall(function()
-    local I=require('interruption')
-    local m=handle.monitor
-    local code=I.monitor_start(I.context(m.runtime,m.persist))
-    if code then m.events[#m.events+1]=canon.object({time=runner.wall(),code=code}) end
-  end)
-  uloop.run()
-  pcall(os.remove,handle.ready)
-  handle.conn:close()
+  local guard=require('loop_guard')
+  local real=require('uloop')
+  local runtime=(options and options.runtime) or runner.RUNTIME
+  local recorder=guard.recorder({path=runtime..'/'..guard.RECORD,read=runner.read_file,wall=runner.wall,clock=runner.clock,
+    write=runner.write_ram or runner.write_atomic,log=runner.log or function() end})
+  recorder.load()
+  local dead=false
+  local handle
+  local ok,err=xpcall(function()
+    package.loaded['uloop']=guard.uloop(real,recorder.report)
+    if runner.setup_timezone then runner.setup_timezone() end
+    real.init()
+    handle=M.start(runner,options,{report=recorder.report,
+      object=function(object,conn) guard.guard_object(object,conn,recorder.report) end,
+      loop_dead=function(text) dead=true;recorder.fatal('monitor loop',text);real.cancel() end})
+    handle.monitor.loop_summary=recorder.summary
+    -- Interruption codes (owner request 01.11.2026, interruption.lua): a monitor restarted by procd without a service
+    -- stop (crash, kill) is one event and one system log line. Python: agent.monitor_loop. (hv-core: auto.start_cause.)
+    pcall(function()
+      local I=require('interruption')
+      local m=handle.monitor
+      local code=I.monitor_start(I.context(m.runtime,m.persist))
+      if code then m.events[#m.events+1]=canon.object({time=runner.wall(),code=code}) end
+    end)
+    real.run()
+  end,guard.trace)
+  if not ok then recorder.fatal('monitor',err) end
+  if handle then
+    pcall(os.remove,handle.ready)
+    pcall(function() handle.conn:close() end)
+  end
+  if dead or not ok then os.exit(1) end
 end
 
 ------------------------------------------------------------------------------------------------------

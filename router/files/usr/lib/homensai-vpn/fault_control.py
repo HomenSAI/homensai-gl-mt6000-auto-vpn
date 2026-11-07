@@ -322,7 +322,7 @@ def failed_claim(nonce,engine,code):
 
 
 def start(arguments):
-    from native_switch import Linux,Refused
+    from native_switch import Linux,Refused,key_blockers
     from failure_diagnosis import profile_identity
     nonce=uuid.uuid4().hex;engine=Nft();now=time.time();mono=time.monotonic()
     # Reserve only private RAM metadata. Slow reads and watchdog readiness do
@@ -346,6 +346,7 @@ def start(arguments):
             import pair_auto
             backend.use_process_bindings(pair_auto.read_state().get('process_bindings'))
         blockers,selection=backend.diagnostic()
+        blockers=key_blockers(blockers,selection)
         require_auto_on(settings)
         rows=eligibility(arguments,data,status,native,settings,selection,blockers,time.time(),
                          read_json(PERSIST/'native-certificate.json',{}))
@@ -378,6 +379,7 @@ def start(arguments):
         def commit_guard():
             require_revision(revision)
             live_blockers,live_selection=backend.diagnostic()
+            live_blockers=key_blockers(live_blockers,live_selection)
             live_data=inventory();live_settings=backend.policy()['settings']
             require_auto_on(live_settings)
             eligibility(arguments,live_data,read_json(RUNTIME/'status.json',{}),read_json(RUNTIME/'native-status.json',{}),

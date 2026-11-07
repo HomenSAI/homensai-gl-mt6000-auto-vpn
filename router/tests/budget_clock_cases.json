@@ -1,0 +1,30 @@
+{
+  "about": "BH3-03 (bug hunt 07.11.2026): ledger stamps after a backward wall-clock step. charge_clock(events, record, now, uptime, boot) -> the stamps budget() sees (pair_auto.py / lua/pair.lua). timelines: a failover charged at 'stamp'; 'same_boot' runs keep the RAM note (boot B, uptime start) and the wall clock is 'behind' seconds behind the stamp at the charge moment; 'other_boot' runs have no note and start at uptime 'start'. At t seconds later the next failover's cooldown spacing (max(cooldown,min_dwell) of the default settings, 60 s) must be met exactly when 'allowed'.",
+  "boot": "0123abcd-0000-4000-8000-00000000000b",
+  "spacing": 60,
+  "charge_clock": [
+    {"name": "no events", "events": [], "record": {}, "now": 1000.0, "uptime": 50.0, "expect": []},
+    {"name": "normal past stamps are unchanged", "events": [900.0, 950.5], "record": {}, "now": 1000.0, "uptime": 50.0, "expect": [900.0, 950.5]},
+    {"name": "noted in this boot, clock unchanged: wall age wins (equal or larger)", "events": [950.0], "record": {"boot": "0123abcd-0000-4000-8000-00000000000b", "at": [[950.0, 40.0]]}, "now": 1000.0, "uptime": 80.0, "expect": [950.0]},
+    {"name": "noted in this boot, clock stepped back 3 h: monotonic age", "events": [11800.0], "record": {"boot": "0123abcd-0000-4000-8000-00000000000b", "at": [[11800.0, 500.0]]}, "now": 1045.0, "uptime": 545.0, "expect": [1000.0]},
+    {"name": "noted in this boot, clock stepped back 30 s: monotonic age (inside the skew too)", "events": [1030.0], "record": {"boot": "0123abcd-0000-4000-8000-00000000000b", "at": [[1030.0, 500.0]]}, "now": 1010.0, "uptime": 510.0, "expect": [1000.0]},
+    {"name": "noted in this boot, clock stepped forward: wall age wins (never longer than before)", "events": [1000.0], "record": {"boot": "0123abcd-0000-4000-8000-00000000000b", "at": [[1000.0, 500.0]]}, "now": 5000.0, "uptime": 510.0, "expect": [1000.0]},
+    {"name": "a note of another boot is ignored: future beyond the skew counts as old as the uptime", "events": [9000.0], "record": {"boot": "ffffffff-0000-4000-8000-00000000000a", "at": [[9000.0, 10.0]]}, "now": 1000.0, "uptime": 30.0, "expect": [970.0]},
+    {"name": "no note, future beyond the skew: unknown age = uptime", "events": [4600.0], "record": {}, "now": 1000.0, "uptime": 300.0, "expect": [700.0]},
+    {"name": "no note, future within the skew: unchanged (budget clamps it to now as before)", "events": [1100.0], "record": {}, "now": 1000.0, "uptime": 300.0, "expect": [1100.0]},
+    {"name": "no note, exactly CLOCK_SKEW in the future: unchanged", "events": [1120.0], "record": {}, "now": 1000.0, "uptime": 300.0, "expect": [1120.0]},
+    {"name": "uptime earlier than the note (impossible in one boot): unchanged", "events": [2000.0], "record": {"boot": "0123abcd-0000-4000-8000-00000000000b", "at": [[2000.0, 900.0]]}, "now": 1000.0, "uptime": 100.0, "expect": [2000.0]},
+    {"name": "mixed: one noted after the step, one old normal, one unknown future", "events": [500.0, 9000.0, 1200.0], "record": {"boot": "0123abcd-0000-4000-8000-00000000000b", "at": [[1200.0, 150.0], [500.0, 1.0]]}, "now": 1000.0, "uptime": 200.0, "expect": [500.0, 800.0, 950.0]},
+    {"name": "damaged note rows are ignored (the stamp then has no note: unknown future = uptime)", "events": [1200.0], "record": {"boot": "0123abcd-0000-4000-8000-00000000000b", "at": [[1200.0], "x", [1200.0, -5.0], null]}, "now": 1000.0, "uptime": 200.0, "expect": [800.0]},
+    {"name": "invalid stamps pass unchanged (budget refuses them as before)", "events": ["x", -1.0], "record": {}, "now": 1000.0, "uptime": 200.0, "expect": ["x", -1.0]}
+  ],
+  "timelines": [
+    {"name": "same boot, clock 3 h behind", "mode": "same_boot", "stamp": 1800000000.0, "behind": 10800, "start": 5000.0, "checks": [[0, false], [30, false], [59, false], [60, true], [61, true], [600, true]]},
+    {"name": "same boot, clock 1 h behind", "mode": "same_boot", "stamp": 1800000000.0, "behind": 3600, "start": 5000.0, "checks": [[0, false], [59, false], [60, true], [3600, true]]},
+    {"name": "same boot, clock 30 s behind", "mode": "same_boot", "stamp": 1800000000.0, "behind": 30, "start": 5000.0, "checks": [[0, false], [29, false], [59, false], [60, true], [90, true]]},
+    {"name": "same boot, clock right (unchanged behaviour)", "mode": "same_boot", "stamp": 1800000000.0, "behind": 0, "start": 5000.0, "checks": [[0, false], [59, false], [60, true]]},
+    {"name": "after a reboot, clock 3 h behind the stamp: at most one cooldown of uptime", "mode": "other_boot", "stamp": 1800000000.0, "behind": 10800, "start": 20.0, "checks": [[0, false], [39, false], [40, true], [600, true]]},
+    {"name": "after a reboot, clock 1 h behind the stamp", "mode": "other_boot", "stamp": 1800000000.0, "behind": 3600, "start": 0.0, "checks": [[0, false], [59, false], [60, true]]},
+    {"name": "after a reboot, clock 30 s behind (inside CLOCK_SKEW): wall time as before, at most cooldown + 30 s", "mode": "other_boot", "stamp": 1800000000.0, "behind": 30, "start": 0.0, "checks": [[0, false], [89, false], [90, true]]}
+  ]
+}

@@ -2,7 +2,7 @@
 ITEMS = ('servers', 'events', 'traffic', 'delta', 'controller', 'controller_events', 'controller_totals', 'gaps')
 PRESETS = {'minimum': ('servers',),
            'standard': ('servers', 'events', 'traffic', 'controller'),
-           'maximum': ITEMS}
+           'maximum': ITEMS, 'brief': ('brief',)}
 
 
 def parse(value):
@@ -11,6 +11,8 @@ def parse(value):
         return ITEMS
     if value == 'none':
         return ()
+    if value == 'brief':
+        return ('brief',)
     if not isinstance(value, str):
         return ITEMS
     chosen = {part for part in value.split(',') if part in ITEMS}
@@ -21,8 +23,8 @@ def encode(items):
     """List of ids from the page -> stored option; refuses anything unknown."""
     if not isinstance(items, str) or len(items) > 200:
         raise ValueError('TELEGRAM-ITEMS')
-    if items == 'none':
-        return 'none'
+    if items in ('none', 'brief'):
+        return items
     parts = items.split(',')
     if not parts or any(part not in ITEMS for part in parts) or len(set(parts)) != len(parts):
         raise ValueError('TELEGRAM-ITEMS')

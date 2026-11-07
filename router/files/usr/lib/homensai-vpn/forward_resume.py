@@ -115,11 +115,12 @@ def marked(tx):
     return restarted(tx,committed=True)
 
 
-def _settled_selection(backend):
-    """diagnostic(), waiting (bounded, like the verify step of child()) while only the vendor is busy or settling."""
+def _settled_selection(backend,journal=None):
+    """diagnostic(), waiting (bounded, like the verify step of child()) while only the vendor is busy or settling.
+    With the journal the wait ends inside the transaction's monotonic deadline (native_switch.stage_budget, F-30)."""
     import native_switch as n
     blockers,current=backend.diagnostic()
-    until=n.time.monotonic()+n.VERIFY_VENDOR_WAIT
+    until=n.time.monotonic()+(n.stage_budget(journal,n.VERIFY_VENDOR_WAIT) if journal is not None else n.VERIFY_VENDOR_WAIT)
     while blockers and set(blockers)<=n.VERIFY_TRANSIENT and n.time.monotonic()<until and not n.STOP:
         n.time.sleep(2);blockers,current=backend.diagnostic()
     if blockers:raise n.Refused(blockers[0])
@@ -161,6 +162,23 @@ def resume(backend,journal):
     if (not isinstance(state,dict) or state.get('phase') not in ('RUNNING','HELD') or state.get('id')!=journal.get('trial_nonce')
             or state.get('revision')!=journal.get('control_revision') or state.get('order')!=ctx['session_order'] or state.get('policy_hash')!=journal['hash']):
         return False,'PAIR-SESSION'
+    # Review F-28 (06.11.2026): the session's network identity and protected configuration are this recovery's proof of
+    # ownership, before any write and again before COMMITTED, as every pair write checks them (set_disabled, the cleanup).
+    # The kernel marking proves nothing about the configuration. Only the vendor-regenerated firewall sections differ
+    # legitimately (gl_vpn_rules of rtp2.sh): the static firewall digest of the session, when it has one, must still match.
+    from pair_interfaces import state as state_interfaces
+    import pair_auto
+    try:managed=state_interfaces(state)
+    except (ValueError,TypeError):return False,'PAIR-SESSION'
+    def owned():
+        if pair_auto.normalized_network(pair_auto.network(),managed)!=state.get('network_identity'):raise n.Refused('PAIR-EXTERNAL-NETWORK-CHANGE')
+        if pair_auto.changed(state,pair_auto.configs(managed),skip=('firewall',)):raise n.Refused('PAIR-EXTERNAL-CONFIG-CHANGE')
+        static=state.get('protected_static')
+        if isinstance(static,dict) and pair_auto.static_firewall_digest(pair_auto.firewall_bytes())!=static.get('firewall'):
+            raise n.Refused('PAIR-EXTERNAL-CONFIG-CHANGE')
+    try:owned()
+    except n.Refused as error:return False,str(error)
+    except (OSError,ValueError,TypeError,KeyError):return False,'PAIR-CONFIG-UNVERIFIED'
     # an rtp2.sh of the killed apply child finishes first (MT3000: quiet GL workers, a stable kernel graph; bounded)
     from rollback_recovery import vendor_settled
     vendor_settled(backend)
@@ -179,6 +197,10 @@ def resume(backend,journal):
                and fingerprint==journal.get('kernel_before_fingerprint'))
     if not forward and not untouched:return False,'KERNEL'
     if n.STOP:return False,'OWNER-STOP'
+    if untouched:
+        # nothing moved yet: finishing would be a new move onto that channel; a kernel already there stays (native_switch.key_unaccepted)
+        pinned=n.key_unaccepted(journal.get(ctx['destination_role']))
+        if pinned:return False,pinned
     # one resume per transaction: recorded before the first write
     try:progress=n.read_json(n.RUNTIME/'native-apply-progress.json',{})
     except (OSError,ValueError):progress={}
@@ -223,8 +245,10 @@ def resume(backend,journal):
             if args[0]=='/usr/bin/rtp2.sh':n.apply_progress(journal['tx'],'rtp-returned')
             return output
         if not at_after:backend.reorder(journal['after'],write_command=write_command)
-        backend.apply(write_command=write_command)
-        current=_settled_selection(backend)
+        backend.stage_budget=lambda want:n.stage_budget(journal,want)  # F-30: the post-apply waits end inside the transaction
+        try:backend.apply(write_command=write_command)
+        finally:backend.stage_budget=None
+        current=_settled_selection(backend,journal)
         if not _same_identity(journal,ctx,current):raise n.Refused('PROFILE-IDENTITY-CHANGED')
     # from here exactly the end of attempt(): kernel proof, exit, VPN-only guard, router probes, COMMITTED
     n.require_control_revision(revision)
@@ -264,8 +288,12 @@ def resume(backend,journal):
             # K5 (formal model 03.11.2026): the revision check and the COMMITTED write under the control lock, as attempt():
             # a Stop (it rotates the revision under this lock) is before (CLIENT-STOP, rollback) or after the commit
             from auto_control import control_lock
+            owned()  # F-28: the configuration is still the session's at the commit
             with control_lock(n.RUNTIME):
                 n.require_control_revision(revision)
+                # Review F-29 (06.11.2026): the loop checked the deadline before the probe; a probe that crossed it cannot commit.
+                if n.STOP:raise n.Refused('CLIENT-STOP')
+                if n.transaction_expired(journal):raise n.Refused('TRANSACTION-EXPIRED')
                 journal.update(phase='COMMITTED',confirmed=n.time.time(),reason=REASON);n.journal_write(journal)
             import pair_auto
             try:n.atomic_json(n.RUNTIME/FILE,{'tx':journal['tx'],'at':float(pair_auto._uptime()),'time':journal['confirmed'],'outcome':'committed'})

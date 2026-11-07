@@ -30,11 +30,35 @@ t.test('charge_attempt: unlimited for a failover, the cooldown spacing still app
   t.eq(#t.read(env,path).events,4)
 end)
 
+t.test('only failovers count for the hold (review 04.11.2026, finding 5)',function()
+  local env=t.env();local path=env.persist..'/pair-auto-budget.json'
+  local start=env.run.wall()
+  local events=function() return t.read(env,path).events end
+  local function kinds() return #events(),#(t.read(env,path).others or {}) end
+  pair.charge_attempt(env,t.settings(),env.revision,false)
+  env.run.advance(200);pair.charge_attempt(env,t.settings(),env.revision,false,false)
+  t.eq({kinds()},{2,1})
+  env.run.advance(100);pair.ledger_charge(env,(pair.budget(events(),env.run.wall())),env.run.wall())
+  t.eq({kinds()},{3,2})
+  env.run.advance(100);pair.charge_attempt(env,t.settings(),env.revision,false)
+  t.eq({kinds()},{4,2})
+  t.eq(pair.ledger_hold(env,t.settings(),env.run.wall()),240,'two failovers: one doubling, not three')
+  -- a ledger of an older package: every charge counts
+  env.run.fs.write_atomic(path,canon.encode(canon.object({events=canon.array({canon.float(start),canon.float(start+200),canon.float(start+400)})})))
+  t.eq(pair.ledger_hold(env,t.settings(),env.run.wall()),480)
+  -- what left the events leaves 'others' with it; 'aborted' survives every writer
+  local now=env.run.wall()
+  env.run.fs.write_atomic(path,canon.encode(canon.object({events=canon.array({canon.float(now-100)}),others=canon.array({canon.float(now-100),canon.float(now-5000)}),aborted=canon.array({canon.float(now-50)})})))
+  pair.ledger_charge(env,canon.array({canon.float(now-100)}),now,true)
+  local row=t.read(env,path)
+  t.eq({#row.others,#row.aborted,#row.events},{1,1,2})
+end)
+
 t.test('ledger_hold: from the ledger; an unreadable ledger holds the longest',function()
   local env=t.env();local now=env.run.wall();local path=env.persist..'/pair-auto-budget.json'
   t.eq(pair.ledger_hold(env,t.settings(),now),120,'default primary_stable 120 s since 03.11.2026')
   t.eq(pair.ledger_hold(env,t.settings({recovery_primary_stable='30'}),now),30)
-  env.run.fs.write_atomic(path,canon.encode(canon.object({events=canon.array({canon.float(now-600),canon.float(now-400),canon.float(now-100)})})))
+  env.run.fs.write_atomic(path,canon.encode(canon.object({events=canon.array({canon.float(now-400),canon.float(now-100)})})))
   t.eq(pair.ledger_hold(env,t.settings(),now),240)
   t.eq(pair.ledger_hold(env,t.settings({recovery_primary_stable='30'}),now),60)
   env.run.fs.write_atomic(path,canon.encode(canon.object({events=canon.array({-1})})))
@@ -134,7 +158,7 @@ local cache={}
 local function flap_cached(over,cycles)
   -- the damping mechanism is checked on its 30 s base (the default before 03.11.2026)
   if over.recovery_primary_stable==nil then over.recovery_primary_stable='30' end
-  local key=over.recovery_attempt_limit..'/'..cycles..'/'..over.recovery_primary_stable
+  local key=over.recovery_flap_limit..'/'..cycles..'/'..over.recovery_primary_stable
   cache[key]=cache[key] or flap(over,cycles)
   return cache[key]
 end
@@ -143,7 +167,7 @@ t.test('flap 60/120 x10: every outage is left for the reserve',function()
   for _,limit in ipairs({'3','1'}) do
     -- the default run is shared with the next test (each simulated tick runs the whole Lua transaction)
     local cycles=limit=='3' and CYCLES or 6
-    local log=flap_cached({recovery_attempt_limit=limit},cycles)
+    local log=flap_cached({recovery_flap_limit=limit,recovery_flap_window='15'},cycles)
     for _,down in ipairs(outages(cycles)) do
       for at=down+40,down+DOWN-10,10 do
         if not log.reserve[at] then error('limit '..limit..': traffic on the dead primary at '..at..' s; switches '..table.concat(log.switches,','),0) end
@@ -153,7 +177,7 @@ t.test('flap 60/120 x10: every outage is left for the reserve',function()
 end)
 
 t.test('flap 60/120 x10: returns wait progressively longer, never faster than the hold, and the hold decays',function()
-  local log=flap_cached({recovery_attempt_limit='3'},CYCLES)
+  local log=flap_cached({recovery_flap_limit='3',recovery_flap_window='15'},CYCLES)
   local longest,count=0,0
   for _,r in ipairs(log.returns) do
     count=count+1
@@ -169,7 +193,7 @@ end)
 
 t.test('flap 60/120 x4 with the defaults of 03.11.2026 (primary_stable 120 s): one failover, every outage covered',function()
   local cycles=4
-  local log=flap(canon.object({recovery_attempt_limit='3'}),cycles)
+  local log=flap(canon.object({}),cycles)
   for _,down in ipairs(outages(cycles)) do
     for at=down+40,down+DOWN-10,10 do
       if not log.reserve[at] then error('traffic on the dead primary at '..at..' s; switches '..table.concat(log.switches,','),0) end

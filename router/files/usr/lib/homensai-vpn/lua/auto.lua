@@ -39,6 +39,7 @@ local T=require('transaction')
 local R=require('rollback')
 local pair=require('pair')
 local manual=require('manual')
+local retry=require('retry_policy')
 
 local M={}
 local NULL=canon.null
@@ -91,17 +92,29 @@ function M.boot_step(env,step)
   local ok,now=pcall(env.run.clock)
   if ok then pcall(function() require('durable').boot_step(now,step) end) end
 end
+-- R4-03: WRITER-UNRESOLVED (a dispatched policy writer whose exit is not established yet) is pending, not a failure:
+-- it is never counted, the writer's completion is rechecked every WRITER_RECHECK_WAIT seconds (backend.writer_unresolved
+-- sees its status appear, or the next boot clears it) and the normal recovery resumes once it is established. Only
+-- Stop ends the wait, still without a count.
+M.WRITER_RECHECK_WAIT=5
 function M.boot_rollback(env,value)
+  local logged=false
   while true do
     local ok,err=pcall(R.rollback,env,value,'SUPERVISOR-RECOVERY')
     if ok then return end
     local code=is_refused(err) and err.code or nil
-    if not (code and M.BOOT_RETRY_CODES[code]) or env.stop() or env.run.clock()+M.BOOT_RETRY_WAIT>=M.BOOT_SETTLE_UPTIME then
-      R.count_failure(env,value)
-      error(err,0)
+    if R.pending(err) then
+      if env.stop() then error(err,0) end
+      if not logged then logged=true;pcall(function() require('durable').log('WRITER-UNRESOLVED: recovery waits for the policy writer to end; not a rollback failure') end) end
+      env.sleep(M.WRITER_RECHECK_WAIT)
+    else
+      if not (code and M.BOOT_RETRY_CODES[code]) or env.stop() or env.run.clock()+M.BOOT_RETRY_WAIT>=M.BOOT_SETTLE_UPTIME then
+        R.count_failure(env,value)
+        error(err,0)
+      end
+      pcall(function() require('durable').log('ROLLBACK-BOOT-RETRY: '..code) end)
+      env.sleep(M.BOOT_RETRY_WAIT)
     end
-    pcall(function() require('durable').log('ROLLBACK-BOOT-RETRY: '..code) end)
-    env.sleep(M.BOOT_RETRY_WAIT)
   end
 end
 
@@ -254,6 +267,8 @@ M.with_trace=with_trace
 function M.iteration(env,ctx)
   local paths=T.paths(env)
   local backend=env.backend
+  -- before anything that can fail: a pass that never reaches consume must not keep a click queued for ever
+  require('manual').expire_queued(env)
   local ok,err=xpcall(function()
     if backend.speed_gate and backend.speed_gate('auto') then return 1 end
     local decision_revision=ctl.current_revision(env)
@@ -282,7 +297,9 @@ function M.iteration(env,ctx)
     local until_=T.deadline(settings.native_until)
     local scope=getd(settings,'native_proof_scope','external-lan')
     if not T.SCOPES[scope] then ctl.refuse('LAN-TRIAL-REQUIRED') end
-    if scope=='router-probed-ipv4' and settings.pair_auto_mode~='router-probed-ipv4' then ctl.refuse('PAIR-MODE-NOT-CONFIGURED') end
+    -- D21: native_proof.requested raises PAIR-MODE-NOT-CONFIGURED for this mismatch, and the Python loop maps every
+    -- failure of that validation to LAN-TRIAL-REQUIRED (`except ValueError: raise Refused('LAN-TRIAL-REQUIRED')`)
+    if scope=='router-probed-ipv4' and settings.pair_auto_mode~='router-probed-ipv4' then ctl.refuse('LAN-TRIAL-REQUIRED') end
     T.PROOF_SCOPE=scope
     local active=T.journal_read(env)
     if active.phase=='RELEASE-PENDING' then R.abandon(env,active,getd(active,'reason','EXTERNAL-POLICY-CHANGE'));return 2 end
@@ -408,7 +425,13 @@ function M.iteration(env,ctx)
   if not pok then ctl.write_json(env.run,paths.state,merge(failure,{history_error='HISTORY-001',time=fwall(env)})) end
   local jok,pending=pcall(T.journal_read,env)
   if string.find(reason,'GUARD-RETAINED',1,true) or (jok and T.RECOVERY_PHASES[pending.phase]) then pair.fence_recovery(env);return 'exit' end
-  return 5
+  -- A failed pass is retried (ifup, a refused step): Fibonacci 2..15 s with full jitter (retry_policy.lua).
+  local rok,settings=pcall(function() return backend.policy().settings end)
+  ctx.failed_passes,ctx.failed_at=retry.count(ctx.failed_passes or 0,ctx.failed_at,env.run.clock())
+  local pause=retry.pause(ctx.failed_passes,rok and settings or nil)
+  if rok and retry.mode(settings)=='fixed' then return pause end
+  ctx.nap_seconds=pause
+  return 'nap'
 end
 
 -- The end of serve(): a Stop while on a committed reserve restores it, then the pair session is cleaned up.
@@ -417,7 +440,11 @@ function M.shutdown(env)
   if active.phase=='COMMITTED' then
     if T.finish_committed(env,active,'SERVICE-STOPPED') and order_is(env,getd(active,'restored_order',active.before),active.hash) then env.backend.unguard() end
   end
-  pair.recover(env)
+  local ok=pair.recover(env)==true
+  -- audit F-17 (plan item 54): the last word on the shutdown recovery for the package prerm guard after the stop
+  -- (lifecycle_guard.shutdown_refusal); RAM only. Python: native_switch.shutdown_record
+  pcall(ctl.write_json,env.run,env.runtime..'/supervisor-shutdown.json',canon.object({ok=ok,code=ok and canon.null or 'PAIR-RECOVERY-REQUIRED',
+    time=canon.float(env.run.wall())}))
 end
 
 -- Blocking driver for tests and for a router without uloop: runs iterations until stop() or 'exit'.
@@ -430,20 +457,44 @@ function M.run_blocking(env,max_iterations)
     if pause=='exit' then return 'exit' end
     count=count+1
     if max_iterations and count>=max_iterations then break end
-    if pause=='nap' then M.nap(env,2) else env.sleep(pause) end
+    if pause=='nap' then M.nap(env,ctx.nap_seconds or 2);ctx.nap_seconds=nil else env.sleep(pause) end
   end
   M.shutdown(env)
   return 'stopped'
 end
 
--- nap(): the pause between pair ticks; a QUEUED owner click ends it at once.
+-- wake_due(): L1, the monitor left a new row in RAM (a failed sample of an Auto channel, probe_policy.wake_row). A hint
+-- only: the tick that follows reads and proves everything itself. Each row ends one nap.
+function M.wake_due(env)
+  local row=ctl.read_json_safe(env.run,env.runtime..'/'..require('channel_model').WAKE_NAME,canon.object({}))
+  local stamp=canon.is_object(row) and (num(row.since) or num(row.time)) or nil  -- a heartbeat row: one wake per run of lost beats
+  if stamp==nil or stamp==env.wake_seen then return false end
+  env.wake_seen=stamp
+  return true
+end
+
+-- queued_click(): a QUEUED owner click that has not ended a pause yet, or nil. Each row ends one pause (review 04.11.2026,
+-- finding 4): a pass that fails before manual.consume leaves the row QUEUED, and a pause cut short by it every time was
+-- no pause at all, five passes a second until the click was gone. Python: native_switch.queued_click.
+-- The key holds the numeric stamp: a decoded float is a table (canon.float) that differs at each read (review 05.11.2026).
+function M.queued_click(env)
+  local row=ctl.read_json_safe(env.run,env.runtime..'/pair-manual-control.json',canon.object({}))
+  if not canon.is_object(row) or row.state~='QUEUED' then return nil end
+  local key=(type(row.id)=='string' and row.id or '')..'|'..string.format('%.17g',canon.number(row.requested) or -1)
+  if key==env.queued_seen then return nil end
+  env.queued_seen=key
+  return row
+end
+
+-- nap(): the pause between pair ticks; a new QUEUED owner click or a wake row ends it at once.
 function M.nap(env,seconds)
   local end_=env.run.clock()+seconds
   while not env.stop() do
     local left=end_-env.run.clock()
     if left<=0 then return end
-    local row=ctl.read_json_safe(env.run,env.runtime..'/pair-manual-control.json',canon.object({}))
-    if canon.is_object(row) and row.state=='QUEUED' then T.manual_stamp(env,'woke',row.id);return end
+    local row=M.queued_click(env)
+    if row then T.manual_stamp(env,'woke',row.id);return end
+    if M.wake_due(env) then return end
     env.sleep(math.min(0.2,left))
   end
 end
@@ -469,13 +520,14 @@ function M.serve(env,on_stop)
     local pause=M.iteration(env,ctx)
     if pause=='exit' then finished=true;uloop.cancel();return end
     if pause=='nap' then
-      -- poll the owner click every 200 ms for up to 2 s, like nap()
+      -- poll the owner click every 200 ms for up to 2 s (a failed pass: its retry pause), like nap()
       local waited=0
+      local nap_seconds=ctx.nap_seconds or 2
+      ctx.nap_seconds=nil
       local function poll()
         if env.stop() then pass();return end
-        local row=ctl.read_json_safe(env.run,env.runtime..'/pair-manual-control.json',canon.object({}))
         waited=waited+0.2
-        if (canon.is_object(row) and row.state=='QUEUED') or waited>=2 then pass() else timer:set(200) end
+        if M.queued_click(env) or M.wake_due(env) or waited>=nap_seconds then pass() else timer:set(200) end
       end
       timer=uloop.timer(poll);timer:set(200)
       return

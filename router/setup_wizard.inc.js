@@ -16,18 +16,20 @@ var TG_ITEMS=[
   ['controller_events','Controller events','События контроллера','Attempts, trials and switches during the period, with codes.','Попытки, тесты и переключения за период, с кодами.'],
   ['controller_totals','Controller monthly totals','Итоги контроллера за месяц','Attempts, passed trials, commits and rollbacks this month.','Попытки, пройденные тесты, переключения и откаты за месяц.'],
   ['gaps','Monitoring gaps and notes','Пропуски наблюдений и пометки','How often monitoring missed a check, plus the standard reading notes.','Сколько раз мониторинг пропустил проверку и стандартные пометки.']];
-var TG_PRESETS={minimum:['servers'],standard:['servers','events','traffic','controller'],maximum:TG_ITEMS.map(function(i){return i[0];})};
+var TG_PRESETS={minimum:['servers'],standard:['servers','events','traffic','controller'],maximum:TG_ITEMS.map(function(i){return i[0];}),brief:['brief']};
 function tgItemsFromSetting(value){
   if(typeof value!=='string'||value==='')return TG_PRESETS.maximum.slice();
   if(value==='none')return [];
+  if(value==='brief')return ['brief'];
   return value.split(',').filter(function(v){return TG_PRESETS.maximum.indexOf(v)>=0;});
 }
-function tgItemsToSetting(list){return list.length?TG_PRESETS.maximum.filter(function(i){return list.indexOf(i)>=0;}).join(','):'none';}
+function tgItemsToSetting(list){if(list.length===1&&list[0]==='brief')return 'brief';return list.length?TG_PRESETS.maximum.filter(function(i){return list.indexOf(i)>=0;}).join(','):'none';}
 function tgItemsBlock(tg){
   var boxes={};
-  function sync(){TG_ITEMS.forEach(function(i){boxes[i[0]].checked=tg.items.indexOf(i[0])>=0;});}
-  var presets=E('div',{'class':'hv-tg-presets'},[['minimum','Minimum','Минимум'],['standard','Standard','Стандарт'],['maximum','Maximum','Максимум']].map(function(p){return E('button',{'type':'button','class':'cbi-button','click':function(){tg.items=TG_PRESETS[p[0]].slice();sync();}},bi(p[1],p[2]));}));
-  var list=TG_ITEMS.map(function(i){var box=E('input',{'type':'checkbox','change':function(){tg.items=TG_PRESETS.maximum.filter(function(id){return id===i[0]?box.checked:tg.items.indexOf(id)>=0;});}});boxes[i[0]]=box;box.checked=tg.items.indexOf(i[0])>=0;return E('label',{},[box,' ',bi(i[1],i[2]),E('small',{},bi(i[3],i[4]))]);});
+  function sync(){if(boxes.brief)boxes.brief.checked=tg.items.length===1&&tg.items[0]==='brief';TG_ITEMS.forEach(function(i){boxes[i[0]].checked=tg.items.indexOf(i[0])>=0;});}
+  var presets=E('div',{'class':'hv-tg-presets'},[['minimum','Minimum','Минимум'],['standard','Standard','Стандарт'],['maximum','Maximum','Максимум'],['brief','Brief (Russian)','Кратко (русский)']].map(function(p){return E('button',{'type':'button','class':'cbi-button','click':function(){tg.items=TG_PRESETS[p[0]].slice();sync();}},bi(p[1],p[2]));}));
+  var list=TG_ITEMS.map(function(i){var box=E('input',{'type':'checkbox','change':function(){tg.items=TG_PRESETS.maximum.filter(function(id){return id===i[0]?box.checked:tg.items.indexOf(id)>=0;});sync();}});boxes[i[0]]=box;box.checked=tg.items.indexOf(i[0])>=0;return E('label',{},[box,' ',bi(i[1],i[2]),E('small',{},bi(i[3],i[4]))]);});
+  var brief=E('input',{'type':'checkbox','change':function(){tg.items=brief.checked?['brief']:TG_PRESETS.maximum.slice();sync();}});boxes.brief=brief;brief.checked=tg.items.length===1&&tg.items[0]==='brief';list.unshift(E('label',{},[brief,' ',bi('Brief in Russian: errors, switches, channel reliability','Кратко по-русски: ошибки, переключения, надёжность каналов')]));
   return E('div',{'class':'hv-tg-items'},[E('strong',{},bi('What to send in Telegram','Что присылать в Telegram')),E('p',{},bi('Tick only what you need. Always sent: the report header and, if the controller stops automatic switching, an ALARM line. Presets: Minimum = servers only; Standard = servers, changes, traffic, controller; Maximum = everything.','Отметьте только нужное. Всегда приходит заголовок отчёта и, если контроллер остановил автопереключение, строка ALARM. Наборы: Минимум — только серверы; Стандарт — серверы, изменения, трафик, контроллер; Максимум — всё.')),presets].concat(list));
 }
 function telegramTestDelivery(button){

@@ -35,11 +35,19 @@ t.test('recovery settings, observation windows, budget, streak, stable_success',
   t.eq(pair.recovery_normalized(canon.object({})).failures,3)
   local r=pair.recovery_normalized(canon.object({recovery_failures='7',recovery_cooldown='5',recovery_return_policy='hold_reserve',recovery_attempt_limit='99',recovery_attempt_window='2'}))
   t.eq(r.failures,7);t.eq(r.cooldown,60);t.eq(r.return_policy,'hold_reserve');t.eq(r.attempt_limit,3);t.eq(r.attempt_window,2)
+  -- F-46 / R2-03: one grammar with recovery_settings.normalized; a 5000-digit string, '3_0', 30.5 and true take the default
+  local long=string.rep('9',5000)
+  for _,value in ipairs({long,'3_0',canon.float(30.5),true,'0x1e','1e3',' 9999999999 '}) do
+    t.eq(pair.recovery_normalized(canon.object({recovery_primary_stable=value})).primary_stable,120,'primary_stable default for '..tostring(value))
+  end
+  t.eq(pair.recovery_normalized(canon.object({recovery_primary_stable=' 30 '})).primary_stable,30)
+  t.eq(pair.recovery_normalized(canon.object({recovery_primary_stable='+999999999'})).primary_stable,600)
+  t.eq(pair.recovery_normalized(canon.object({recovery_primary_stable='-7'})).primary_stable,30)
   t.eq(pair.valid_for(canon.object({interval='10'})),30);t.eq(pair.valid_for(canon.object({interval='x'})),90);t.eq(pair.valid_for(canon.object({interval='300'})),900)
   t.eq(pair.settle_for(canon.object({interval='10'})),30);t.eq(pair.settle_for(canon.object({})),45,'legacy 90 s validity: 60 capped at SETTLE_MAX 45 (alpha24)');t.eq(pair.settle_for(canon.object({interval='60'})),45)
   local kept,ok=pair.budget(canon.array({100,200}),950,900,3);t.eq(#kept,2);t.eq(ok,true)
   kept,ok=pair.budget(canon.array({100,200,300}),400,900,3);t.eq(ok,false)
-  kept,ok=pair.budget(canon.array({100,200,300}),1150,900,3);t.eq(#kept,1);t.eq(ok,true)
+  kept,ok=pair.budget(canon.array({100,200,300}),1150,900,3);t.eq(#kept,3,'the ledger keeps them for the flap damping');t.eq(ok,true)
   t.code('PAIR-BUDGET-UNVERIFIED',pair.budget,canon.array({-1}),10)
   t.code('PAIR-BUDGET-UNVERIFIED',pair.budget,canon.array({}),10,30,3)
   local now=1000

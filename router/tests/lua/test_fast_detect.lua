@@ -250,6 +250,32 @@ t.test('monitor, switch off (option 0; on by default since alpha24): no socket, 
   t.eq(canon.decode(R.files['/run/hv/status.json']).fast_detect,nil,'published status unchanged when off')
 end)
 
+t.test('monitor, turbo: the heartbeat row is written only with the opt-in, every beat of a loss of k and more',function()
+  local NAME='/run/hv/pair-wake.json'
+  local R,m=fresh(ON,{failure_model='hmm',slider_turbo=true,turbo_beats=3})
+  m:pass()
+  for _=1,3 do R.advance(1);m:fast_tick() end
+  t.eq(R.files[NAME],nil,'all channels answer: no row')
+  R.down.wgclient='refused'
+  R.advance(1);m:fast_tick();R.advance(1);m:fast_tick()
+  t.eq(R.files[NAME],nil,'below k')
+  R.advance(1);m:fast_tick()
+  local row=canon.decode(R.files[NAME])
+  t.eq(row.reason,'heartbeat');t.eq(row.id,SOURCE);t.eq(row.target,TARGET);t.eq(row.target_ok,true);t.eq(row.lost,3)
+  R.advance(1);m:fast_tick()
+  local later=canon.decode(R.files[NAME])
+  t.eq(later.lost,4);t.truthy(canon.number(later.time)>canon.number(row.time),'rewritten');t.eq(canon.number(later.since),canon.number(row.since),'the same run')
+  -- the reserve gone silent too: the row says so
+  R.down.wgclient2='refused'
+  for _=1,3 do R.advance(1);m:fast_tick() end
+  t.eq(canon.decode(R.files[NAME]).target_ok,false)
+  -- no opt-in: never a row
+  local S,n=fresh(ON,{failure_model='hmm',turbo_beats=3})
+  n:pass();S.down.wgclient='refused'
+  for _=1,6 do S.advance(1);n:fast_tick() end
+  t.eq(S.files[NAME],nil)
+end)
+
 t.test('monitor, switch on: beats after a pass, a lost primary starts the dense confirmation once',function()
   local R,m=fresh(ON)
   m:pass()

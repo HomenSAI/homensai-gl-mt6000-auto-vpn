@@ -170,6 +170,24 @@ function M.resume(env,value)
      or state.revision~=value.control_revision or not same_list(state.order,ctx.session_order) or state.policy_hash~=value.hash then
     return false,'PAIR-SESSION'
   end
+  -- review F-28 (06.11.2026): the session's network identity and protected configuration are this recovery's proof of
+  -- ownership, before any write and again before COMMITTED (forward_resume.py owned()); the kernel marking proves nothing
+  -- about the configuration. Only the vendor-regenerated firewall sections differ legitimately: the static digest, when
+  -- the session has one, must still match.
+  local n=env.net
+  if not n then return false,'PAIR-CONFIG-UNVERIFIED' end
+  local mok,managed=pcall(pair.state_interfaces,state)
+  if not mok then return false,'PAIR-SESSION' end
+  local function owned()
+    if n.identity(n.network(),managed)~=state.network_identity then refuse('PAIR-EXTERNAL-NETWORK-CHANGE') end
+    if n.changed(state,n.configs(managed),{firewall=true}) then refuse('PAIR-EXTERNAL-CONFIG-CHANGE') end
+    local static=state.protected_static
+    if canon.is_object(static) and type(n.static_firewall_digest)=='function' and n.static_firewall_digest()~=static.firewall then
+      refuse('PAIR-EXTERNAL-CONFIG-CHANGE')
+    end
+  end
+  local ook,oerr=pcall(owned)
+  if not ook then return false,(is_refused(oerr) and ctl.code_ok(oerr.code)) and oerr.code or 'PAIR-CONFIG-UNVERIFIED' end
   -- an rtp2.sh of the killed process finishes first (MT3000: quiet GL workers, a stable kernel graph; bounded)
   local helpers=env.deps and env.deps.rollback_recovery
   if helpers and helpers.vendor_settled then helpers.vendor_settled(env) end
@@ -187,6 +205,11 @@ function M.resume(env,value)
   local untouched=not forward and ctl.hex(fingerprint,64) and fingerprint==value.kernel_before_fingerprint
   if not forward and not untouched then return false,'KERNEL' end
   if env.stop() then return false,'OWNER-STOP' end
+  if untouched then
+    -- nothing moved yet: finishing would be a new move onto that channel; a kernel already there stays (T.key_unaccepted)
+    local pinned=T.key_unaccepted(env,value[ctx.destination_role])
+    if pinned then return false,pinned end
+  end
   -- one resume per transaction: recorded before the first write
   local progress=ctl.read_json_safe(env.run,T.paths(env).progress,canon.object({}))
   T.require_control_revision(env,revision)
@@ -270,8 +293,12 @@ function M.resume(env,value)
       if not T.order_is(env,value.after,value.hash) then refuse('EXTERNAL-POLICY-CHANGE') end
       -- K5 (formal model 03.11.2026): the revision check and the COMMITTED write under the control lock, as attempt():
       -- a Stop (it rotates the revision under this lock) is before (CLIENT-STOP, rollback) or after the commit
+      owned()  -- F-28: the configuration is still the session's at the commit
       env.run.lock(function()
         T.require_control_revision(env,revision)
+        -- review F-29 (06.11.2026): the loop checked the deadline before the probe; a probe that crossed it cannot commit
+        if env.stop() then refuse('CLIENT-STOP') end
+        if T.transaction_expired(env,value) then refuse('TRANSACTION-EXPIRED') end
         value.phase='COMMITTED';value.confirmed=canon.float(env.run.wall());value.reason=M.REASON;T.journal_write(env,value)
       end,env.runtime)
       pcall(ctl.write_json,env.run,env.runtime..'/'..M.FILE,canon.object({tx=value.tx,at=canon.float(env.run.clock()),time=value.confirmed,outcome='committed'}))

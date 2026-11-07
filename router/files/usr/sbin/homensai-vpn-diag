@@ -1,0 +1,12 @@
+#!/bin/sh
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
+# Masked diagnostic bundle of HomenS.AI Auto VPN (GL-SENSORS-2026-11-04.ru.md, item 5).
+# Collects read-only outputs (routes, rules, nft, wg, tc, uci of the VPN policy and of this app, logread, crash log,
+# status files), masks keys, passwords, tokens, Wi-Fi keys/names, endpoints and MAC tails, and writes
+# /tmp/homensai-vpn-diag.tar.gz (mode 0600). Download it from the logged-in GL page (whitelist
+# /usr/share/gl-download.d/homensai-vpn) or with scp. Nothing is uploaded, sent or changed. Remove it with
+# rm /tmp/homensai-vpn-diag.tar.gz (RAM; gone after a reboot anyway).
+if [ -x /usr/bin/lua ] && [ -f /usr/lib/homensai-vpn/lua/diag_bundle.lua ]; then
+    exec /usr/bin/lua /usr/lib/homensai-vpn/lua/diag_bundle.lua collect
+fi
+exec /usr/bin/python3 /usr/lib/homensai-vpn/diag_bundle.py

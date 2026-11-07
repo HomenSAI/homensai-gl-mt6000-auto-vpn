@@ -1,0 +1,114 @@
+{
+  "killed": 18,
+  "total": 18,
+  "rows": [
+    {
+      "mutation": "ed25519-accept-any",
+      "test": "test_signing_core.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=11, skipped=1)"
+    },
+    {
+      "mutation": "chain-skip-signature",
+      "test": "test_signing_core.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=8, skipped=1)"
+    },
+    {
+      "mutation": "chain-skip-prev-link",
+      "test": "test_signing_core.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1, skipped=1)"
+    },
+    {
+      "mutation": "chain-ignore-revocation",
+      "test": "test_signing_core.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=2, skipped=1)"
+    },
+    {
+      "mutation": "chain-ignore-key-id",
+      "test": "test_signing_core.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1, skipped=1)"
+    },
+    {
+      "mutation": "payload-skip-checksum",
+      "test": "test_signing_core.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=2, skipped=1)"
+    },
+    {
+      "mutation": "totp-no-replay",
+      "test": "test_signing_core.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=2, skipped=1)"
+    },
+    {
+      "mutation": "totp-no-lockout",
+      "test": "test_signing_core.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1, skipped=1)"
+    },
+    {
+      "mutation": "kit-skip-chain-signature",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=3)"
+    },
+    {
+      "mutation": "kit-skip-package-signature",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1)"
+    },
+    {
+      "mutation": "kit-skip-prev-link",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1)"
+    },
+    {
+      "mutation": "kit-ignore-revocations",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=4)"
+    },
+    {
+      "mutation": "kit-no-head-check",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1)"
+    },
+    {
+      "mutation": "kit-no-fork-check",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1)"
+    },
+    {
+      "mutation": "kit-missing-signature-allowed",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=2)"
+    },
+    {
+      "mutation": "kit-trust-kit-on-upgrade",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1)"
+    },
+    {
+      "mutation": "trust-key-no-confirmation",
+      "test": "test_signing_install.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=1)"
+    },
+    {
+      "mutation": "publication-skip-signatures",
+      "test": "test_publication_record.py",
+      "result": "KILLED",
+      "summary": "FAILED (failures=4)"
+    }
+  ]
+}

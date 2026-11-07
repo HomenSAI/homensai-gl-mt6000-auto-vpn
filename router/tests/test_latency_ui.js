@@ -92,6 +92,16 @@ assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,10081,'co
 encodedWeek.website_response_history.rows_json='broken';assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,0);
 encodedWeek.website_response_history.rows_json=' '.repeat(850001);assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,0);
 encodedWeek.website_response_history.rows_json=JSON.stringify(packed);encodedWeek.website_response_history.rows_count=2;assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,0,'count mismatch is not a successful truncated week');
+// review F-54: the router retains more than the transported week (10,082 or 30 days = 43,201 rows); the reply names the
+// served count separately and the decoder checks the rows against it, not against the retained count.
+for(const retained of [10081,10082,43201]){
+ const reply={...weekStatus,website_response_history:{...weekStatus.website_response_history,rows:packed.slice(-1441),rows_count:retained,retained_rows_count:retained,served_rows_count:10081,rows_json:JSON.stringify(packed)}};
+ assert.equal(c.latencyHistoryRows(reply,inventory,900000).length,10081,'retained '+retained+' -> served week decoded');
+ reply.website_response_history.served_rows_count=10080;assert.equal(c.latencyHistoryRows(reply,inventory,900000).length,0,'served count mismatch refused');
+}
+{const small=history([inventory.settings.plan_source,inventory.settings.plan_target],bulk.slice(-1441)).rows;
+ const reply={...weekStatus,website_response_history:{...weekStatus.website_response_history,rows:small,rows_count:1441,served_rows_count:1441}};
+ assert.equal(c.latencyHistoryRows(reply,inventory,900000).length,1441,'one day without rows_json');}
 console.log('PASS: bounded weekly transport decoding, legacy daily compatibility, malformed/oversize/count mismatch refusals');
 
 const compact=c.renderLatencyPanel(weekStatus,inventory),notes=compact.all().find(n=>n.tag==='details'&&n.attrs['data-auto-disclosure']==='latency-statistics');

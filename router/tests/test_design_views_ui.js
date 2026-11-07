@@ -1,5 +1,6 @@
 require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const {luciE}=require('./luci_dom_model'),SINKS=[];  // BH3-01: E follows LuCI (a single scalar child -> innerHTML, recorded)
 // Runs the generated page's helper code (everything before the view object) in a sandbox, then renders the three overviews.
 class N{constructor(t,a,c){this.tag=t;this.attrs=a||{};this.children=[].concat(c===undefined?[]:c).flat().filter(x=>x!=null);}
   all(){return [this].concat(...this.children.filter(c=>typeof c!=='string').map(c=>c.all()));}
@@ -15,7 +16,7 @@ const prefix=unguardedPrefix.includes('function hvElementChildren(')?unguardedPr
 function sandbox(lang){
   const ctx={window:{localStorage:{getItem(){return null},setItem(){}},HomenS:{},location:{search:lang?'?lang='+lang:'',href:'http://x/',hash:''}},
     document:{createElementNS:(ns,t)=>new N(t,{},[]),createElement:t=>new N(t),addEventListener(){}},localStorage:{getItem(){return null}},
-    E:(t,a,c)=>new N(t,a,c),URLSearchParams,URL,Intl,console,L:{},rpc:{declare:()=>()=>Promise.resolve({})},ui:{},poll:{},view:{extend:o=>o}};
+    E:luciE((t,a)=>new N(t,a,[]),SINKS),URLSearchParams,URL,Intl,console,L:{},rpc:{declare:()=>()=>Promise.resolve({})},ui:{},poll:{},view:{extend:o=>o}};
   ctx.location=ctx.window.location;vm.createContext(ctx);vm.runInContext(prefix,ctx);return ctx;
 }
 const now=Date.now()/1000;
@@ -139,3 +140,4 @@ console.log('PASS: retained overview helpers handle real/hostile data and RU; re
  }
  console.log('PASS: source Auto layout in A/B/C keeps both graphs in remembered collapsed statistics and raises separate manual controls');
 }
+assert.deepStrictEqual(SINKS,[],'BH3-01: no element got a router string through innerHTML (single scalar E child)');

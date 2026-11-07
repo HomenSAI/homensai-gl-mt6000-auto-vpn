@@ -25,7 +25,7 @@ from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, DENSE_HTTP_SECONDS, remaining
 MONITOR_HTTP_SECONDS = HTTP_SECONDS  # DENSE_HTTP_SECONDS during a dense confirmation (set per pass)
 
-VERSION = '2.1.0-alpha8'
+VERSION = '2.1.0-alpha10'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -77,8 +77,34 @@ def command(args, timeout=5):
     return result.stdout
 
 
+TELEGRAM_MASK = '…'
+MASK_SHAPE = r'(?:[A-Za-z0-9_@-]{2}…[A-Za-z0-9_@-]{2}|…)?'  # what masked_destination can return
+
+
+def masked_destination(chat):
+    """The Telegram destination as the read-ACL inventory shows it (review F-14; owner decision 07.11.2026): from
+    eight characters on its first two and last two characters around '…' ('12…89', '@e…el'), shorter or unusual
+    values only '…'. The same rule as inventory.lua; setup_config accepts the mask back as "keep the stored
+    destination". Never a valid destination itself (telegram_payload rejects the mask character). The full value
+    only through the write-ACL method telegram_destination, after an explicit "show" click on the settings page."""
+    if not isinstance(chat, str) or not chat:
+        return ''
+    head, tail = (chat[:2], chat[-2:]) if len(chat) >= 8 else ('', '')
+    if not re.fullmatch(r'[A-Za-z0-9_@-]*', head + tail):
+        head = tail = ''
+    return head + TELEGRAM_MASK + tail
+
+
 def inventory():
     data = json.loads(command(['/usr/bin/lua', INVENTORY]))
+    # The full Telegram destination never leaves this process through the read ACL, whichever inventory.lua answered.
+    settings = data.get('settings')
+    if isinstance(settings, dict) and 'telegram_destination' in settings:
+        chat = settings['telegram_destination']
+        # inventory.lua's mask ('12…89' or '…') stays; an unmasked value is masked here, anything else becomes '…'
+        if not isinstance(chat, str) or not re.fullmatch(MASK_SHAPE, chat):
+            settings['telegram_destination'] = (masked_destination(chat) if isinstance(chat, str) and TELEGRAM_MASK not in chat
+                                                else TELEGRAM_MASK if chat else '')
     # Lua cjson represents an empty table as {}, including empty array fields.
     for key in ('profiles','servers','native_candidates','wan_interfaces'):
         value=data.get(key,[])
@@ -753,6 +779,23 @@ def probe_profiles(profiles, settings):
     return eligible[:settings['probe_limit']]
 
 
+def pass_plan(bound,settings,booster,memo):
+    """probe_plan.plan for this pass over the previous pass (memo: rows, pair, native); a failure measures everything."""
+    import probe_plan
+    from observation_freshness import valid_for
+    ids=[p['id'] for p in bound]
+    try:
+        pair=memo.get('pair') or {};rows=memo.get('rows') or {}
+        source=pair.get('source');target=pair.get('target')
+        context={'interval':booster.interval(settings),'valid_for':valid_for(settings),'now':time.time(),'source':source,
+                 'target':target,'native':memo.get('native'),'dense':bool(booster.dense()),'boost':booster.active(),
+                 'waiting':booster.waiting(),'source_clean':probe_plan.clean(rows.get(source)),
+                 'target_clean':probe_plan.clean(rows.get(target)),'reserve_time':(rows.get(target) or {}).get('time')}
+        return probe_plan.plan(ids,context,settings)
+    except (ValueError,TypeError,KeyError,AttributeError):
+        return {'skip':[],'order':ids,'offsets':[0.0]*len(ids)}
+
+
 def shared_inventory(ttl):
     """inventory() reused for ttl seconds across sampler threads (bounded staleness, live route checks)."""
     from threading import Lock
@@ -814,8 +857,21 @@ def start_status_server():
         return None
 
 
+def maintenance_refusal(method):
+    """Plan item 54 (F-16): while the package hooks hold the maintenance marker the buttons that could switch or load
+    anything are refused with MAINTENANCE-IN-PROGRESS (Stop, cancel and reads never are). None otherwise."""
+    from maintenance import blocker
+    code=blocker(PERSIST)
+    if not code:return None
+    if method in ('fault_start','speed_start','native_return'):return {'accepted':False,'code':code}
+    return {'accepted':False,'queued':False,'completed':False,'blockers':[code]}
+
+
 def control_reply(method, arguments):
     """Start/Stop Auto, the failure test and the probe/response settings: one answer for rpcd/agent.py and the socket."""
+    if method=='fault_start':
+        refused=maintenance_refusal(method)
+        if refused:return refused
     if method in ('fault_start','fault_cancel'):
         from fault_control import start,cancel,FaultError
         try:return start(arguments) if method=='fault_start' else cancel() if not arguments else {'queued':False,'code':'FAULT-FIELDS'}
@@ -847,9 +903,12 @@ CONTROL_METHODS=('native_start','native_stop','fault_start','fault_cancel','setu
 def pair_manual_reply(arguments):
     """The owner's manual channel click; the same answer through rpcd/agent.py and the resident socket."""
     from pair_manual import request
-    if not {'direction','control_revision'}<=set(arguments)<={'direction','control_revision','request_source'}:
+    if not {'direction','control_revision'}<=set(arguments)<={'direction','control_revision','request_source','client_request_id'}:
         return {'accepted':False,'blockers':['PAIR-MANUAL-FIELDS']}
-    return request(arguments['direction'],arguments['control_revision'],request_source=arguments.get('request_source'))
+    refused=maintenance_refusal('pair_manual')
+    if refused:return refused
+    return request(arguments['direction'],arguments['control_revision'],request_source=arguments.get('request_source'),
+                   client_request_id=arguments.get('client_request_id'))
 
 
 def serve():
@@ -870,6 +929,31 @@ def serve():
 INTERRUPTION=False  # only the daemon takes part (tests run monitor_loop with their own files)
 
 
+def network_advisor_part():
+    """The monitor's part of the network journal and the advisor (advisor.MonitorPart, 2.1.0-alpha10): the journal's
+    single writer, the starter of the nightly `advisor.py run` (it lowers its own priority), the status field."""
+    import advisor
+
+    class IO:
+        job=None
+
+        def read(self,path):
+            try:return Path(path).read_text(encoding='utf-8')
+            except OSError:return None
+
+        def write_ram(self,path,text):atomic_json(Path(path),json.loads(text))
+
+        def write_flash(self,path,text):atomic_json(Path(path),json.loads(text))
+
+        def spawn(self):
+            if self.job is not None and self.job.poll() is None:return False
+            try:self.job=subprocess.Popen([sys.executable or '/usr/bin/python3',str(Path(__file__).with_name('advisor.py')),'run'],
+                                          stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,close_fds=True)
+            except OSError:return False
+            return True
+    return advisor.MonitorPart(IO(),str(RUNTIME),str(PERSIST),time.time())
+
+
 def monitor_loop():
     # Owner decision 31.10.2026: Auto the owner switched on comes back after a power cut (boot_resume.py)
     try:
@@ -882,6 +966,7 @@ def monitor_loop():
     except (OSError, ValueError, KeyError, TypeError):
         accounting, storage_error = Accounting(), 'STORAGE-001'
     events, samples, last_save = [], [], time.monotonic()
+    advisor_part=None
     # Interruption codes (owner request 01.11.2026, interruption.py): a monitor restarted by procd without a service
     # stop (crash, kill) is one event and one system log line. Lua: monitor.run.
     if INTERRUPTION:
@@ -911,6 +996,7 @@ def monitor_loop():
     telegram_saved,telegram_notice=load_telegram_state(PERSIST)
     telegram_job=None;telegram_public=None
     pick_job=None;pick_started=None;pick_failed=[];pick_retried=[];pick_seen=None;pick_enabled=None;pick_event_seen=None  # server_pick.py rounds (2.1.0)
+    server_pins=None  # server_pin.py: trust on first use of the servers' keys (option server_key_pin, default warn)
     def telegram_collect(job):
         # Applies a finished delivery: its saved state and its public answer. Runs only in the monitor thread.
         nonlocal telegram_saved,telegram_notice,telegram_public
@@ -946,7 +1032,18 @@ def monitor_loop():
     # Passive suspicion between full checks (sysfs counters, rare `wg show`): only starts dense full checks.
     from suspicion import SuspicionWatcher,channels as suspicion_channels
     watcher=SuspicionWatcher()
+    # GL sensors (GL-SENSORS-2026-11-04.ru.md, gl_sensors.py): WAN underlay echo + diagnosis, WireGuard events,
+    # crash-log refresh; the same rules as the Lua monitor (gl_sensors.lua).
+    from gl_sensors import Sensors as GlSensors
+    gl=GlSensors(RUNTIME,PERSIST,repeater=lambda:command(['ubus','call','repeater','status'],timeout=2),
+                 write_json=lambda path,value:atomic_json(Path(path),value))
+    gl_pass_now=False
+    import probe_target_log
+    target_writer=probe_target_log.Writer(RUNTIME)  # per-target probe log (option probe_target_log, default on); RAM ring
+    target_log_error=None
     from scan_control import begin as begin_scan, finish as finish_scan
+    import probe_plan
+    grid_slot=None;plan_memo={'measured':{}}
     while not STOP:
         from speed_pause import gate as speed_gate
         if speed_gate('monitor',quiescent=lambda:website_sampler.idle() and ping_sampler.idle() and all(s.idle() for s in compare_samplers.values())):
@@ -985,6 +1082,7 @@ def monitor_loop():
         scan_id=begin_scan(RUNTIME,read_json,atomic_json)
         config_stamp=config_mtime()
         started = time.monotonic()
+        pass_slot=started
         published_status=None
         try:
             data = inventory()
@@ -995,16 +1093,28 @@ def monitor_loop():
             selected = {s['profile']: s for s in data.get('servers', []) if s.get('enabled')}
             observed = monitoring_profiles(data)[0]
             bound = probe_profiles(observed, settings)
+            pass_slot=probe_plan.begin_slot(grid_slot,started)
+            planned=pass_plan(bound,settings,booster,plan_memo)
+            by_id={p['id']:p for p in bound}
+            bound=[by_id[identifier] for identifier in planned['order']]
             global MONITOR_HTTP_SECONDS
             pass_dense = bool(booster.dense())  # published with each sample: the failure model's cadence (channel_model)
             MONITOR_HTTP_SECONDS = DENSE_HTTP_SECONDS if pass_dense else HTTP_SECONDS
+            def timed(item):
+                # the i-th measurement of the pass starts at its phase (probe_plan: the carrying primary last)
+                left=started+item[1]-time.monotonic()
+                if left>0:time.sleep(left)
+                return probe(item[0])
             with ThreadPoolExecutor(max_workers=2) as pool:
-                measured = list(pool.map(probe, bound))
+                measured = list(pool.map(timed, zip(bound,planned['offsets'])))
             # Read metadata again after the network observations. Never attach a
             # former configured profile's success to its replacement on a tunnel.
             after_inventory=inventory()
             vendor_observation,measured=vendor_observer.observe(data,after_inventory,measured,time.time())
             mapped = {p['id']: p for p in measured}
+            for identifier in planned['skip']:
+                kept=probe_plan.carried(plan_memo['measured'].get(identifier),vendor_observation)
+                if kept is not None:mapped[identifier]=kept
             rows = []
             for p in observed:
                 row = dict(p)
@@ -1057,11 +1167,26 @@ def monitor_loop():
                 row['role']='source' if row['id']==failure_pair.get('source') else 'target' if row['id']==failure_pair.get('target') else 'unknown'
             try:watcher.configure(suspicion_channels(rows))
             except Exception:watcher.configure([])
+            # stall_sensor (GL-SENSORS-2026-11-04 item 3, stall.py): rx flat 3 s instead of 6 s while tx grows
+            from stall import enabled as stall_enabled,STALL_SECONDS as GL_STALL_SECONDS
+            from suspicion import STALL_SECONDS as OLD_STALL_SECONDS
+            watcher.stall_seconds=GL_STALL_SECONDS if stall_enabled(settings) else OLD_STALL_SECONDS
             failure_context=read_json(RUNTIME/'native-status.json', {})
+            pass_samples=[]
             for row in measured:
                 accounting.observe(row,max_gap=settings['interval']*3,native=failure_context,pair=failure_pair)
                 samples.append(dict({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok',
                     'interface','vendor_tunnel_id','vendor_generation')},dense=pass_dense))
+                pass_samples.append(samples[-1])
+            if probe_target_log.enabled(settings):
+                # what every target answered in this pass, for the two Auto channels; reads the pass, measures nothing
+                try:
+                    target_writer.record([row for row in measured if row.get('id') in (failure_pair.get('source'),failure_pair.get('target'))],
+                                         None,pass_dense,time.time())
+                    target_log_error=None
+                except (OSError,ValueError,TypeError,KeyError) as error:
+                    if target_log_error!=str(error):
+                        target_log_error=str(error);sys.stderr.write('probe target log: %s\n'%error)
             kept=86400*retention_days(settings) if diagnosing else WORK_SAMPLE_SECONDS  # work mode: decisions need minutes
             samples = [s for s in samples if (s.get('time') or 0) >= time.time()-kept][-10000:]
             # The failure model's view of the pair channels (channel_model; one source for the page, the history and
@@ -1104,6 +1229,12 @@ def monitor_loop():
             from observation_freshness import attach as attach_observation_freshness
             attach_observation_freshness(status,settings)
             status['uplink_observation']=data.get('uplink_observation',{'state':'UNKNOWN'})
+            # WAN down versus tunnel down (wan_diag.py): Auto reads its hold through failure_diagnosis.diagnose
+            try:
+                from observation_freshness import valid_for as gl_valid_for
+                gl.configure(settings,wan_devices,rows,failure_pair)
+                status['wan_diagnosis']=gl.pass_(rows,failure_pair,time.time(),gl_valid_for(settings),settings,status['uplink_observation'])
+            except Exception:pass
             status['vendor_observation']=vendor_observation
             status['package']=package_version()
             if sqm.active(settings,sqm_state):
@@ -1121,6 +1252,14 @@ def monitor_loop():
             try:
                 booster.note_wait(settings,status.get('vendor_observation'),failure_pair,status['native_failover'],time.time())
                 booster.observe(settings,measured,failure_pair,status['native_failover'].get('state'),time.time(),models=failure_models or None)
+                plan_memo.update(rows={row['id']:row for row in rows},pair=failure_pair,native=status['native_failover'].get('state'))
+                plan_memo['measured'].update((row['id'],row) for row in measured)
+                status['probe_plan']={'order':planned['order'],'skip':planned['skip'],'offsets':planned['offsets']}
+                # the WAN is proven up and only the primary fails: its dense confirmation starts now (never a switch)
+                if gl.hasten and failure_pair.get('source'):
+                    booster.suspect(settings,[{'profile':failure_pair['source'],'reason':'wan-ok-tunnel-down','evidence':{}}],
+                                    failure_pair,status['native_failover'].get('state'),time.time())
+                if gl.restored:gl_pass_now=True  # the WAN came back: check both channels at once
                 status['probe_policy']=booster.public(settings,time.time())
                 from probe_policy import response_metric
                 status['response_metric']=response_metric(settings)
@@ -1158,7 +1297,14 @@ def monitor_loop():
             except (OSError,ValueError,TypeError):active=False
             accounting.reliability.controller(active,time.time(),max_gap=settings['interval']*3)
             from route_history import observed_route
-            if accounting.reliability.routes.observe(observed_route(status,time.time()),time.time(),max_gap=settings['interval']*3):accounting.reliability.critical=True
+            route_kind=observed_route(status,time.time())
+            if accounting.reliability.routes.observe(route_kind,time.time(),max_gap=settings['interval']*3):accounting.reliability.critical=True
+            # the network journal (single writer) and the advisor's status field (advisor.MonitorPart; Lua: monitor.lua)
+            try:
+                if advisor_part is None:advisor_part=network_advisor_part()
+                status['network_advisor']=advisor_part.pass_(pass_samples,failure_pair,route_kind,(status.get('native_failover') or {}).get('state'),
+                                                              settings,time.time(),time.localtime().tm_gmtoff,time.monotonic())
+            except Exception:status['network_advisor']={'code':'ADVISOR-UNAVAILABLE'}
             status['accounting']['reliability']=accounting.reliability.public()
             status['native_history']=native_history_public()
             status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
@@ -1222,9 +1368,28 @@ def monitor_loop():
                     pick_started=time.monotonic();pick_failed=failed;pick_enabled=request['enabled'];pick_job.start()
                 status['server_pick']=picked
             except Exception:status['server_pick']=None
+            try:
+                import server_pin
+                if server_pins is None:server_pins=server_pin.Pins(str(RUNTIME),str(PERSIST),server_pin.router_io())
+                try:
+                    with open(server_pin.CONFIG,'rb') as stream:pin_config=stream.read(65536).decode('latin-1')
+                except OSError:pin_config=None
+                fresh,status['server_keys']=server_pins.step(rows,server_pin.mode(pin_config),time.time())
+                events.extend(fresh);status['events']=(status['events']+fresh)[-300:]
+                for event in fresh:
+                    if event['code']!=server_pin.PINNED:
+                        subprocess.run(['logger','-t','homensai-vpn','%s: %s %s'%(event['code'],event.get('profile',''),event.get('host',''))],
+                                       stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
+            except Exception:status['server_keys']=None
             status['measurement_request_id']=scan_id
             atomic_json(RUNTIME/'status.json', status)
             published_status=status
+            try:  # L1: a failed sample of an Auto channel wakes the supervisor's nap (only a hint, probe_policy.wake_row)
+                from channel_model import WAKE_NAME
+                from probe_policy import wake_row
+                wake=wake_row(settings,measured,failure_pair,time.time())
+                if wake:atomic_json(RUNTIME/WAKE_NAME,wake)
+            except (OSError,ValueError,TypeError):pass
             finish_scan(RUNTIME,read_json,atomic_json,scan_id,snapshot=status)
             since_save=time.monotonic()-last_save
             # Work mode: the accounting reaches flash once a day (and at shutdown), not every checkpoint interval.
@@ -1244,7 +1409,12 @@ def monitor_loop():
             except Exception:pass
             settings = {'interval': 30}
         # A scan request is bounded metadata, never an arbitrary command/path.
-        while not STOP and time.monotonic()-started < min(monitor_poll_interval(settings),booster.interval(settings)):
+        period=min(monitor_poll_interval(settings),booster.interval(settings))
+        wake=started+period
+        if probe_plan.spread_enabled(settings):
+            grid_slot,_=probe_plan.next_slot(pass_slot,period,time.monotonic())
+            wake=min(grid_slot,pass_slot+period)  # a pass that overran its period: the next one now, as before
+        while not STOP and time.monotonic()<wake:
             if (RUNTIME/'speed-pause.json').exists():break
             request = RUNTIME/'scan.request'
             if request.exists() and not request.is_symlink():
@@ -1269,6 +1439,15 @@ def monitor_loop():
                         if found and booster.suspect(settings,found,failure_pair,
                                 read_json(RUNTIME/'native-status.json',{}).get('state'),time.time()):break
                     except Exception:pass
+                # GL sensors: the WAN underlay echo and new WireGuard events (a REKEY of a pair device starts the
+                # dense confirmation, never a switch); a WAN that came back starts the next pass now.
+                try:
+                    items=gl.tick(time.monotonic())
+                    if items and booster.suspect(settings,items,failure_pair,
+                            read_json(RUNTIME/'native-status.json',{}).get('state'),time.time()):break
+                except Exception:pass
+                if gl_pass_now:
+                    gl_pass_now=False;break
             time.sleep(1)
     # Saved first: in work mode this is the only save besides the daily one, and procd kills after 15 s.
     try:
@@ -1366,6 +1545,9 @@ def status_reply(load=read_monitor_status):
     status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
     status['boot_resume']=read_json(RUNTIME/'boot-resume.json',None)  # recovery after a power cut (owner 01.11.2026)
     status['integrity']=read_json(RUNTIME/'integrity.json',None)  # self-check of the installed files (TODO 15)
+    status['upgrade_result']=read_json(PERSIST/'upgrade-result.json',None)  # rolled-back / refused upgrade (owner 07.11.2026)
+    from maintenance import public as maintenance_public
+    status['maintenance']=maintenance_public(PERSIST)  # plan item 54: a package operation runs (or was interrupted)
     from switch_timing import read as switch_timing
     status['switch_timing']=switch_timing(PERSIST)
     from auto_control import public_status
@@ -1402,7 +1584,7 @@ def history_reply(load=read_monitor_status):
 
 def rpc(method):
     if method == 'list':
-        print(json.dumps({'status': {}, 'history': {}, 'speed_live': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':''}, 'inventory': {}, 'scan': {}, 'events': {},
+        print(json.dumps({'status': {}, 'history': {}, 'speed_live': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':'','client_request_id':''}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
@@ -1410,14 +1592,18 @@ def rpc(method):
                           'setup_probe':{'level':0,'boost':False},
                           'setup_response':{'metric':'','compare':False,'fast_switch':False,'ping_interval':0,'server_pick':False,'server_pick_model':''},
                           'setup_stats':{'mode':'','hours':0,'retention':'','days':0,'mb':0},
-                          'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
-                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'rescue_stable':0,'interval':0,'failure_model':''},
+                          'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},'setup_onboarding_skip':{},
+                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'rescue_stable':0,'flap_model':'','flap_limit':0,'flap_window':0,'flap_halflife':0,'flap_suppress':0,'flap_reuse':0,'interval':0,'failure_model':''},
+                          'setup_detector':{'retry_backoff':'','probe_spread':False,'reserve_probe_interval':0,'parallel_recheck':False,'auto_event_wake':False,'wan_sensor':False,'wan_recover_grace':0,'wg_events':False,'stall_sensor':False,'stall_veto':False,'heartbeat_quorum':False,'server_key_pin':'','probe_target_log':False},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
                           'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':'','request_source':''}, 'native_stop': {'request_source':''}, 'native_start': {'control_revision':'','request_source':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
-                          'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0,'schedule':'','hour':0,'weekly':False,'monthly':False,'items':''}}));return
+                          'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0,'schedule':'','hour':0,'weekly':False,'monthly':False,'items':''},
+                          'probe_targets':{'after':0,'limit':0},
+                          'advisor':{},'advisor_apply':{'t':0.0},'advisor_settings':{'mode':'','window':0,'theta':0.0,'dur_b':0.0,'pg':0.0,'fast':False,'turbo':False,'turbo_ack':''},
+                          'server_key_accept':{'profile':'','observed':''},'telegram_destination':{}}));return
     request = sys.stdin.buffer.read(65537)
     from rpc_input import decode_request
     arguments=decode_request(request)
@@ -1484,22 +1670,38 @@ def rpc(method):
         except ValueError as error:
             result={'saved':False,'code':str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'}
         print(json.dumps(result));return
-    if method in ('setup_system','setup_telegram','setup_speed','setup_recovery','setup_monitor','setup_onboarding','setup_probe','setup_response'):
+    if method in ('setup_system','setup_telegram','setup_speed','setup_recovery','setup_monitor','setup_onboarding','setup_onboarding_skip','setup_probe','setup_response','setup_detector'):
         from setup_config import save
-        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed','setup_recovery':'recovery','setup_monitor':'monitor','setup_onboarding':'onboarding','setup_probe':'probe','setup_response':'response'}[method])
+        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed','setup_recovery':'recovery','setup_monitor':'monitor','setup_onboarding':'onboarding','setup_onboarding_skip':'onboarding_skip','setup_probe':'probe','setup_response':'response','setup_detector':'detector'}[method])
         except ValueError as error:
             code=str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'
             result={'saved':False,'code':code}
         print(json.dumps(result));return
     if method=='speed_start':
         from speed_test import start, SpeedError
+        refused=maintenance_refusal(method)
+        if refused:print(json.dumps(refused));return
         try:result=start(arguments)
         except SpeedError as error:result={'accepted':False,'code':error.code}
         print(json.dumps(result));return
     if method=='manual_switch':
+        refused=maintenance_refusal(method)
+        if refused:print(json.dumps(refused));return
         from manual_control import request,refusal
         result=request(arguments['direction'],arguments['control_revision'],request_source=arguments.get('request_source')) if {'direction','control_revision'}<=set(arguments)<={'direction','control_revision','request_source'} else refusal('MANUAL-FIELDS')
         print(json.dumps(result));return
+    if method in ('advisor','advisor_apply','advisor_settings'):
+        # master slider / network advisor (2.1.0-alpha10): advisor_control.py
+        from advisor_control import reply as advisor_reply
+        print(json.dumps(advisor_reply(method,arguments),ensure_ascii=True));return
+    if method=='probe_targets':
+        # the read-only per-target probe log (probe_target_log.py): the RAM ring the running monitor writes, either runtime
+        import probe_target_log
+        print(json.dumps(probe_target_log.read(RUNTIME,arguments)));return
+    if method=='server_key_accept':
+        # the page's button "Accept the new key" (2.1.0-alpha10): the accept request of server_pin.py for the running monitor
+        from server_pin import rpc_accept
+        print(json.dumps(rpc_accept(arguments,str(RUNTIME),str(PERSIST))));return
     if arguments and method not in('native_start','native_trial_start','native_stop'):
         raise ValueError('RPC-UNEXPECTED-ARGS')
     if method=='telegram_retry':
@@ -1514,6 +1716,13 @@ def rpc(method):
     elif method == 'telegram_test':
         from telegram_report import send_test
         print(json.dumps(send_test()));return
+    elif method == 'telegram_destination':
+        # Review F-14 (06.11.2026): the full stored destination for the settings page only (write ACL); the read-ACL
+        # inventory shows its mask. Never the token.
+        from telegram_report import option
+        stored=option('telegram_chat')
+        valid=isinstance(stored,str) and bool(re.fullmatch(r'-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31}',stored))
+        print(json.dumps({'destination':stored if valid else '','configured':valid,'masked':masked_destination(stored) if valid else ''}));return
     elif method == 'inventory':
         print(json.dumps(inventory(), ensure_ascii=True))
     elif method == 'scan':
@@ -1550,13 +1759,64 @@ def rpc_error_code(error):
     return text if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}', text) else 'SYSTEM-001'
 
 
+class RpcInputInvalid(ValueError):
+    """A malformed RPC argument shape found while the caller's input is validated (R3-02 / R4-06)."""
+
+
+def rpc_input(parse, *args):
+    """Run an input parser; a shape it did not foresee (a list where a text was expected, a missing nested field) is
+    the caller's problem (RPC-INPUT-INVALID), never a system failure."""
+    try:
+        return parse(*args)
+    except (TypeError, KeyError, AttributeError, IndexError):
+        raise RpcInputInvalid('RPC-INPUT-INVALID')
+
+
+def innermost_frame(error):
+    """(file basename, line, function name) where the exception was raised; ('?', 0, '?') without a traceback."""
+    tb = error.__traceback__
+    where = ('?', 0, '?')
+    while tb is not None:
+        code = tb.tb_frame.f_code
+        where = (os.path.basename(code.co_filename), tb.tb_lineno, code.co_name)
+        tb = tb.tb_next
+    return where
+
+
+def raised_by_input_validation(error):
+    """True when the exception came out of an input validator: a *_payload function (setup, recovery_settings,
+    stats_mode) or the request decoder - the places that look at the caller's argument shapes."""
+    name, _, function = innermost_frame(error)
+    return name == 'rpc_input.py' or function.endswith('payload')
+
+
+def internal_diagnostic(error):
+    """One sanitized line for the log: the exception class and the frame that raised it, no values, no paths."""
+    name, line, function = innermost_frame(error)
+    return 'RPC-SYSTEM-FAILURE %s at %s:%d in %s' % (type(error).__name__, name, line, function)
+
+
 def call(method):
     """One command-line RPC: always a JSON line on stdout, never a traceback for input problems."""
     try:
         rpc(method)
         return 0
+    except RpcInputInvalid:
+        print(json.dumps({'error': 'RPC-INPUT-INVALID'}))
+        return 1
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         print(json.dumps({'error': rpc_error_code(error)}))
+        return 1
+    except (TypeError, KeyError, AttributeError, IndexError) as error:
+        # Review R3-02: a malformed argument shape is RPC-INPUT-INVALID - but only when it came out of the input
+        # validation (rpc_input, the *_payload validators). R4-06: the same exception out of a handler or stored state
+        # (a malformed status snapshot) is a system failure: SYSTEM-001 to the caller, one sanitized diagnostic line on
+        # stderr for the log, never a traceback.
+        if raised_by_input_validation(error):
+            print(json.dumps({'error': 'RPC-INPUT-INVALID'}))
+            return 1
+        sys.stderr.write(internal_diagnostic(error) + '\n')
+        print(json.dumps({'error': 'SYSTEM-001'}))
         return 1
 
 

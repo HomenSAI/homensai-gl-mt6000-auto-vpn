@@ -256,7 +256,8 @@ local function stat_tail(raw)
 end
 
 -- _workers(deadline): {time, busy, verified=true}; raises when a live process could not be read
-function M.workers(sys,deadline)
+-- ignore_lock: the vendor lock FILE does not count (vendor_busy_seen asks what runs besides it)
+function M.workers(sys,deadline,ignore_lock)
   if deadline and sys.clock()>=deadline then value_error('MT3000-COLLECTION-DEADLINE') end
   local busy=M.held_firewall_locks(sys)
   local entries=sys.dir('/proc')
@@ -295,7 +296,7 @@ function M.workers(sys,deadline)
     end
   end
   local lock=sys.lstat(M.RTP_LOCK)
-  if tunnel_switch_locks(sys) or (lock and lock.type=='lnk') or (lock and M.mt3000_rtp_lock_busy(sys)) then busy=busy+1 end
+  if tunnel_switch_locks(sys) or (lock and lock.type=='lnk') or (lock and not ignore_lock and M.mt3000_rtp_lock_busy(sys)) then busy=busy+1 end
   return {time=sys.wall(),busy=busy,verified=true}
 end
 
@@ -344,6 +345,40 @@ local function queues_busy(sys)
   return false
 end
 M.queues_busy=queues_busy
+
+-- vendor_busy_seen(sys, scan) -> {kind=, mark=, pid=, workers=}: what can be seen of a VENDOR-WORKER-BUSY right now, for a
+-- status code only. It changes no decision: rtp_lock_busy stays true for the same lock and nothing here removes anything.
+-- A row is an observation, not a proof (lock study 05.11.2026, REPORT.ru.html): a dead holder does not mean the work ended
+-- (a SIGKILLed rtp2 leaves its child running) and no file does not mean GL is quiet (a first run can erase the mark of a
+-- second). Only 'no such /proc/<pid>' or a process that is not rtp2 counts as a dead holder; a failed read does not.
+--   kind 'rtp-lock-dead' 'rtp-lock-live' 'tunnel-switch' 'workers' 'unidentified'; mark: the same file (inode, pid) or state
+--   scan true: also count the workers (the whole of /proc, not on every tick); workers nil = not read
+function M.vendor_busy_seen(sys,scan)
+  local row={kind='unidentified',mark='no-file'}
+  local st=sys.lstat(M.RTP_LOCK)
+  if st then
+    row.mark='rtp-lock:'..tostring(st.ino)
+    local raw=st.type=='reg' and sys.read(M.RTP_LOCK) or nil
+    local text=raw and #raw<=32 and string.match(raw,'^%s*(.-)%s*$') or ''
+    if string.find(text,'^[1-9]%d*$') and #text<=10 then
+      local pid=tonumber(text)
+      row.pid=pid
+      row.mark=row.mark..':'..text
+      local base='/proc/'..text
+      if not sys.exists(base) then row.kind='rtp-lock-dead'
+      else
+        local command=sys.read(base..'/cmdline')
+        if command~=nil then row.kind=string.find(command,'rtp2',1,true) and 'rtp-lock-live' or 'rtp-lock-dead' end
+      end
+    end
+  elseif M.tunnel_switch_locks(sys) then row.kind='tunnel-switch';row.mark='tunnel-switch' end
+  if scan then
+    local ok,seen=pcall(M.workers,sys,sys.clock()+2,true)
+    if ok and seen.verified==true then row.workers=seen.busy end
+    if row.mark=='no-file' and ((row.workers or 0)>0 or M.queues_busy(sys)) then row.kind='workers' end
+  end
+  return row
+end
 
 ------------------------------------------------------------------------------------------------------
 -- native_platform.assess(board, data)

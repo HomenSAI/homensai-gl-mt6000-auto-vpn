@@ -15,6 +15,7 @@ M.DEFINITION='one ICMP echo per channel per check through its own tunnel; minute
 M.SCOPE='observed ICMP replies only; a lost echo is a gap; website history is separate'
 M.WEBSITE_METRIC='websites-https-mean-ms-v1';M.WEBSITE_TARGET_SET='google-cloudflare-wikipedia-v1'
 M.DAY=86400;M.WEEK=7*86400;M.MAX_ROWS=30*1440+1;M.MAX_BYTES=4*1024*1024  -- up to 30 days (retention.lua)
+M.PUBLIC_ROWS=7*1440+1  -- rows_json/coverage_rows_json carry at most the newest week (status transport bound)
 M.NAME='ping-response-history.json'
 local KINDS={source=true,target=true,unknown=true,off=true,switching=true,blocked=true,down=true}
 local NULL=canon.null
@@ -211,6 +212,19 @@ function History:public(now)
   local ps=canon.object()
   for i,id in ipairs(pair) do ps[id]=statistics[i==1 and 'source' or 'target'] end
   result.profile_statistics=ps
+  -- As website_response_history.public: more than a day travels as one week string, and the reply names what it
+  -- carries (served_rows_count) apart from what is retained (rows_count), review F-54.
+  if #rows>1441 then
+    local week,cover=canon.array(),canon.array()
+    for i=math.max(1,#rows-M.PUBLIC_ROWS+1),#rows do
+      local r=rows[i]
+      week[#week+1]=canon.array({r[1],r[4]>0 and sum_tenths(r,0) or NULL,r[5]>0 and sum_tenths(r,1) or NULL,r[4],r[5],r[6]})
+      cover[#cover+1]=canon.array({r[1],r[8],r[9],r[10],r[11],r[12],r[13]})
+    end
+    result.rows_json=canon.encode(week);result.coverage_rows_json=canon.encode(cover)
+  end
+  result.retained_rows_count=#rows
+  result.served_rows_count=#rows>1441 and math.min(#rows,M.PUBLIC_ROWS) or #rows
   return result
 end
 

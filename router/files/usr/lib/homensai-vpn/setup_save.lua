@@ -22,12 +22,24 @@ local data,sections
 local committed=false
 local ok=pcall(function()
   data=json.decode(input)
-  local allowed={response_metric=true,response_compare=true,fast_switch=true,server_pick=true,server_pick_model=true,lua_core=true,stats_mode=true,stats_until=true,stats_retention_mode=true,stats_retention_days=true,stats_retention_mb=true,probe_level=true,probe_boost=true,measure_interval=true,ping_interval=true,live_log_limit=true,history_days=true,checkpoint=true,probe_limit=true,plan_enabled=true,plan_source_tunnel=true,plan_target_tunnel=true,recovery_failures=true,recovery_successes=true,recovery_cooldown=true,recovery_min_dwell=true,recovery_return_policy=true,recovery_primary_successes=true,recovery_primary_stable=true,recovery_rescue_stable=true,recovery_attempt_limit=true,recovery_attempt_window=true,failure_model=true,enabled=true,plan_source=true,plan_target=true,interval=true,native_duration=true,
+  local allowed={response_metric=true,response_compare=true,fast_switch=true,server_pick=true,server_pick_model=true,lua_core=true,stats_mode=true,stats_until=true,stats_retention_mode=true,stats_retention_days=true,stats_retention_mb=true,probe_level=true,probe_boost=true,measure_interval=true,ping_interval=true,live_log_limit=true,history_days=true,checkpoint=true,probe_limit=true,plan_enabled=true,plan_source_tunnel=true,plan_target_tunnel=true,recovery_failures=true,recovery_successes=true,recovery_cooldown=true,recovery_min_dwell=true,recovery_return_policy=true,recovery_primary_successes=true,recovery_primary_stable=true,recovery_rescue_stable=true,recovery_attempt_limit=true,recovery_attempt_window=true,recovery_flap_model=true,recovery_flap_limit=true,recovery_flap_window=true,recovery_flap_halflife=true,recovery_flap_suppress=true,recovery_flap_reuse=true,failure_model=true,hmm_theta=true,hmm_dur_b=true,return_pg=true,slider_t=true,slider_fast=true,slider_turbo=true,hmm_or_failures=true,turbo_beats=true,advisor_mode=true,advisor_window=true,enabled=true,plan_source=true,plan_target=true,interval=true,native_duration=true,
+    -- the expert group Detector and sensors (setup_detector)
+    retry_backoff=true,probe_spread=true,reserve_probe_interval=true,parallel_recheck=true,auto_event_wake=true,wan_sensor=true,wan_recover_grace=true,wg_events=true,
+    stall_sensor=true,stall_veto=true,heartbeat_quorum=true,server_key_pin=true,probe_target_log=true,
     native_session_loss=true,setup_complete=true,terms_version=true,terms_time=true,telegram_chat=true,telegram_token=true,
     telegram_enabled=true,telegram_interval=true,telegram_schedule=true,telegram_hour=true,telegram_weekly=true,telegram_monthly=true,telegram_items=true,speed_enabled=true,speed_auto_new=true,
     speed_budget_mib=true,speed_duration=true,speed_streams=true,speed_daily_mib=true,speed_busy_mbps=true,
     onboarding_version=true,onboarding_complete=true,onboarding_pair_deferred=true,
     appearance_language=true,appearance_design=true,appearance_theme=true,router_model=true}
+  if data.main.telegram_items then
+    local value=data.main.telegram_items
+    if value~='brief' and value~='none' then
+      local known={servers=true,events=true,traffic=true,delta=true,controller=true,controller_events=true,controller_totals=true,gaps=true}
+      local seen={}
+      assert(type(value)=='string' and #value>0 and #value<=200)
+      for part in (value..','):gmatch('(.-),') do assert(known[part] and not seen[part]);seen[part]=true end
+    end
+  end
   if data.main.router_model then
     local selected=data.main.router_model
     assert(selected=='auto' or selected=='mt6000' or selected=='mt3000')
@@ -42,9 +54,10 @@ local ok=pcall(function()
     assert(allowed[key] and type(value)=='string')
     assert(c:set('homensai_vpn','main',key,value))
   end
-  -- Only the stored Telegram token may be deleted, and only by an explicit own request.
+  -- Only the stored Telegram token may be deleted, and only by an explicit own request; the slider position when the
+  -- owner sets his own detector values (advisor_control.manual: the slider detaches).
   for _,key in ipairs(data.delete or {}) do
-    assert(key=='telegram_token')
+    assert(key=='telegram_token' or key=='slider_t')
     assert(c:delete('homensai_vpn','main',key))
   end
   local existing={}
@@ -61,6 +74,9 @@ local ok=pcall(function()
   committed=true
 end)
 if not ok then c:revert('homensai_vpn');os.exit(1) end
+-- The file holds the Telegram token: root-only whatever mode the image or an older package gave it.
+-- The path is fixed (the test root is validated above), nothing from the request reaches the command.
+os.execute('chmod 0600 '..(testroot and (testroot..'/config/homensai_vpn') or '/etc/config/homensai_vpn'))
 -- An acknowledgement must prove all requested values, not only the completion
 -- flag. A new cursor reads the committed file, not the writer's staged cache.
 local verified=pcall(function()

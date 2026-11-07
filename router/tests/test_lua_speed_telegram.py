@@ -628,8 +628,34 @@ class TelegramMatchesPython(Differential):
         for units in (4000, 3995, 10):
             self.case('limited_text', [text, units], telegram_context(), [], {}, 'limited %d' % units)
         self.case('limited_text', ['short', 4000], telegram_context(), [], {}, 'limited short')
-        for value in (None, '', 'none', 'servers,gaps,bogus', 'delta'):
+        for value in (None, '', 'none', 'servers,gaps,bogus', 'delta', 'brief', 'brief,servers'):
             self.case('parse_items', [value], telegram_context(), [], {}, 'items %r' % value)
+        self.compare()
+
+    def test_explicit_russian_brief(self):
+        cases = json.loads((TESTS/'fixtures/telegram_brief.json').read_text())
+        for fixture in cases:
+            status = dict(fixture['status'], native_failover={'source': 'p', 'target': 'other', 'alarm': 'ROLLBACK-GIVEN-UP'})
+            self.case('format_report', [status, 60, fixture['now'], ['brief']], telegram_context(), [], {}, fixture['name'])
+        from test_telegram_brief import sample_status
+        status = sample_status(NOW)
+        self.case('format_report', [status, 60, NOW, ['brief']], telegram_context(), [], {}, 'errors and switches')
+        for kind in ('daily', 'weekly', 'monthly'):
+            self.case('format_period', [status, {'kind': kind, 'key': kind+':x', 'start': NOW-86400, 'end': NOW}, NOW, ['brief']], telegram_context(), [], {}, kind)
+        self.compare()
+
+    def test_brief_actual_route_changes_asymmetric(self):
+        from test_telegram_brief import sample_status
+        status = sample_status(NOW)
+        event = status['native_history']['events'][0]
+        # Three actual changes and one no-change prevent an inverted predicate
+        # from accidentally preserving the total (the old fixture had 1 and 1).
+        status['native_history']['events'] = [
+            dict(event, attempt_id=1), dict(event, attempt_id=2),
+            dict(event, attempt_id=3, transition_outcome='restored', destination_role='source'),
+            dict(event, attempt_id=4, route_changed=False)]
+        self.assertIn('Переключения: 3 ', report.format_report(status, 60, NOW, ('brief',)))
+        self.case('format_report', [status, 60, NOW, ['brief']], telegram_context(), [], {}, '3 actual changes, 1 no-change')
         self.compare()
 
     def test_calendar(self):
@@ -826,7 +852,11 @@ class SpeedTelegramDispatcher(_Dispatcher):
                 self.assertEqual(self.run_plugin('call', method, request=b'{}'), {'lua': True, 'request': {}})
         reply = self.run_plugin('call', 'speed_start', request=b'{"profiles":["a"]}', mode='fallback')
         self.assertEqual(reply, {'agent': ['call', 'speed_start'], 'stdin': '{"profiles":["a"]}'})
-        self.assertEqual(self.run_plugin('call', 'speed_cancel', request=b'{}', mode='timeout')['agent'], ['call', 'speed_cancel'])
+        # BH3-02: a button with an unclear Lua outcome is never replayed through agent.py (the page treats the code as a
+        # lost answer); the read speed_live keeps its agent.py fallback
+        self.assertEqual(self.run_plugin('call', 'speed_cancel', request=b'{}', mode='timeout'),
+                         {'accepted': False, 'queued': False, 'code': 'RPC-BRIDGE-UNCONFIRMED', 'blockers': ['RPC-BRIDGE-UNCONFIRMED']})
+        self.assertEqual(self.run_plugin('call', 'speed_live', request=b'{}', mode='timeout')['agent'], ['call', 'speed_live'])
         self.assertEqual(self.leftovers(), [])
 
     def test_without_the_lua_monitor_speed_calls_go_to_agent_not_the_status_client(self):

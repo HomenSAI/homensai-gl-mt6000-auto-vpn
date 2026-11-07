@@ -31,11 +31,11 @@ class PresetTests(unittest.TestCase):
     def test_presets_match_backend_bounds_and_do_not_enable_auto(self):
         import json,sys
         sys.path.insert(0,str(path.parent))
-        from recovery_settings import payload,DEFAULTS
+        from recovery_settings import payload,DEFAULTS,FLAP_FIELDS
         presets=json.loads((path.parent/'recovery_presets.json').read_text())
         self.assertEqual(set(presets),{'stability','fast_recovery','hold_reserve'})
         for draft in presets.values():
-            self.assertEqual(set(draft),set(DEFAULTS));saved=payload(draft)
+            self.assertEqual(set(draft),set(DEFAULTS)-set(FLAP_FIELDS));saved=payload(draft)  # the page's preset never touches flap_*
             self.assertFalse(any('native' in key for key in saved['main']))
         self.assertEqual(presets['hold_reserve']['return_policy'],'hold_reserve')
 

@@ -245,17 +245,24 @@ function autoReadiness(status,inventory,now){
   return {steps:steps,next:next,ready:!next};
 }
 
-// Traffic light: one lamp says what Auto is doing. The round button only starts or stops it.
-var AUTO_LIGHTS=[
-  {lamp:'green',key:'ok',icon:'✓',legend:['Green: Auto is on and watching the primary','Зелёный: Auto включён и следит за основным']},
-  {lamp:'yellow',key:'switching',icon:'⟳',legend:['Yellow: starting, stopping or switching the route','Жёлтый: запускается, останавливается или переключает маршрут']},
-  {lamp:'orange',key:'reserve',icon:'⇄',legend:['Orange: the reserve route is selected; primary health is separate','Оранжевый: выбран резерв; исправность основного показана отдельно']},
-  {lamp:'red',key:'problem',icon:'!',legend:['Red: needs your attention','Красный: нужно ваше внимание']}
-];
-// Green needs a fresh kernel confirmation; while the router re-confirms the route the light is yellow and Auto
-// keeps running. A completed failed check is shown as an error at once.
-// Auto the owner turned on stays on screen as running while fresh router data is only late: yellow
-// "refreshing", never red. Red needs an error code, a controller alarm or no answer for 90 s.
+// One display contract for every Auto lamp, status text and switch. Enabled is the confirmed session,
+// independent of its current health: a failed channel does not mean the owner turned Auto off.
+var AUTO_SIGNAL_TABLE={
+  working:{lamp:'green',enabled:true,working:true,text:['Auto works','Auto работает']},
+  checking:{lamp:'yellow',enabled:true,working:false,text:['Auto is on · waiting or checking','Auto включён · ожидание или проверка']},
+  pending:{lamp:'yellow',enabled:false,working:false,text:['Auto state is being confirmed','Состояние Auto подтверждается']},
+  failure:{lamp:'red',enabled:true,working:false,text:['Auto is on · needs attention','Auto включён · требует внимания']},
+  refused:{lamp:'red',enabled:false,working:false,text:['Auto needs attention','Auto требует внимания']},
+  off:{lamp:'off',enabled:false,working:false,text:['Auto is off','Auto выключен']}
+};
+function autoPresentation(light){
+  if(!light)return AUTO_SIGNAL_TABLE.pending;
+  var enabled=light.enabled===true||light.enabled===undefined&&(light.running===true||light.hold===true||light.key==='ok'||light.key==='reserve');
+  return AUTO_SIGNAL_TABLE[light.key==='off'?'off':light.key==='problem'?(enabled?'failure':'refused'):light.key==='ok'||light.key==='reserve'?(enabled?'working':'pending'):enabled?'checking':'pending'];
+}
+function autoEnabled(light){return autoPresentation(light).enabled;}
+function autoStateText(light){var words=autoPresentation(light).text;return bi(words[0],words[1]);}
+// Checks/waits are yellow. Only proven failures or 90 s without fresh data are red.
 var AUTO_RPC_GRACE=90,UI_AUTO_LAST_ON=null,UI_RPC_LOST_SINCE=null,UI_DATA_LATE_SINCE=null,UI_TRANSIENT_SINCE=null,AUTO_TRANSIENT_GRACE=180;
 // Waiting conditions the controller clears by itself on the next fresh pass; anything else is critical.
 var AUTO_TRANSIENT=['OBSERVATION-STALE','VENDOR-SETTLING','VENDOR-WORKER-BUSY','VENDOR-WORKER-QUIET-UNVERIFIED','PROFILE-IDENTITY-CHANGED','VENDOR-IDENTITY-UNKNOWN','KERNEL-POLICY-UNVERIFIED','STATUS-STALE','MONITOR-DATA-STALE'];
@@ -264,59 +271,63 @@ function autoLightModel(status,inventory,now){
   var model=autoControlModel(status,now),ns=status.native_failover||{},intent=status.auto_control||{},state=ns.state;
   var blockers=(Array.isArray(ns.blockers)?ns.blockers:[]).filter(function(code){return AUTO_LAN_ONLY.indexOf(code)<0;});
   var sessionRuns=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0&&!model.awaiting;
-  function out(key,title,hint,code,running){return {running:running===true,key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
-    icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null,tunnels:T};}
+  var confirmedOn=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0||intent.pair_phase==='STOPPING'&&UI_AUTO_LAST_ON!==null||model.on||(status.rpc_error||status.error)&&UI_AUTO_LAST_ON!==null;
+  function out(key,title,hint,code,running){var light={enabled:key!=='off'&&(confirmedOn||!intent.pair_phase&&running===true),running:running===true,key:key,
+    icon:key==='off'?'○':key==='problem'?'!':key==='ok'?'✓':'⟳',title:title,hint:hint,code:code||null};
+    light.lamp=autoSignal(light)==='off'?null:autoSignal(light);
+    if(autoEnabled(light)&&typeof channelLampTone==='function'&&typeof manualConfirmedPath==='function')light.tunnels=['source','target'].map(function(role){var tone=channelLampTone(status,inventory,role,now,light);return {color:tone.color,carrier:tone.carrier};});
+    return light;}
   if(!status.rpc_error&&!status.error){UI_RPC_LOST_SINCE=null;
-    if(intent.requested==='on'&&['STARTING','RUNNING'].indexOf(intent.pair_phase)>=0)UI_AUTO_LAST_ON=now;else UI_AUTO_LAST_ON=null;}
+    if(confirmedOn)UI_AUTO_LAST_ON=now;else UI_AUTO_LAST_ON=null;}
   else if(UI_RPC_LOST_SINCE===null)UI_RPC_LOST_SINCE=now;
   if(model.fresh)UI_DATA_LATE_SINCE=null;else if(UI_DATA_LATE_SINCE===null)UI_DATA_LATE_SINCE=now;
-  // Owner 01.11.2026: the light never looks better than the monitoring lamp. No answer from the router program
-  // (monitoring red) is red here too; a recovery after a restart that resumes Auto by itself is yellow.
+  // A stopped monitor is a failure; a missed RPC waits out its 90-second grace below.
   var monitorLamp=typeof monitorLightModel==='function'?monitorLightModel(status,inventory,now,false):null;
-  if(monitorLamp&&monitorLamp.lamp==='red'&&!model.fresh)return out('problem',bi('No connection to the router program','Нет связи с программой роутера'),bi('Monitoring cannot be read, so the page cannot see Auto. If the router is running, Auto keeps working on it by itself; after a power cut it comes back by itself.','Мониторинг не читается, поэтому страница не видит Auto. Если роутер работает, Auto продолжает работать на нём сам; после отключения питания он возвращается сам.'),monitorLamp.code||'STATUS-STALE');
-  if(typeof uiBootResuming==='function'&&uiBootResuming(status,now))return out('switching',bi('Restoring after a router restart','Восстановление после перезапуска роутера'),bi('The router was restarted. Auto finishes the interrupted switch, waits for the VPN channels and turns itself back on. Nothing needs to be pressed; this usually takes 3–4 minutes after power-on.','Роутер перезапускался. Auto завершает прерванное переключение, ждёт VPN-каналы и включится сам. Нажимать ничего не нужно; обычно это 3–4 минуты после включения питания.'),'AUTO-RESUME-PENDING',true);
+  if(monitorLamp&&monitorLamp.lamp==='red'&&!model.fresh&&!status.rpc_error&&!status.error)return out('problem',bi('No connection to the router program','Нет связи с программой роутера'),bi('Monitoring cannot be read, so the page cannot see Auto. If the router is running, Auto keeps working on it by itself; after a power cut it comes back by itself.','Мониторинг не читается, поэтому страница не видит Auto. Если роутер работает, Auto продолжает работать на нём сам; после отключения питания он возвращается сам.'),monitorLamp.code||'STATUS-STALE');
+  if(typeof uiBootResuming==='function'&&uiBootResuming(status,now))return out('switching',bi('Restoring after a router restart','Восстановление после перезапуска роутера'),bi('The router was restarted. Auto finishes the interrupted switch, waits for the VPN channels and turns itself back on. Nothing needs to be pressed; this usually takes 3–4 minutes after power-on.','Роутер перезапускался. Auto завершает прерванное переключение, ждёт VPN-каналы и включится сам. Нажимать ничего не нужно; обычно это 3–4 минуты после включения питания.'),'AUTO-RESUME-PENDING',false);
   var command=typeof autoCommandOperation==='function'?autoCommandOperation(status,now):null;
-  // A start/stop seen in the last answer is not "in progress" once the router has been silent longer than the grace.
+  // Pending commands expire with the transport grace.
   var silent=!model.fresh&&Math.max(UI_RPC_LOST_SINCE===null?0:now-UI_RPC_LOST_SINCE,UI_DATA_LATE_SINCE===null?0:now-UI_DATA_LATE_SINCE)>AUTO_RPC_GRACE;
   if((command==='starting'||command==='stopping')&&!silent)return out('switching',command==='starting'?bi('Turning Auto on…','Включение Auto…'):bi('Turning Auto off…','Выключение Auto…'),bi('Waiting for the router to confirm the command.','Ждём подтверждения команды роутером.'));
   if(command==='unconfirmed')return out('unknown',bi('Auto command is not confirmed','Команда Auto не подтверждена'),bi('The router has not confirmed completion. Refreshing its state; Stop remains available.','Роутер не подтвердил завершение. Обновляем его состояние; Stop остаётся доступен.'),'AUTO-CONTROL-UNCONFIRMED');
   if(model.paused)return out('switching',bi('Auto paused for speed test','Auto на паузе для теста скорости'),bi('Background checks are paused. They resume before Auto; a manual Stop stays in force.','Фоновые проверки приостановлены. Они возобновятся перед Auto; ручной Stop сохраняет силу.'));
   var manual=typeof manualOperationModel==='function'?manualOperationModel(status,now):null,recovery=typeof uiRecoveryModel==='function'&&!(manual&&manual.busy&&!manual.uncertain)?uiRecoveryModel(status,now):null;
   if(recovery)return out('problem',recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed','Результат переключения не подтверждён'):bi('Recovery needed','Нужно восстановление'),uiRecoveryText(recovery),recovery.code);
-  var lostFor=Math.max(UI_RPC_LOST_SINCE===null?0:now-UI_RPC_LOST_SINCE,UI_DATA_LATE_SINCE===null?0:now-UI_DATA_LATE_SINCE),turnedOn=intent.requested==='on'&&['STARTING','RUNNING'].indexOf(intent.pair_phase)>=0||(status.rpc_error||status.error)&&UI_AUTO_LAST_ON!==null;
+  var lostFor=Math.max(UI_RPC_LOST_SINCE===null?0:now-UI_RPC_LOST_SINCE,UI_DATA_LATE_SINCE===null?0:now-UI_DATA_LATE_SINCE),turnedOn=confirmedOn;
   var onlyTransient=blockers.every(function(code){return AUTO_TRANSIENT.indexOf(code)>=0;});
+  if(!model.fresh&&state==='BLOCKED'&&!onlyTransient)return out('problem',autoStateText({key:'problem',enabled:confirmedOn}),autoBlockerText(blockers[0]),blockers[0]);
   if(!model.fresh&&turnedOn&&onlyTransient&&lostFor<=AUTO_RPC_GRACE){var late=out('unknown',status.rpc_error||status.error?bi('No answer, retrying','Нет ответа, повтор'):bi('Updating data','Обновление данных'),bi('Auto stays on. Fresh data from the router has not arrived yet; this is not an error. Red is shown only if the router stays silent for 90 s.','Auto остаётся включённым. Свежие данные роутера ещё не пришли; это не ошибка. Красный будет, только если роутер молчит дольше 90 с.'),null,true);late.stale=true;return late;}
-  // Auto the owner turned off stays dark while fresh data is only late; red needs 90 s of silence.
+  // Confirmed OFF stays dark during a short data delay.
   if(!model.fresh&&intent.requested==='off'&&intent.pair_phase==='STOPPED'&&onlyTransient&&lostFor<=AUTO_RPC_GRACE)return out('off',bi('Auto is off · updating data','Auto выключен · обновление данных'),bi('Auto was off in the last router answer. Fresh data has not arrived yet; red is shown only if the router stays silent for 90 s.','В последнем ответе роутера Auto был выключен. Свежие данные ещё не пришли; красный будет, только если роутер молчит дольше 90 с.'));
-  if(!model.fresh)return out('unknown',status.rpc_error||status.error?bi('No connection to the router program','Нет связи с программой роутера'):bi('Controller state is out of date','Состояние контроллера устарело'),status.rpc_error||status.error?bi('The page gets no answer from the router program.','Страница не получает ответ от программы роутера.'):bi('The router answers, but the Auto controller has not reported a current state. Check Monitoring service in Settings → System and diagnostics (Console: System tab) and make sure the monitor is running.','Роутер отвечает, но контроллер Auto не сообщил актуальное состояние. Проверьте «Служба мониторинга» в «Настройки → Система и диагностика» (в «Пульте» — вкладка «Система»): мониторинг должен работать.'));
+  if(!model.fresh)return out(silent?'problem':'unknown',status.rpc_error||status.error?bi('No connection to the router program','Нет связи с программой роутера'):bi('Controller state is out of date','Состояние контроллера устарело'),status.rpc_error||status.error?bi('The page gets no answer from the router program.','Страница не получает ответ от программы роутера.'):bi('The router answers, but the Auto controller has not reported a current state. Check Monitoring service in Settings → System and diagnostics (Console: System tab) and make sure the monitor is running.','Роутер отвечает, но контроллер Auto не сообщил актуальное состояние. Проверьте «Служба мониторинга» в «Настройки → Система и диагностика» (в «Пульте» — вкладка «Система»): мониторинг должен работать.'));
   if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
     var scopeHint='';
     if(model.awaiting)return out('switching',bi('Starting or stopping Auto','Запуск или остановка Auto'),scopeHint);
     if(model.transitioning&&typeof uiTransitionModel==='function'&&uiTransitionModel(status,now).state==='RECOVERING')return out('switching',bi('Recovery after an interrupted switch','Восстановление после прерванного переключения'),bi('The previous route is being restored; the channel is not verified yet.','Возвращается прежний маршрут; канал ещё не подтверждён.'),'TRANSACTION-IN-PROGRESS');
     if(manual&&manual.busy)return out(manual.uncertain?'unknown':'switching',manual.uncertain?bi('Manual request is not confirmed','Ручной запрос не подтверждён'):manual.direction==='resume'?bi('Resuming Auto','Возобновление Auto'):bi('Switching channel','Переключение канала'),manual.uncertain?bi('Waiting for the result from the router. Stop remains available.','Ждём результат от роутера. Stop остаётся доступен.'):bi('Waiting for the router to confirm the manual request.','Ждём подтверждения ручного запроса роутером.'),manual.uncertain?'MANUAL-REQUEST-UNCONFIRMED':null,sessionRuns&&!manual.uncertain&&manual.direction!=='resume');
     if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint,null,sessionRuns);
+    var route=channelPathSelection(status,now,ns.source,ns.target),active=(status.profiles||[]).filter(function(p){return p.id===route.selected;})[0],health=active&&profileHealth(active,now).state;
+    if((model.on||sessionRuns)&&route.selected&&(health==='failed'||health==='inactive'))return out('problem',bi('The selected VPN channel has failed','Выбранный VPN-канал не работает'),bi('Auto is watching the route, but the selected channel has failed its connection check.','Auto следит за маршрутом, но выбранный канал не прошёл проверку соединения.'),active&&active.code);
     if((model.on||sessionRuns)&&['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ROLLED-BACK'].indexOf(state)>=0){
-      var route=channelPathSelection(status,now,ns.source,ns.target);
       if(!route.selected)return out('unknown',bi('Route check','Проверка маршрута'),bi('The router is confirming its VPN rules again. Auto keeps working.','Роутер заново подтверждает действующие правила VPN. Auto продолжает работать.'),route.code||'KERNEL-POLICY-UNVERIFIED',true);
-      var active=(status.profiles||[]).filter(function(p){return p.id===route.selected;})[0],health=active&&profileHealth(active,now).state;
-      if(health==='failed'||health==='inactive')return out('problem',bi('The selected VPN channel has failed','Выбранный VPN-канал не работает'),bi('Auto is watching the route, but the selected channel has failed its connection check.','Auto следит за маршрутом, но выбранный канал не прошёл проверку соединения.'),active&&active.code);
       if(!active||health!=='healthy')return out('unknown',bi('Waiting for a current channel check','Ждём актуальную проверку канала'),bi('The selected route is verified, but current channel health has not been confirmed.','Выбранный маршрут проверен, но актуальная доступность канала не подтверждена.'),null,true);
-      // A manual choice is not a pause: Auto keeps watching the chosen channel and switches away if it fails.
+      // A recovered channel still needs controller confirmation.
       if(state==='DEGRADED-ON-RESERVE')return out('unknown',bi('Recovery is being confirmed','Восстановление подтверждается'),bi('The latest channel check passed after a controller failure. Waiting for Auto to confirm recovery.','Последняя проверка канала прошла после сбоя контроллера. Ждём подтверждения восстановления от Auto.'));
-      // Owner 01.11.2026: two tunnel icons under the light, primary then reserve: green works, red failed, the carrying one marked.
-      var T=[ns.source,ns.target].map(function(id){var p=(status.profiles||[]).filter(function(x){return x.id===id})[0];return [p&&profileHealth(p,now).state==='healthy',id===route.selected];});
       if(route.selected===ns.target)return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
       return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
     }
-    var failedCode=blockers[0]||(intent.failure&&intent.failure.code&&intent.requested!=='on'?intent.failure.code:null);
-    var transientNow=sessionRuns&&intent.pair_phase==='RUNNING'&&blockers.length&&blockers.every(function(code){return AUTO_TRANSIENT.indexOf(code)>=0;});
-    if(transientNow){if(UI_TRANSIENT_SINCE===null)UI_TRANSIENT_SINCE=now;}else UI_TRANSIENT_SINCE=null;
-    if(transientNow&&now-UI_TRANSIENT_SINCE<=AUTO_TRANSIENT_GRACE)
-      return out('unknown',bi('Updating data','Обновление данных'),autoBlockerText(blockers[0]),blockers[0],true);
-    if(model.off&&!failedCode){
+    var failedCode=blockers.filter(function(code){return AUTO_TRANSIENT.indexOf(code)<0;})[0]||ns.busy_seconds&&ns.reason||blockers[0]||(intent.failure&&intent.failure.code&&intent.requested!=='on'?intent.failure.code:null);
+    // A transient wait keeps confirmed Auto enabled, regardless of duration.
+    var waitingNow=sessionRuns&&blockers.length&&blockers.every(function(code){return AUTO_TRANSIENT.indexOf(code)>=0;});
+    if(!waitingNow)UI_TRANSIENT_SINCE=null;
+    if(waitingNow){if(UI_TRANSIENT_SINCE===null)UI_TRANSIENT_SINCE=now;var vendorWait=blockers.some(function(code){return code.indexOf('VENDOR-')===0;});
+      var waited=out('unknown',vendorWait?bi('Auto is on, waiting for the router','Auto включён, ждёт прошивку'):bi('Updating data','Обновление данных'),autoBlockerText(failedCode||blockers[0]),failedCode||blockers[0],true);
+      waited.stale=vendorWait||now-UI_TRANSIENT_SINCE>AUTO_TRANSIENT_GRACE;return waited;}
+    if(model.off&&!intent.failure&&(!failedCode||onlyTransient)){
       var s0=(inventory&&inventory.settings)||{},down=(status.profiles||[]).some(function(p){return (p.id===s0.plan_source||p.id===s0.plan_target)&&p.interface&&(p.administrative_state==='disabled'||p.code==='VPN-001');});
       return out('off',bi('Auto is off','Auto выключен'),down?bi('Auto brings the tunnels up — press Start.','Туннели поднимает Auto — нажмите Start.'):scopeHint,down?'TUNNEL-DISCONNECTED':null);
     }
+    if(!failedCode&&['BLOCKED','RELEASE-PENDING','STOPPED-ON-RESERVE','TRIAL-REQUIRED','DEGRADED-ON-RESERVE'].indexOf(state)<0)return out('unknown',autoStateText({key:'unknown',enabled:confirmedOn}),scopeHint);
     return out('problem',bi('Auto needs attention','Auto требует внимания'),failedCode?autoBlockerText(failedCode):scopeHint,failedCode);
   }
   if(ns.proof_scope==='router-hosted-ipv4')return out('problem',bi('Checked by the router itself','Проверку делает сам роутер'),bi('This trial checks IPv4 forwarding with a client inside the router. It does not certify traffic from a separate LAN computer.','Этот тест проверяет пересылку IPv4 клиентом внутри роутера. Трафик отдельного компьютера LAN им не подтверждён.'));
@@ -335,14 +346,9 @@ function autoLightModel(status,inventory,now){
   if(state==='STOPPED'&&ns.original_restored===true)return out('off',bi('Auto is off','Auto выключен'),bi('Control is back with the router; the original route is verified.','Управление вернулось роутеру; исходный маршрут проверен.'));
   return out('off',bi('Auto is off','Auto выключен'),bi('Monitoring continues; nothing is switched while Auto is off.','Мониторинг продолжается; пока Auto выключен, ничего не переключается.'));
 }
-// The card's lamp has two states only: green = automatic switching is working (watching, switching or holding the
-// reserve), red = it is not (off, blocked, needs attention or no fresh data). The detailed state stays in the text.
-function autoWorking(light){return !!light&&(light.key==='ok'||light.key==='reserve'||light.key==='switching'&&light.running===true);}
-// Three signals: green = working and confirmed, yellow = checking or switching (Auto still runs), red = a real failure or Auto not working.
-// Late data is yellow, never green (owner 01.11.2026: the light is never better than the monitoring lamp).
-function autoSignal(light){return !light?'red':light.key==='unknown'&&light.stale===true?'yellow':light.key==='ok'||light.key==='reserve'||light.key==='unknown'&&light.running===true?'green':light.hold?'yellow':light.key==='off'?'off':light.key==='switching'?'yellow':'red';}
-// The Auto session itself runs (green button) while the light is green or only checking (yellow).
-function autoRuns(light){var s=autoSignal(light);return autoWorking(light)||(s==='green'||s==='yellow')&&!!light&&(light.running===true||light.hold===true);}
+function autoWorking(light){return autoPresentation(light).working;}
+function autoSignal(light){return autoPresentation(light).lamp;}
+function autoRuns(light){return autoEnabled(light)&&autoSignal(light)!=='red';}
 function techCodeNodes(text){
   return String(text).split(' · ').reduce(function(nodes,part,index){
     if(index)nodes.push(' · ');
@@ -352,13 +358,13 @@ function techCodeNodes(text){
 function renderAutoLight(light,technicalCode,countdown){
   var working=autoWorking(light),signal=autoSignal(light);
   var lamps=['red','yellow','green'].map(function(color){return E('span',{'class':'hv-lamp hv-lamp-'+color+(signal===color?' hv-lamp-lit':''),'aria-hidden':'true'});});
-  var housing=E('div',{'class':'hv-light hv-light-two hv-light-three hv-light-'+(signal==='off'?'dark':working?'on':'off'),'data-signal':signal,'role':'img','aria-label':light.hold?light.title:signal==='off'?bi('Auto is off','Auto выключен'):autoRuns(light)?(signal==='yellow'?bi('Automatic switching works; checking','Автопереключение работает; идёт проверка'):bi('Automatic switching works','Автопереключение работает')):bi('Automatic switching does not work','Автопереключение не работает')},lamps);
+  var housing=E('div',{'class':'hv-light hv-light-two hv-light-three hv-light-'+(signal==='off'?'dark':working?'on':'off'),'data-signal':signal,'role':'img','aria-label':autoStateText(light)},lamps);
   var legend=E('ul',{'class':'hv-light-legend','aria-label':bi('What the lamps mean','Что означают лампы')},[
     E('li',{'class':signal==='yellow'?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-yellow','aria-hidden':'true'}),bi('Yellow: the router is checking the channels or switching. Auto keeps working; nothing is wrong yet.','Жёлтый: роутер проверяет каналы или переключает маршрут. Auto продолжает работать; сбоя нет.')]),
     E('li',{'class':signal==='green'?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
     E('li',{'class':signal==='red'?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),light.hold?manualHoldText():bi('Red: a real failure: the selected channel failed its check, the controller raised an alarm, or the router has not answered for 90 s. All lamps dark: you turned Auto off.','Красный: настоящий сбой: выбранный канал не прошёл проверку, служба сообщила об аварии или роутер не отвечает 90 с. Все лампы погашены: вы выключили Auto.')]),
     E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow is alive; the button shows whether switching is available, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — живой, доступность переключения показана на кнопке, серый — ждём ответа роутера, красный — ошибка.')])]);
-  return E('div',{'class':'hv-light-block'},[countdown?E('div',{'class':'hv-light-column'},[housing,countdown]):housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},light.title),E('p',autoHintLive(light.hint),light.hint),light.tunnels?E('div',{'class':'hv-ts'},light.tunnels.map(function(t,i){return E('span',{'class':'hv-tn'+(t[1]?' hv-tc':'')},[E('span',{'class':'hv-dot hv-dot-'+(t[0]?'green':'red')}),i?bi('Reserve','Резерв'):bi('Primary','Основной')]);})):null,E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')].concat(techCodeNodes(technicalCode)).concat([light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null]).filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
+  return E('div',{'class':'hv-light-block'},[countdown?E('div',{'class':'hv-light-column'},[housing,countdown]):housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},light.title),E('p',autoHintLive(light.hint),light.hint),light.tunnels?E('div',{'class':'hv-ts'},light.tunnels.map(function(t,i){return E('span',{'class':'hv-tn'+(t.carrier?' hv-tc':'')},[E('span',{'class':'hv-dot hv-dot-'+t.color}),i?bi('Reserve','Резерв'):bi('Primary','Основной')]);})):null,E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')].concat(techCodeNodes(technicalCode)).concat([light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null]).filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 
 // Reply of the Auto button: the code of the answer is shown as a link to its row in the error table, with its short meaning.
@@ -466,14 +472,14 @@ function renderAutoPowerControl(status,inventory){
     var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||operation==='unconfirmed'||!model.fresh;
     button.disabled=!!(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||inventory.error||!model.fresh||!monitorReady));
     if(button.classList&&button.classList.toggle){button.classList.toggle('hv-auto-stop-requested',operation==='stopping');
-      // The button shows "on" only when Auto is confirmed working and no command is still pending.
-      var confirmedOn=!operation&&autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));
-      var litOn=!operation&&autoRuns(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));
+      // The switch retains the last confirmed session while its health or Stop is being checked.
+      var litOn=autoEnabled(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));
       button.classList.toggle('hv-auto-lit-on',litOn);button.classList.toggle('hv-auto-lit-off',!litOn);}
     AUTO_COUNTDOWN_NODES=countdownNodes;
     if(operation==='starting'||operation==='stopping')autoCountdownBegin(operation==='starting'?'start':'stop');
     else if(AUTO_COUNTDOWN){var nowOn=autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));autoCountdownEnd(AUTO_COUNTDOWN.kind==='start'?nowOn&&model.fresh&&!model.awaiting:model.fresh&&model.off&&!model.awaiting&&!intent.failure&&(intent.pair_phase==='STOPPED'||!intent.pair_phase&&ns.original_restored===true));}
     button.setAttribute('data-auto-operation',operation||'idle');
+    button.setAttribute('aria-pressed',String(autoEnabled(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)))));
     var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unconfirmed'?bi('Command not confirmed · press to stop','Команда не подтверждена · нажмите для остановки'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
     button.setAttribute('aria-label',label);button.setAttribute('aria-busy',operation?'true':'false');
     var recovery=!operation&&!stop&&typeof uiRecoveryModel==='function'?uiRecoveryModel(status,typeof statusNow==='function'?statusNow(status):Date.now()/1000):null;
@@ -482,7 +488,7 @@ function renderAutoPowerControl(status,inventory){
     var timed=operation==='starting'||operation==='stopping';  // switch timers live in the manual card, never under the button
     if(timed&&typeof uiTimerNode==='function'&&actionLabel.appendChild){if(!operation)actionLabel.textContent+=' · ';actionLabel.appendChild(uiTimerNode(status,typeof statusNow==='function'?statusNow(status):Date.now()/1000));}
   }
-  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoRuns(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
+  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoEnabled(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':String(autoEnabled(light)),'disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
     currentControl();
     var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||operation==='unconfirmed'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
@@ -561,7 +567,7 @@ function renderAutoControl(status,inventory,refresh){
       ui.showModal(typeof UI_RECOVERY_CODES!=='undefined'&&UI_RECOVERY_CODES.indexOf(failureInfo)>=0?bi('Recovery needed','Нужно восстановление'):bi('Auto did not start','Auto не запустился'),[E('p',{},bi('Reason:','Причина:')),autoCodeNotice(failureInfo),E('div',{'class':'right'},E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Close','Закрыть')))]);
     }
   }
-  var automatic=E('section',{'class':'hv-chart-card hv-auto-control'},[header,E('div',{'class':'hv-auto-controls'},[E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoRuns(light)?'on':'off'),'role':'status'},autoRuns(light)?bi('Auto works','Auto работает'):autoSignal(light)==='off'?bi('Auto is off','Auto выключен'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode,typeof probeCountdown==='function'&&autoRuns(light)&&!status.rpc_error&&!status.error?probeCountdown(status):null)]),typeof renderMonitorBlock==='function'&&typeof monitorLightModel==='function'&&monitorLightModel(status,inventory,typeof statusNow==='function'?statusNow(status):Date.now()/1000,false).key!=='ok'?renderMonitorBlock(status,inventory):null].filter(Boolean)),typeof renderConnectivityCheck==='function'&&typeof refresh==='function'?E('div',{'class':'hv-auto-step-row'},[renderConnectivityCheck(status,refresh,inventory)]):null,holdReturn,checklist,pairMode?null:E('details',{'class':'hv-auto-scope','data-auto-explanation':'scope'},[E('summary',{},bi('About these checks','Об этих проверках')),E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. The router checks it itself.','Два выбранных VPN-канала. Проверку делает сам роутер.'):bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))])].filter(Boolean));
+  var automatic=E('section',{'class':'hv-chart-card hv-auto-control'},[header,E('div',{'class':'hv-auto-controls'},[E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+autoSignal(light),'role':'status'},autoStateText(light)),button,actionLabel]),renderAutoLight(light,technicalCode,typeof probeCountdown==='function'&&autoRuns(light)&&!status.rpc_error&&!status.error?probeCountdown(status):null)]),typeof renderMonitorBlock==='function'&&typeof monitorLightModel==='function'&&monitorLightModel(status,inventory,typeof statusNow==='function'?statusNow(status):Date.now()/1000,false).key!=='ok'?renderMonitorBlock(status,inventory):null].filter(Boolean)),typeof renderConnectivityCheck==='function'&&typeof refresh==='function'?E('div',{'class':'hv-auto-step-row'},[renderConnectivityCheck(status,refresh,inventory)]):null,holdReturn,checklist,pairMode?null:E('details',{'class':'hv-auto-scope','data-auto-explanation':'scope'},[E('summary',{},bi('About these checks','Об этих проверках')),E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. The router checks it itself.','Два выбранных VPN-канала. Проверку делает сам роутер.'):bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))])].filter(Boolean));
   // The colour legend opens across the whole card (lamp left, text right) instead of a narrow column.
   var lightHelp=automatic&&automatic.querySelector?automatic.querySelector('.hv-light-help'):null;
   if(lightHelp){lightHelp.classList.add('hv-light-help-wide');automatic.appendChild(lightHelp);}

@@ -178,6 +178,9 @@ function History:public()
     local week=canon.array();for i=math.max(1,#rows-M.PUBLIC_ROWS+1),#rows do week[#week+1]=rows[i] end
     result.rows_json=canon.encode(week)
   end
+  -- retained on flash versus carried in this reply (review F-54, as latency_history.py)
+  result.retained_rows_count=#rows
+  result.served_rows_count=#rows>1441 and math.min(#rows,M.PUBLIC_ROWS) or #rows
   return result
 end
 

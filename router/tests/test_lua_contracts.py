@@ -4,12 +4,14 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 LUA=shutil.which('lua5.1')
 LUAC=shutil.which('luac5.1')
 ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
+sys.path.insert(0,str(ROOT))
 
 
 @unittest.skipUnless(LUA and LUAC,'Lua 5.1 runtime absent; use homensai-vpn-python39:local')
@@ -17,6 +19,7 @@ class LuaContracts(unittest.TestCase):
     def run_setup(self,payload,failure='',testroot=None,pending=None,board=None):
         with tempfile.TemporaryDirectory() as directory:
             output=Path(directory)/'calls.json'
+            executed=Path(directory)/'executed.txt'
             delta=Path(directory)/'delta';delta.mkdir()
             if pending is not None:(delta/'homensai_vpn').write_bytes(pending)
             prelude='''
@@ -24,6 +27,8 @@ local json=require('cjson')
 local calls={}
 local output=OUTPUT
 local failure=FAILURE
+local executed=EXECUTED
+os.execute=function(command) local f=assert(io.open(executed,'a'));f:write(command..'\\n');f:close();return 0 end
 local function record(name,config,section,key,value)
   assert(config=='homensai_vpn','unexpected UCI config')
   calls[#calls+1]={name=name,config=config,section=section,key=key,value=value}
@@ -76,7 +81,7 @@ package.preload['uci']=function()
  end
  return {cursor=cursor}
 end
-'''.replace('OUTPUT',json.dumps(str(output))).replace('FAILURE',json.dumps(failure)).replace('DELTA',json.dumps(str(delta)))
+'''.replace('EXECUTED',json.dumps(str(executed))).replace('OUTPUT',json.dumps(str(output))).replace('FAILURE',json.dumps(failure)).replace('DELTA',json.dumps(str(delta)))
             environment=dict(os.environ)
             if board is not None:
                 prelude += "\nlocal original_open=io.open;io.open=function(path,mode) if path=='/tmp/sysinfo/board_name' then local f=io.tmpfile();f:write("+json.dumps(board)+");f:seek('set');return f end;return original_open(path,mode) end\n"
@@ -84,11 +89,28 @@ end
             result=subprocess.run([LUA,'-e',prelude,str(ROOT/'setup_save.lua')],
                                   input=payload,capture_output=True,env=environment,timeout=5)
             calls=json.loads(output.read_text()) if output.exists() else []
+            self.executed=executed.read_text().splitlines() if executed.exists() else []
             return result,calls
 
     def payload(self):
         return json.dumps(dict(main={'interval':'30'},servers=[dict(section='srv_new',
             profile='wireguard:peer_7',name='Имя пользователя',channel='Main',priority='2',enabled='1')])).encode()
+
+    def test_config_file_is_made_root_only_after_a_commit_and_never_otherwise(self):
+        telegram=json.dumps({'main':{'telegram_token':'123456789:'+'Ab3_'*9,'telegram_chat':'-1001'},'servers':[]}).encode()
+        result,calls=self.run_setup(telegram,pending=b'')
+        self.assertEqual(result.stdout,b'OK')
+        self.assertEqual(self.executed,['chmod 0600 /etc/config/homensai_vpn'])
+        self.assertNotIn(b'123456789',b' '.join(c.encode() for c in self.executed),'the token never reaches a command line')
+        result,calls=self.run_setup(self.payload(),pending=b'',testroot='/tmp/homensai-setup-test-abc_1')
+        self.assertEqual(self.executed,['chmod 0600 /tmp/homensai-setup-test-abc_1/config/homensai_vpn'])
+        for failure in ('set','save','commit','delete'):
+            payload=json.dumps({'main':{'interval':'30'},'servers':[],'delete':['telegram_token']}).encode()
+            result,calls=self.run_setup(payload,failure=failure,pending=b'')
+            self.assertNotEqual(result.returncode,0,failure)
+            self.assertEqual(self.executed,[],failure+': nothing is changed when the write fails')
+        result,calls=self.run_setup(self.payload(),pending=b"homensai_vpn.main.interval='99'\n")
+        self.assertEqual(self.executed,[],'a refused request touches nothing')
 
     def test_model_is_verified_before_any_uci_change(self):
         for board, selected, expected in (
@@ -103,6 +125,16 @@ end
             self.assertEqual(result.returncode==0, expected, (board,selected,result.stderr))
             if not expected:
                 self.assertFalse(any(call['name'] in ('set','save','commit') for call in calls))
+
+    def test_telegram_brief_saved_explicitly_and_mixed_selection_rejected(self):
+        for value in ('brief', 'none', 'servers,events'):
+            result,calls=self.run_setup(json.dumps({'main':{'telegram_items':value},'servers':[]}).encode())
+            self.assertEqual(result.stdout,b'OK')
+            self.assertIn(('set','telegram_items',value),[(c['name'],c.get('key'),c.get('value')) for c in calls])
+        for value in ('brief,servers', 'brief,brief', '', 'servers,', 'unknown'):
+            result,calls=self.run_setup(json.dumps({'main':{'telegram_items':value},'servers':[]}).encode())
+            self.assertNotEqual(result.returncode,0)
+            self.assertFalse(any(c['name'] in ('set','save','commit') for c in calls))
 
     def test_pending_delta_refuses_without_writes_or_revert(self):
         for pending in (b"homensai_vpn.main.interval='99'\n",b'\x00'):
@@ -138,6 +170,17 @@ end
         self.assertEqual(result.stdout,b'OK');self.assertEqual({c['key'] for c in calls if c['name']=='set'},{'fast_switch'})
         result,calls=self.run_setup(json.dumps({'main':{'fast_switch':False},'servers':[]}).encode(),pending=b'')
         self.assertNotEqual(result.returncode,0)
+
+    def test_every_recovery_field_the_payload_accepts_reaches_the_config(self):
+        # review 04.11.2026 (finding 7): recovery_settings.payload took the flap fields, this writer refused them (SETUP-SAVE-FAILED)
+        import recovery_settings as recovery
+        values=dict(recovery.DEFAULTS,interval=30,failure_model='hmm',flap_model='halflife',flap_limit=4,flap_window=30,
+                    flap_halflife=1200,flap_suppress=2000,flap_reuse=400)
+        data=recovery.payload(values)
+        self.assertTrue({'recovery_'+key for key in recovery.FLAP_FIELDS}<=set(data['main']))
+        result,calls=self.run_setup(json.dumps(data).encode(),pending=b'')
+        self.assertEqual(result.stdout,b'OK',result)
+        self.assertEqual({c['key'] for c in calls if c['name']=='set'},set(data['main']))
 
     def test_terms_keys_are_writable_and_arbitrary_keys_are_not(self):
         result,calls=self.run_setup(json.dumps({'main':{'terms_version':'1','terms_time':'1792000000'},'servers':[]}).encode(),pending=b'')

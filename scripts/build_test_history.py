@@ -8,6 +8,10 @@ Privacy: text from release notes is sanitized, and a final scan refuses to write
 page or results.json contains an IPv4/IPv6 address, a MAC address, a VPN server host name, an e-mail address other
 than info@homensai.com, an SSH key or fingerprint, or the words BEGIN, PRIVATE or token.
 
+Router measurements per version: the optional key "router_measurements" of results.json holds one object per version in
+its "versions" list (per-run times and BLOCKED flickers, numbers only). Statistics and Wilson intervals are computed here;
+adding a version is one appended object, then rebuild.
+
 Usage:
   python3 scripts/build_test_history.py            # write docs/TEST-HISTORY.html
   python3 scripts/build_test_history.py --check    # fail when the committed page is out of date
@@ -391,8 +395,174 @@ def validate_results(data):
             if not isinstance(m.get(f), str):
                 errs.append('features[%d].%s must be text' % (i, f))
     errs += validate_charts(data.get('charts'))
+    errs += validate_router(data.get('router_measurements'))
     if errs:
         raise ValueError('\n'.join(errs))
+
+
+# ---------------------------------------------------------------- router measurements (per version, own section)
+# Optional top-level key "router_measurements" in results.json. Adding a version is one object appended to its "versions"
+# list; every statistic, Wilson interval and column below is computed from the per-run numbers (nothing is typed twice).
+ROUTER_TIMES = ('detect_s', 'on_reserve_s', 'return_start_s', 'on_primary_s')
+ROUTER_COLS = (('detect_s', 'Обнаружение (APPLYING)', 'Detection (APPLYING)'),
+               ('on_reserve_s', 'На резерве (COMMITTED)', 'On reserve (COMMITTED)'),
+               ('return_start_s', 'Возврат начат (RESTORING)', 'Return started (RESTORING)'),
+               ('on_primary_s', 'На основном', 'Back on primary'),
+               ('return_delay_s', 'Возврат после снятия сбоя', 'Return after the fault was removed'))
+ROUTER_CRIT = (('detected', 'Обнаружен', 'Detected'), ('reserve', 'Ушёл на резерв', 'Reached the reserve'),
+               ('returned', 'Вернулся на основной', 'Returned to primary'), ('clean', 'Без мигания BLOCKED', 'No BLOCKED flicker'),
+               ('full', 'Всё вместе', 'All of it'))
+
+
+def _num_ok(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and x >= 0
+
+
+def validate_router(rm):
+    """Schema errors of the optional router_measurements block (a list of strings)."""
+    if rm is None:
+        return []
+    errs = []
+    if not isinstance(rm, dict) or not isinstance(rm.get('versions'), list):
+        return ['router_measurements.versions must be a list']
+    for f in ('intro_ru', 'intro_en'):
+        if not isinstance(rm.get(f), str):
+            errs.append('router_measurements.%s must be text' % f)
+    seen = set()
+    for i, v in enumerate(rm['versions']):
+        where = 'router_measurements.versions[%d]' % i
+        if not isinstance(v, dict):
+            errs.append(where + ' must be an object')
+            continue
+        for f in ('version', 'date', 'platform', 'role', 'scenario_ru', 'scenario_en', 'source', 'note'):
+            if not isinstance(v.get(f), str):
+                errs.append('%s.%s must be text' % (where, f))
+        if not VERSION_RX.fullmatch(str(v.get('version'))):
+            errs.append(where + '.version is not a version')
+        if v.get('version') in seen:
+            errs.append('%s: duplicate version %s' % (where, v.get('version')))
+        seen.add(v.get('version'))
+        if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(v.get('date'))):
+            errs.append(where + '.date must be YYYY-MM-DD')
+        for f in ('fault_s', 'observe_s'):
+            if not _num_ok(v.get(f)) or not v.get(f):
+                errs.append('%s.%s must be a positive number' % (where, f))
+        runs = v.get('runs')
+        if not isinstance(runs, list) or not runs:
+            errs.append(where + '.runs must be a non-empty list')
+            continue
+        for j, r in enumerate(runs):
+            rw = '%s.runs[%d]' % (where, j)
+            if not isinstance(r, dict):
+                errs.append(rw + ' must be an object')
+                continue
+            if not isinstance(r.get('run'), int) or isinstance(r.get('run'), bool):
+                errs.append(rw + '.run must be an integer')
+            for f in ROUTER_TIMES:
+                if r.get(f) is not None and not _num_ok(r.get(f)):
+                    errs.append('%s.%s must be a non-negative number or null' % (rw, f))
+            if not isinstance(r.get('blocked'), list):
+                errs.append(rw + '.blocked must be a list')
+            else:
+                for b in r['blocked']:
+                    if not isinstance(b, dict) or not _num_ok(b.get('at_s')) or not (b.get('for_s') is None or _num_ok(b.get('for_s'))):
+                        errs.append(rw + '.blocked entries need at_s and for_s (number or null)')
+            if not isinstance(r.get('note', ''), str):
+                errs.append(rw + '.note must be text')
+    return errs
+
+
+def router_stats(v):
+    """Derived numbers of one version block: per-run return delay, column statistics, success counts."""
+    runs = []
+    for r in v['runs']:
+        r = dict(r)
+        r['return_delay_s'] = None if r.get('return_start_s') is None else round(r['return_start_s'] - v['fault_s'], 3)
+        runs.append(r)
+    cols = {}
+    for key, _, _ in ROUTER_COLS:
+        vals = sorted(r[key] for r in runs if r.get(key) is not None)
+        if vals:
+            mid = len(vals) // 2
+            med = vals[mid] if len(vals) % 2 else (vals[mid - 1] + vals[mid]) / 2
+            cols[key] = {'n': len(vals), 'min': vals[0], 'median': med, 'max': vals[-1]}
+    crit = {
+        'detected': sum(1 for r in runs if r.get('detect_s') is not None),
+        'reserve': sum(1 for r in runs if r.get('on_reserve_s') is not None),
+        'returned': sum(1 for r in runs if r.get('on_primary_s') is not None),
+        'clean': sum(1 for r in runs if not r['blocked']),
+        'full': sum(1 for r in runs if r.get('detect_s') is not None and r.get('on_reserve_s') is not None
+                    and r.get('on_primary_s') is not None and not r['blocked']),
+    }
+    return runs, cols, crit, sum(len(r['blocked']) for r in runs)
+
+
+def _t(x):
+    return '—' if x is None else fmt_num(x)
+
+
+def render_router(rm):
+    """HTML of the 'router measurements per version' section; '' when the data block is absent."""
+    if not rm or not rm.get('versions'):
+        return ''
+    vers = sorted(rm['versions'], key=lambda v: vkey(v['version']))
+    o = []
+    w = o.append
+    w('<section id="router"><h2>Замеры на роутере по версиям / Router measurements per version</h2>')
+    w('<p class="muted">%s<br>%s</p>' % (E(sanitize(rm['intro_ru'])), E(sanitize(rm['intro_en']))))
+    w('<p class="muted">Времена в секундах от начала обрыва туннеля. Доли — k из n и 95 %% интервал Вильсона (нижняя граница '
+      'вниз, верхняя вверх до 0,1 %%). При n &lt; %d P95 не показывается: только min / медиана / max, у max подпись «(≥k %%)». / '
+      'Times are seconds from the start of the tunnel cut. Proportions are k of n with the 95 %% Wilson interval (lower bound '
+      'rounded down, upper bound up, to 0.1 %%). Below n = %d no P95 is shown: only min / median / max, the max carries "(≥k %%)".</p>' % (
+          hs.MIN_N, hs.MIN_N))
+    # comparison: one row per version
+    w('<div class="tbl"><table><thead><tr><th>Версия / Version</th><th>Дата / Date</th><th>Роль / Role</th><th>n</th>')
+    for key, ru, en in ROUTER_COLS:
+        w('<th>%s / %s, s<br><span class="muted">min – медиана / median – max</span></th>' % (E(ru), E(en)))
+    for key, ru, en in ROUTER_CRIT:
+        w('<th>%s / %s</th>' % (E(ru), E(en)))
+    w('<th>BLOCKED</th></tr></thead><tbody>')
+    detail = []
+    for v in vers:
+        runs, cols, crit, nblk = router_stats(v)
+        n = len(runs)
+        w('<tr><td><span class="ver">%s</span></td><td>%s</td><td>%s</td><td class="num">%d</td>' % (
+            E(v['version']), E(v['date']), E(sanitize(v['role'])), n))
+        for key, _, _ in ROUTER_COLS:
+            c = cols.get(key)
+            w('<td class="num">%s</td>' % ('—' if not c else '%s – %s – %s' % (_t(c['min']), _t(c['median']), _t(c['max']))))
+        for key, _, _ in ROUTER_CRIT:
+            w('<td class="num" title="%s">%d/%d%s</td>' % (E(wilson_title(crit[key], n)), crit[key], n, E(wilson_short(crit[key], n))))
+        w('<td class="num">%d</td></tr>' % nblk)
+        detail.append((v, runs, cols, crit, nblk))
+    w('</tbody></table></div>')
+    for v, runs, cols, crit, nblk in detail:
+        w('<details class="router-item"><summary><span class="ver">%s</span> <span class="date">%s · %s</span> %s</summary>' % (
+            E(v['version']), E(v['date']), E(v['platform']), E(sanitize(v['scenario_ru'] + ' / ' + v['scenario_en']))))
+        w('<p class="muted">Обрыв / Cut: %s s; наблюдение / observation: %s s. %s</p>' % (
+            E(fmt_num(v['fault_s'])), E(fmt_num(v['observe_s'])), E(sanitize(v['note']))))
+        w('<div class="tbl"><table><thead><tr><th>№</th>')
+        for key, ru, en in ROUTER_COLS:
+            w('<th>%s / %s, s</th>' % (E(ru), E(en)))
+        w('<th>BLOCKED</th><th>Примечание / Note</th></tr></thead><tbody>')
+        for r in runs:
+            blk = ', '.join('%s s (%s s)' % (_t(b['at_s']), _t(b.get('for_s'))) for b in r['blocked']) or 'нет / none'
+            w('<tr><td class="num">%d</td>' % r['run'])
+            for key, _, _ in ROUTER_COLS:
+                w('<td class="num">%s</td>' % _t(r.get(key)))
+            w('<td>%s</td><td>%s</td></tr>' % (E(blk), E(sanitize(r.get('note', '')))))
+        w('<tr><th>n / min / медиана / median / max</th>')
+        for key, _, _ in ROUTER_COLS:
+            c = cols.get(key)
+            if not c:
+                w('<td class="num">—</td>')
+                continue
+            tail = ' (≥%d %%)' % hs.coverage_percent(c['n']) if c['n'] < hs.MIN_N else ''
+            w('<td class="num">%d / %s / %s / %s%s</td>' % (c['n'], _t(c['min']), _t(c['median']), _t(c['max']), E(tail)))
+        w('<td class="num">%d</td><td></td></tr>' % nblk)
+        w('</tbody></table></div><p class="muted">Источник / Source: %s</p></details>' % E(sanitize(v['source'])))
+    w('</section>')
+    return '\n'.join(o)
 
 
 def fmt_num(x):
@@ -408,8 +578,10 @@ def fmt_metric(m):
     if 'median' in m and m.get('n') == 1:
         return fmt_num(m['median'])
     if 'median' in m and 'n' in m:
-        s = '%s / %s / %s / %s' % (m['n'], fmt_num(m['median']), fmt_num(m.get('p95', m['median'])), fmt_num(m.get('max', m['median'])))
-        return s
+        # A missing P95 or maximum stays unknown (—), never the median: as in fmt_metric_html (review R3-04).
+        def known(value):
+            return '—' if value is None else fmt_num(value)
+        return '%s / %s / %s / %s' % (m['n'], fmt_num(m['median']), known(m.get('p95')), known(m.get('max')))
     parts = []
     if 'min' in m and 'max' in m:
         parts.append('%s–%s' % (fmt_num(m['min']), fmt_num(m['max'])))
@@ -426,6 +598,11 @@ def _p95_title(n, p95, mx):
     if mx is None:
         return head
     return head + ' \u2014 ' + hs.format_max_claim(mx, n, 'ru') + ' / ' + hs.format_max_claim(mx, n, 'en')
+
+
+def _upper_title(n, mx):
+    """Tooltip of a P95 from n >= 59 samples: still an estimate; the separately computed upper bound follows (review F-59)."""
+    return ('P95 — оценка; ' + hs.format_upper(n, mx, 'ru') + ' / P95 — an estimate; ' + hs.format_upper(n, mx, 'en'))
 
 
 def is_honest_p95(n):
@@ -450,13 +627,23 @@ def p95_counts(data):
 
 
 def fmt_metric_html(m):
-    """fmt_metric as escaped HTML; a P95 from fewer than 59 samples is muted, prefixed with \u2248 and carries a tooltip."""
+    """fmt_metric as escaped HTML; a P95 from fewer than 59 samples is muted, prefixed with ≈ and carries a tooltip.
+
+    A missing maximum stays unknown (review R3-04): it is never replaced by the median, which could claim an upper bound
+    below the P95; the cell shows — and the tooltip names no numeric bound."""
+    def shown(value):
+        return '—' if value is None else E(fmt_num(value))
     if 'value' not in m and 'median' in m and 'n' in m and m.get('n') != 1 and m.get('p95') is not None and not is_honest_p95(m['n']):
         n = m['n']
-        mx = m.get('max', m['median'])
-        return '%d / %s / <span class="p95w" title="%s">\u2248%s</span> / %s <span class="p95w" title="%s">(\u2265%d %%)</span>' % (
-            n, E(fmt_num(m['median'])), E(_p95_title(n, m['p95'], mx)), E(fmt_num(m['p95'])), E(fmt_num(mx)),
-            E(hs.format_max_claim(mx, n, 'ru') + ' / ' + hs.format_max_claim(mx, n, 'en')), hs.coverage_percent(n))
+        mx = m.get('max')
+        claim = ('' if mx is None else ' <span class="p95w" title="%s">(≥%d %%)</span>' % (
+            E(hs.format_max_claim(mx, n, 'ru') + ' / ' + hs.format_max_claim(mx, n, 'en')), hs.coverage_percent(n)))
+        return '%d / %s / <span class="p95w" title="%s">≈%s</span> / %s%s' % (
+            n, E(fmt_num(m['median'])), E(_p95_title(n, m['p95'], mx)), E(fmt_num(m['p95'])), shown(mx), claim)
+    if 'value' not in m and 'median' in m and isinstance(m.get('n'), int) and m.get('p95') is not None and is_honest_p95(m['n']):
+        mx = m.get('max')
+        return '%d / %s / <span title="%s">%s</span> / %s' % (
+            m['n'], E(fmt_num(m['median'])), E(_upper_title(m['n'], mx)), E(fmt_num(m['p95'])), shown(mx))
     return E(fmt_metric(m))
 
 
@@ -540,6 +727,20 @@ bind('rq','rf','#results .run-item');
 """
 
 
+def wilson_title(k, n):
+    """Tooltip with the 95 % Wilson interval of the success proportion k of n (ru / en); empty when n = 0 or k > n."""
+    if not hs.wilson_interval(k, n):
+        return ''
+    return 'Доля успеха %d из %d: 95 %% интервал Вильсона %s / Success %d of %d: 95 %% Wilson interval %s' % (
+        k, n, hs.format_wilson(k, n, 'ru'), k, n, hs.format_wilson(k, n, 'en'))
+
+
+def wilson_short(k, n):
+    """' · 43.8–100 %' appended to a '(k/n)' label; empty when undefined."""
+    t = hs.format_wilson(k, n, 'en')
+    return ' · ' + t if t else ''
+
+
 def badge(r):
     if r.get('pass') is True:
         return '<span class="b ok">PASS</span>'
@@ -580,6 +781,7 @@ def render(versions, app_version, data):
     w('<div class="attr"><span>Лицензия / License: %s</span><span>Contact: %s</span></div>' % (E(LICENSE_LINE), E(CONTACT)))
     w('<nav><a href="#overview">Обзор / Overview</a><a href="#features">Новые функции / Features</a>'
       '<a href="#charts">Графики / Charts</a><a href="#versions">Версии / Versions</a><a href="#results">Результаты / Results</a>'
+      + ('<a href="#router">Роутер по версиям / Router per version</a>' if data.get('router_measurements') else '') +
       '<a href="#matrix">Матрица / Test matrix</a><a href="#issues">Открытые вопросы / Open issues</a>'
       '<a href="#method">Методика / Method</a></nav></header><main>')
 
@@ -596,25 +798,37 @@ def render(versions, app_version, data):
       'dedicated GL.iNet GL-MT3000 test router unless marked otherwise (virtual OpenWrt and Docker runs are marked). Failed results '
       'are kept.</p>')
     total95, weak95 = p95_counts(data)
-    w('<p class="method"><b>Методика P95 (правило 59 замеров).</b> P95 из n замеров надёжен как верхняя граница с 95 %% уверенностью '
-      'только при n ≥ %d (0,95^%d = 0,0485 < 0,05). В этой истории %d из %d значений P95 посчитаны по n < %d: они показаны '
-      'приглушённо как ≈P95 (подсказка при наведении), на графиках усы пунктирные. Честное утверждение для малой выборки: '
-      'с 95 %% уверенностью не менее k %% = 100·0,05^(1/n) %% случаев не медленнее наблюдаемого max (подпись «(≥k %%)»). '
-      '<br><b>P95 method (the 59-sample rule).</b> A P95 from n samples is a 95 %%-confidence upper bound only when n ≥ %d '
-      '(0.95^%d = 0.0485 &lt; 0.05). In this history %d of %d P95 values come from n &lt; %d: they are shown muted as ≈P95 '
-      '(tooltip on hover) and drawn with dashed whiskers on charts. The honest claim for a small sample: with 95 %% confidence at '
-      'least k %% = 100·0.05^(1/n) %% of cases are no slower than the observed max (label "(≥k %%)"). Distribution-free, '
-      'order statistics of the binomial; see scripts/honest_stats.py.</p>' % (
-          hs.MIN_N, hs.MIN_N, weak95, total95, hs.MIN_N, hs.MIN_N, hs.MIN_N, weak95, total95, hs.MIN_N))
+    # Review F-59: the displayed P95 is the empirical X(ceil(0.95 n)), an estimate at every n. The 95 % upper confidence
+    # bound is a different order statistic (honest_stats.upper_rank); it exists only from n = 59, where it is the maximum.
+    w('<p class="method"><b>Методика P95 (правило 59 замеров).</b> Показанный P95 — эмпирическая оценка: 95-й процентиль самой '
+      'выборки X(⌈0,95·n⌉), а не гарантия при любом n. Верхняя граница настоящего P95 с 95 %% уверенностью считается отдельно '
+      '(другая порядковая статистика X(s)) и существует только при n ≥ %d (0,95^%d = 0,0485 < 0,05); при n = %d это максимум, '
+      'а не показанный P95 (тот при n = %d имеет лишь ≈57 %% уверенности). Она указана в подсказке. В этой истории %d из %d '
+      'значений P95 посчитаны по n < %d: они показаны приглушённо как ≈P95 (подсказка при наведении), на графиках усы '
+      'пунктирные. Честное утверждение для малой выборки: с 95 %% уверенностью не менее k %% = 100·0,05^(1/n) %% случаев не '
+      'медленнее наблюдаемого max (подпись «(≥k %%)»). '
+      '<br><b>P95 method (the 59-sample rule).</b> The P95 shown is an empirical estimate: the sample\'s own 95th percentile '
+      'X(⌈0.95·n⌉), not a guarantee at any n. The 95 %%-confidence upper bound of the true P95 is computed separately (a different '
+      'order statistic X(s)) and exists only when n ≥ %d (0.95^%d = 0.0485 &lt; 0.05); at n = %d it is the maximum, not the '
+      'P95 shown (which has only ≈57 %% confidence at n = %d). It is given in the tooltip. In this history %d of %d P95 values '
+      'come from n &lt; %d: they are shown muted as ≈P95 (tooltip on hover) and drawn with dashed whiskers on charts. The honest '
+      'claim for a small sample: with 95 %% confidence at least k %% = 100·0.05^(1/n) %% of cases are no slower than the observed '
+      'max (label "(≥k %%)"). Distribution-free, order statistics of the binomial; see scripts/honest_stats.py.'
+      '<br><b>Доли успеха.</b> «k/n» рядом с прогоном и в столбце OK — число успешных из всех; в подсказке и после доли '
+      '— 95 %% интервал Вильсона (формула в scripts/honest_stats.py): 3 из 3 доказывают лишь нижнюю границу 43,8 %%, не 100 %%; нижняя граница округлена вниз, верхняя вверх. '
+      '<br><b>Success proportions.</b> "k/n" next to a run and in the OK column is successes out of all; the 95 %% Wilson score '
+      'interval follows it (tooltip and label, formula in scripts/honest_stats.py): 3 of 3 prove only a lower bound of 43.8 %%, not 100 %%; the lower bound is rounded down, the upper bound up.</p>' % (
+          hs.MIN_N, hs.MIN_N, hs.MIN_N, hs.MIN_N, weak95, total95, hs.MIN_N,
+          hs.MIN_N, hs.MIN_N, hs.MIN_N, hs.MIN_N, weak95, total95, hs.MIN_N))
     w('</section>')
 
     # charts
     w('<section id="charts"><h2>Как ускорялось переключение / How switching got faster</h2>')
     w('<p class="muted">Только измеренные значения: пропуск \u2014 в этой версии такой замер не делался. Маркер \u2014 медиана '
-      '(или среднее, или один прогон), усы \u2014 P95 или min\u2013max (пунктир \u2014 P95 из n < 59, это оценка, не граница). Наведите или сфокусируйте точку, чтобы увидеть '
+      '(или среднее, или один прогон), усы \u2014 P95 (эмпирическая оценка, не граница) или min\u2013max (пунктир \u2014 P95 из n < 59, мало данных). Наведите или сфокусируйте точку, чтобы увидеть '
       'число и источник. Полый маркер \u2014 стенд или виртуальная машина, сплошной \u2014 роутер GL-MT3000. / Measured values '
-      'only: a gap means the version was not measured that way. Marker = median (or mean, or one run), whisker = P95 or '
-      'min\u2013max (dashed = P95 from n < 59, an estimate, not a bound). Hover or focus a point for the number and source. Hollow marker = lab/virtual, filled = GL-MT3000 router.</p>')
+      'only: a gap means the version was not measured that way. Marker = median (or mean, or one run), whisker = P95 (an empirical estimate, not a bound) or '
+      'min\u2013max (dashed = P95 from n < 59, too few samples). Hover or focus a point for the number and source. Hollow marker = lab/virtual, filled = GL-MT3000 router.</p>')
     for c in data['charts']:
         w('<figure class="chart"><div class="chart-scroll">%s</div>%s</figure>' % (chart_svg(c), chart_table(c)))
     w('</section>')
@@ -667,9 +881,9 @@ def render(versions, app_version, data):
         bad = [r for r in rs if r['pass'] is False]
         status = '<span class="b bad">FAIL %d</span>' % len(bad) if bad else ('<span class="b ok">PASS</span>' if any(r['pass'] for r in rs) else '<span class="b na">INFO</span>')
         w('<details class="run-item" data-group="%s"><summary>%s <span class="ver">%s</span> <span class="date">%s · %s</span> '
-          '%s <span class="muted">(%d/%d)</span></summary>' % (
+          '%s <span class="muted" title="%s">(%d/%d%s)</span></summary>' % (
               E(' '.join(sorted({r['kind'] for r in rs}))), status, E(r0['version']), E(r0['date']), E(r0['platform']),
-              E(sanitize(r0['run_label'])), ok, n))
+              E(sanitize(r0['run_label'])), E(wilson_title(ok, n)), ok, n, wilson_short(ok, n)))
         mnames = sorted({k for r in rs for k in r['metrics']},
                         key=lambda k: (METRIC_ORDER.index(k) if k in METRIC_ORDER else len(METRIC_ORDER), k))
         w('<div class="tbl"><table><thead><tr><th>Сценарий / Scenario</th><th>n</th><th>OK</th><th>Итог</th>')
@@ -679,13 +893,19 @@ def render(versions, app_version, data):
             w('<th title="%s">%s / %s%s</th>' % (E(k), E(lab[0]), E(lab[1]), (', ' + E(u)) if u else ''))
         w('<th>Утечки / Leaks</th><th>Примечание / Note</th></tr></thead><tbody>')
         for r in rs:
-            w('<tr><td>%s</td><td class="num">%d</td><td class="num">%d</td><td>%s</td>' % (E(sanitize(r['scenario'])), r['n'], r['passed'], badge(r)))
+            w('<tr><td>%s</td><td class="num">%d</td><td class="num" title="%s">%d</td><td>%s</td>' % (
+                E(sanitize(r['scenario'])), r['n'], E(wilson_title(r['passed'], r['n'])), r['passed'], badge(r)))
             for k in mnames:
                 w('<td class="num">%s</td>' % (fmt_metric_html(r['metrics'][k]) if k in r['metrics'] else '—'))
             w('<td class="num">%s</td><td>%s<br><span class="muted">%s</span></td></tr>' % (
                 '—' if r['leaks'] is None else r['leaks'], E(sanitize(r['note'])), E(sanitize(r['source']))))
         w('</tbody></table></div></details>')
     w('</section>')
+
+    # router measurements per version (optional block)
+    router_html = render_router(data.get('router_measurements'))
+    if router_html:
+        w(router_html)
 
     # matrix
     w('<section id="matrix"><h2>Матрица испытаний: фазы 0–9 / Test matrix: phases 0–9</h2>')
@@ -805,7 +1025,7 @@ def _point_text(p, label, unit):
         main = '%s %s (%s)' % (_fmt_s(p['value']), unit, {'single': 'one run', 'approx': 'approximate'}.get(p['stat'], p['stat']))
         extra = []
         if p.get('p95') is not None:
-            extra.append(('P95 %s' % _fmt_s(p['p95'])) if is_honest_p95(p['n']) else
+            extra.append(('P95 %s (estimate; %s)' % (_fmt_s(p['p95']), hs.format_upper(p['n'], p.get('max'), 'en'))) if is_honest_p95(p['n']) else
                          'P95\u2248%s (n=%d, too few: needs \u2265%d; with 95 %% confidence \u2265 %d %% of cases are no slower than the max)' % (
                              _fmt_s(p['p95']), p['n'], hs.MIN_N, hs.coverage_percent(p['n'])))
         if p.get('min') is not None and p.get('max') is not None:
@@ -968,7 +1188,7 @@ def chart_table(c):
         rng = []
         weak = p.get('p95') is not None and not is_honest_p95(p['n'])
         if p.get('p95') is not None and not weak:
-            rng.append(E('P95 ' + _fmt_s(p['p95'])))
+            rng.append('<span title="%s">P95 %s</span>' % (E(_upper_title(p['n'], p.get('max'))), E(_fmt_s(p['p95']))))
         elif weak:
             rng.append('<span class="p95w" title="%s">P95\u2248%s</span>' % (
                 E(_p95_title(p['n'], p['p95'], p.get('max', p['p95']))), E(_fmt_s(p['p95']))))

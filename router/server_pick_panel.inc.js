@@ -5,6 +5,8 @@
 function serverPickPanel(ctx){
   var E=ctx.E,bi=ctx.bi,status=ctx.status||{},settings=(ctx.inventory||{}).settings||{},pick=status.server_pick,busy=false;
   var now=Number.isFinite(status.server_time)?status.server_time:Number.isFinite(status.time)?status.time:Date.now()/1000;
+  /* Profile/server names come from the GL inventory and server lists: always pass them as array children (text), never
+     as a single scalar child, which LuCI would put into innerHTML (BH3-01; the page's E wrapper also enforces it). */
   function name(c){return c&&(c.location?c.location+' ('+c.profile+')':c.profile)||'—';}
   function age(t){var s=Math.max(0,Math.round(now-t));return s<90?bi(s+' s ago',s+' с назад'):s<5400?bi(Math.round(s/60)+' min ago',Math.round(s/60)+' мин назад'):bi(Math.round(s/3600)+' h ago',Math.round(s/3600)+' ч назад');}
   function channel(t){
@@ -34,7 +36,7 @@ function serverPickPanel(ctx){
     var change=t.last_change,changed=change&&Number.isFinite(change.time)?E('p',{'class':'hv-step-note'},[bi('Last change: ','Последняя смена: '),
       (change.from_location||change.from||'?')+' → '+(change.to_location||change.to||'?')+', '+(Number.isFinite(change.from_ms)?change.from_ms:'?')+' → '+(Number.isFinite(change.to_ms)?change.to_ms:'?')+' '+bi('ms','мс')+', ',age(change.time)]):null;
     parts.push(E('section',{'class':'hv-server-pick-channel','data-interface':t.interface||''},[
-      E('h4',{},channel(t)),E('p',{},[bi('Current server: ','Текущий сервер: '),E('strong',{},current?name(current):(t.current||'—'))]),list,changed,
+      E('h4',{},[channel(t)]),E('p',{},[bi('Current server: ','Текущий сервер: '),E('strong',{},[current?name(current):(t.current||'—')])]),list,changed,
       t.code?E('p',{'class':'hv-step-note'},[ctx.errorCodeLink?ctx.errorCodeLink(t.code):t.code]):null].filter(Boolean)));
   });
   return E('div',{'class':'hv-server-pick'},parts);

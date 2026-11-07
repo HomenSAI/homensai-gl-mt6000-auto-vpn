@@ -14,6 +14,30 @@ is marked "fix2" with the code it abstracts in the fix branch (lua/pair.lua, lua
 lua/control_request.lua; Python twins pair_auto.py, native_switch.py, auto_control.py).
 K11 (04.11.2026): pair.cleanup re-reads the record under the control lock before its STOPPING write; a record the
 owner's Start hand-over finished meanwhile ends the pass without a write (switch 'K11', transition 'CL0 superseded').
+K12 (04.11.2026, finding 7): the vendor rebuilds the carrying reserve (switch 'K12', option --rebuild, liveness 'return').
+Trace conformance (tools/formal/trace_check.py, 04.11.2026; marked G1-G7): the rules the conformance run showed the
+abstraction did not have: no tunnel -> full block (G1), variant C kept clients (G2), the boot window of the hand-over (G3),
+abandon writes the stop latch (G4), a session without owned clients (G5), the order of the checks in a pass (G6), the
+details of a failed rollback (G7). The conditions the model cannot see (which clients are up, HANDOVER_WAIT, one attempt per
+boot, KEEP_SECONDS) are free choices: the model allows both outcomes, which is a stronger claim for its properties and a
+weaker one for conformance.
+
+Fast end (feat/fast-switch-20261104, docs/architecture/FAST-SWITCH-2026-11-04.ru.md), option --fast-switch: what the base model
+cannot say. The decision may now come from evidence that does not prove the primary dead (2 failed samples in a row, the
+expert heartbeat verdict: a live primary can be left), and the live recheck runs beside the preparation, so its answer can be
+older than the commit (a primary that recovers after it is not seen): TICK may start the forward switch with pUp, and FWD0 may
+pass with pUp. L1 (the wake) only moves ticks in time, which the interleaving already covers; every guard stays in the code.
+Off by default; the TLA+ re-statement has it as the constant FastSwitch.
+
+Server keys (review 04.11.2026, findings 1 and 2), option --key-pin (option server_key_pin 'enforce'; off by default; the TLA+
+re-statement has it as the constant KeyPin): a key of the primary or the reserve changes and waits
+for the owner. 'directional' is the code: a Start with an unaccepted key on the channel that carries the traffic after it (the
+live order: the reserve of a boot handover, else the primary) is refused before the session, the guard and the clients (pair.begin,
+owner 05.11.2026), a key seen there while begin runs waits at the first proof, a key on the other channel changes nothing, a
+working pair refuses only a move onto the channel with the unaccepted key, a rollback and a Stop do not depend on keys. 'blocker' is the code before the fix, for
+the record: SERVER-KEY-UNACCEPTED was a diagnostic blocker, which ended every pass of the pair and failed the proof of a rollback
+(the liveness checks failover, return and stop-wins fail with it). New properties: MOVE-ONTO-UNACCEPTED-KEY,
+BEGIN-WITH-UNACCEPTED-KEY.
 
 Run:  py -3 model.py                     # both variants (alpha6 Start, fixed Start), base model
       py -3 model.py --variant fix --faults --server
@@ -45,7 +69,7 @@ class S(NamedTuple):
     intent: str = 'off'      # RAM pair-auto-control.json mode ('on' always carries the current revision)
     fresh: bool = False      # intent id != session id: begin() pending (pair.lua:1177)
     marker: bool = False     # PERSIST auto-resume.json: the owner's own Start, newer than any Stop (boot_resume)
-    stopped: bool = False    # ghost: an owner Stop happened and no Start since
+    stopped: bool = False    # ghost: a stop latch (owner Stop, abandon) is newer than the last Start
     sess: str = 'NONE'       # PERSIST pair-auto-state.json phase
     code: str = '-'          # HELD recovery_error: '-' | 'READOPT' (pair.lua:27) | 'OTHER'
     ran: bool = False        # state.ran
@@ -71,13 +95,30 @@ class S(NamedTuple):
     boot: bool = False       # a power cut happened since the journal's transaction started
     resume: bool = False     # monitor's boot/restart resume window open (boot_resume.py)
     sc: tuple = ('-', '', False)   # server change record (phase, tunnel P/R, verified)
+    rgen: bool = False       # the vendor rebuilt the carrying reserve: the journal's vendor proof is stale (K12, finding 7)
+    kept: bool = False       # STOPPED with the clients kept for the boot resume's Start (variant C, pair.boot_keep; G2)
+    young: bool = False      # --window: uptime below BOOT_KEEP_UPTIME (900 s; pair.resume_pending; G3)
+    kp: bool = False         # --key-pin: the primary's server key changed and waits for the owner (server_pin 'changed')
+    kr: bool = False         # --key-pin: the same for the reserve
+    kv: bool = False         # --key-pin: the session has proved its route (state.selected_policy): a Start is over
 
 
 INIT = S()
 
+
+def boot_window(s, cfg):
+    """pair.resume_pending: inside the uptime window (--window: it doubles the state space; else a power cut during the
+    journal stands for it) or a forward-resumed transaction, with the owner's marker and no newer stop latch."""
+    return s.marker and not s.stopped and (s.fres or (s.young if cfg.window else s.boot))
+
 # Individually switchable fixes of the formal-fixes branch; variant fix2 = all of them. K1T = K1 tail (early hand-over
 # for the owner's marker after a reboot). See tools/formal/README.md for how CI uses them.
-ALL_FIXES = frozenset({'K1T', 'K2', 'K3', 'K4', 'K5', 'K9', 'K11'})
+# F32 (b851db74, owner decision 07.11.2026): a RUNNING session adopts an outside change by itself only when readopt_class
+# proves it touches nothing but wireless/dhcp/gl-dns-v2 or the network outside the pair; the pair's route_policy (and its
+# order), the VPN profiles, the firewall, any other package or an unreadable class are HELD (PAIR-OUTSIDE-CHANGE-HELD) until
+# the owner's Start or Stop. T4A (c31d7332): the owner's Stop ends such a hold STOPPED (end_hold_on_stop: release_session
+# adopted_by='owner-stop', owned=[], the guard released, no readopt budget spent); a Start while Auto is on keeps it HELD.
+ALL_FIXES = frozenset({'K1T', 'K2', 'K3', 'K4', 'K5', 'K9', 'K11', 'K12', 'F32', 'T4A'})
 
 
 def fence(s):
@@ -87,6 +128,16 @@ def fence(s):
 
 def carrying(kern):
     return kern if kern in ('P', 'R') else None
+
+
+def key_on_carrying(s):
+    """--key-pin: the channel the live order names has an unaccepted key (native_switch.carrying_unaccepted, owner 05.11.2026)."""
+    return s.kr if s.uci == 'R' else s.kp
+
+
+def key_pin(cfg):
+    # getattr: trace_check.py builds its own cfg without this option
+    return getattr(cfg, 'key_pin', None)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -128,18 +179,30 @@ def start(s, cfg, manual):
 
 
 def stop(s):
-    # auto_control.stop: revision rotated under the control lock, pair intent off, stop latch on flash
-    return s._replace(intent='off', fresh=False, marker=False, stopped=True, txrev=False, resume=False)
+    # auto_control.stop: revision rotated under the control lock, pair intent off, stop latch on flash. The monitor's window
+    # stays: its token is read on the next look (5 s), a later Start of the owner meets it with the owner's own marker.
+    return s._replace(intent='off', fresh=False, marker=False, stopped=True, txrev=False)
 
 
 # ---------------------------------------------------------------------------------------------------------------
 # Supervisor
 # ---------------------------------------------------------------------------------------------------------------
-def tick_error(s, cls):
-    """pair.tick catch (pair.lua:1326-1356) followed by iteration (auto.lua:262-268)."""
-    if s.sess == 'RUNNING' and cls == 'READOPT' and s.intent == 'on':
-        if s.readopt < 3 and s.jr in SETTLED:                       # readopt_running -> release_session
-            return s._replace(sess='STOPPED', code='-', ran=False, ho=False, readopt=s.readopt + 1, fresh=True, sup=IDLE)
+def can_readopt(s):
+    """readopt_running -> release_session(automatic) succeeds: a running session, the 3/900 s budget, a settled journal."""
+    return s.sess == 'RUNNING' and s.intent == 'on' and s.readopt < 3 and s.jr in SETTLED
+
+
+def readopt(s):
+    """readopt_running ADOPT: the record archived, the session retired (STOPPED), a new request id: begin() follows."""
+    return s._replace(sess='STOPPED', code='-', ran=False, ho=False, readopt=s.readopt + 1, fresh=True, sup=IDLE)
+
+
+def tick_error(s, cls, adopt=True):
+    """pair.tick catch (pair.lua:1326-1356) followed by iteration (auto.lua:262-268). adopt=False (F32): readopt_class
+    decided HOLD - readopt_running writes HELD with the code under the control lock, the catch goes on as for any error
+    (Auto stays on for a session that ran; outside_hold is not called while the request is current)."""
+    if adopt and cls == 'READOPT' and can_readopt(s):
+        return readopt(s)
     if s.sess == 'STARTING':                                         # cleanup(pending) (pair.lua:1344-1347)
         return s._replace(sup=('CL', 0, 'st'))
     if (s.sess in TERM or (s.sess == 'HELD' and not s.ran)) and s.intent == 'on':
@@ -169,8 +232,9 @@ def rb_done(s, ctx):
 
 
 def rb_failed(s, ctx):
-    """rollback raised after count_failure (rollback.lua:208-212)."""
-    s = s._replace(fails=min(2, s.fails + 1))
+    """rollback raised; only rollback_counted counts it (rollback.lua:233): the attempt's and the recovery's (G7)."""
+    if ctx in ('rec', 'fwd'):
+        s = s._replace(fails=min(2, s.fails + 1))
     if ctx == 'rec':
         if s.fails >= 2:                                             # auto.lua:198 -> give_up (rollback.lua:223)
             return s._replace(sup=BLOCKED, guard='vpn', marker=False)
@@ -178,13 +242,15 @@ def rb_failed(s, ctx):
     if ctx == 'cl-rec':
         if s.sess in NONTERM:
             s = s._replace(sess='HELD', code='OTHER')
-        return fence(s)._replace(sup=DOWN)
+        # pair.recover catches it and the recovery ends (G7): the journal stays RESTORING until the next pass exits
+        return s._replace(sup=IDLE, resume=True)
     return tick_error(s, 'OTHER')
 
 
 def abandon(s, ctx):
-    """rollback.abandon (rollback.lua:24-41): unguard, ROLLED-BACK abandoned, stop latch; raise RELEASED."""
-    s = s._replace(guard='none', jr='RB', sup=IDLE)
+    """rollback.abandon (rollback.lua:24-41): unguard, ROLLED-BACK abandoned, stop latch (G4: stop_latch rotates the
+    revision, so the intent is off, and it is newer than the owner's marker); raise RELEASED."""
+    s = s._replace(guard='none', jr='RB', marker=False, stopped=True, intent='off', fresh=False, txrev=False, sup=IDLE)
     if ctx in ('rec',):
         return s._replace(sup=('REC', 3, ''))
     if ctx == 'cl-rec':
@@ -219,12 +285,16 @@ def sup_steps(s, cfg):
                 add('FWD0 configure_lease: CLIENT-STOP (pair.lua:513)', tick_error(s, 'OTHER'), 'sup')
             elif not s.rUp:
                 add('FWD0 diagnostic: PAIR-READINESS-CHANGED (pair.lua:1309)', tick_error(s, 'OTHER'), 'sup')
-            elif s.pUp:
-                add('FWD0 late recheck: PRIMARY-RECOVERED-BEFORE-SWITCH (pair.lua:1311)', s._replace(sup=IDLE), 'sup')
+            elif key_pin(cfg) and s.kr:
+                add('FWD0 attempt refused: SERVER-KEY-UNACCEPTED (transaction.lua attempt, the key changed after the decision)', tick_error(s, 'OTHER'), 'sup')
             else:
-                add('FWD1 journal ARMED (transaction.lua:556)',
-                    s._replace(jr='ARMED', rtp=False, fails=0, fres=False, txrev=True, failed=False, boot=False,
-                               sup=('FWD', 2, '')), 'sup', 'armed')
+                if s.pUp:
+                    add('FWD0 late recheck: PRIMARY-RECOVERED-BEFORE-SWITCH (pair.lua:1311)', s._replace(sup=IDLE), 'sup')
+                if not s.pUp or cfg.fast_switch:
+                    # fast_switch: a recheck that started with the decision did not see a primary that came back after it
+                    add('FWD1 journal ARMED (transaction.lua:556)',
+                        s._replace(jr='ARMED', rtp=False, fails=0, fres=False, txrev=True, failed=False, boot=False,
+                                   sup=('FWD', 2, '')), 'sup', 'armed')
         elif k == 2:  # dispatch under the lock: revision + charge_attempt (transaction.lua:558-576)
             if not s.txrev or not s.dwell:
                 add('FWD2 dispatch refused -> ROLLED-BACK FAILED-BEFORE-APPLY (transaction.lua:567-569)',
@@ -250,6 +320,8 @@ def sup_steps(s, cfg):
                 add('FWD6 before_write: stale -> rollback', fwd_fail(s), 'sup')
             else:
                 add('FWD6 journal rtp_dispatched=true (transaction.lua:419-420)', s._replace(rtp=True, sup=('FWD', 7, '')), 'sup')
+                if cfg.faults:
+                    add('FWD6 FAULT apply refused before its dispatch (G7: rtp_boot, the synchronization script)', fwd_fail(s), 'sup', 'fault')
         elif k == 7:   # run.fenced(revision, fn): the revision is checked under the control lock (transaction.lua:423)
             if not s.txrev:
                 add('FWD7 fenced dispatch refused: CONTROL-REVISION-STALE -> rollback', fwd_fail(s), 'sup')
@@ -291,7 +363,8 @@ def sup_steps(s, cfg):
             # forward_resume.resume: kernel untouched (pre-switch graph) or already the reserve's; else refuse
             forward = s.uci == 'R' and s.kern == 'R'
             untouched = s.kern == 'P' and s.uci in ('P', 'R')
-            if s.stopped or not (forward or untouched) or s.sess not in ('RUNNING', 'HELD', 'STOPPING'):
+            if (s.stopped or not (forward or untouched) or s.sess not in ('RUNNING', 'HELD', 'STOPPING')
+                    or (key_pin(cfg) and untouched and not forward and s.kr)):   # a kernel still on the primary: a new move
                 add('FRES0 refused before any write -> rollback (forward_resume.lua:165-186)',
                     s._replace(sup=('RB', 0, 'rec')), 'sup')
             else:
@@ -340,6 +413,9 @@ def sup_steps(s, cfg):
                     add('RB-A undo UCI order (rollback.lua:67)', s._replace(uci='P', sup=('RB', 1, ctx)), 'sup')
             else:
                 add('RB-B journal RESTORING (rollback.lua:132-133)', s._replace(jr='RESTORING', sup=('RB', 2, ctx)), 'sup')
+                if cfg.faults and s.jr == 'RESTORING':
+                    # G7: a former failed apply left the kernel behind the restored order: the proof before the writes refuses
+                    add('RB-B FAULT KERNEL-POLICY-UNVERIFIED before any write (rollback.lua:120)', rb_failed(s, ctx), 'sup', 'fault')
         elif k == 1:  # branch A: kernel follows if it changed (best effort), guard(devices), ROLLED-BACK
             if s.kern != 'P':
                 add('RB-A vendor reload: kernel follows the restored UCI (rollback.lua:73-78)',
@@ -358,6 +434,9 @@ def sup_steps(s, cfg):
                 add('RB-B uci reorder: primary first (rollback.lua:169)', s._replace(uci='P', sup=('RB', 4, ctx)), 'sup')
         elif k == 4:
             add('RB-B kernel apply dispatched', s._replace(kern='X', sup=('RB', 5, ctx)), 'sup', 'move-to-P')
+            if cfg.faults:
+                # G7: the vendor write failed: the kernel stands, the full block releases itself, RESTORING stays
+                add('RB-B FAULT apply failed: the full block stays', rb_failed(s, ctx), 'sup', 'fault')
         elif k == 5:
             add('RB-B kernel rebuilt from UCI (primary first)', s._replace(kern=s.uci, sup=('RB', 6, ctx)), 'sup')
             if cfg.faults:
@@ -366,6 +445,9 @@ def sup_steps(s, cfg):
         elif k == 6:
             if s.kern != 'P' or s.uci != 'P':
                 add('RB-B verify: ROLLBACK-UNVERIFIED', rb_failed(s._replace(guard='vpn'), ctx), 'sup')
+            elif key_pin(cfg) == 'blocker' and (s.kp or s.kr):
+                # finding 1: the key was a blocker of the proof: the route is back, the journal stays RESTORING
+                add('RB-B verify: SERVER-KEY-UNACCEPTED fails the proof (before the fix)', rb_failed(s._replace(guard='vpn'), ctx), 'sup')
             else:
                 add('RB-B journal ROLLED-BACK + guard(devices) (rollback.lua:197-201)',
                     rb_done(s._replace(jr='RB', guard='vpn'), ctx), 'sup')
@@ -411,8 +493,9 @@ def sup_steps(s, cfg):
             if s.jr in RECOVERY:
                 add('CL1 journal mid-switch: PAIR-RECOVERY-REQUIRED (pair.lua:915)', cl_fail(s, ctx, 'OTHER'), 'sup')
             elif s.jr in ('COMMITTED', 'HOR'):
-                # boot_handover: resume_pending = owner's marker, no newer Stop, young boot or a forward-resumed tx
-                if (s.marker and not s.stopped and (s.boot or s.fres) and not (s.pHold if 'K2' in cfg.fixed else s.pStable) and s.kern == 'R'
+                # boot_handover: resume_pending = owner's marker, no newer Stop, young boot or a forward-resumed tx (G3: the
+                # uptime window, any journal inside it). HANDOVER_WAIT and one attempt per boot are free: it may always refuse.
+                if (boot_window(s, cfg) and not (s.pHold if 'K2' in cfg.fixed else s.pStable) and s.kern == 'R'
                         and s.uci == 'R' and s.rUp):
                     n = s._replace(guard='vpn', sess='STOPPED', ho=True, sup=IDLE)
                     if ctx == 'rec':
@@ -420,23 +503,30 @@ def sup_steps(s, cfg):
                     elif ctx == 'st':
                         n = st_post(n)
                     add('CL1 boot handover on the reserve (pair.lua:837-869)', n, 'sup')
-                else:
-                    add('CL1 finish_committed(PAIR-STOPPED) (pair.lua:920-921)', s._replace(sup=('FIN', 0, 'cl-' + ctx)), 'sup')
+                add('CL1 finish_committed(PAIR-STOPPED) (pair.lua:920-921)', s._replace(sup=('FIN', 0, 'cl-' + ctx)), 'sup')
             else:
                 add('CL1 journal settled', s._replace(sup=('CL', 3, ctx)), 'sup')
         elif k == 3:
             if s.uci != 'P':
                 add('CL3 order_is(state.order) failed: PAIR-EXTERNAL-POLICY-CHANGE (pair.lua:931)',
                     cl_fail(s, ctx, 'READOPT', cfg), 'sup')
-            elif s.ext == 'net':
-                add('CL5 identity changed: PAIR-EXTERNAL-NETWORK-CHANGE (pair.lua:944)', cl_fail(s, ctx, 'READOPT', cfg), 'sup')
             else:
-                n = s._replace(guard='none', sess='STOPPED', code='-', ran=False, ho=False)
-                if ctx == 'st':
-                    n = st_post(n)
-                else:
-                    n = n._replace(sup=IDLE, resume=True) if ctx == 'rec' else n._replace(sup=IDLE)
-                add('CL6 clients down, unguard, STOPPED (pair.lua:954)', n, 'sup')
+                if s.ext == 'net':
+                    add('CL5 identity changed: PAIR-EXTERNAL-NETWORK-CHANGE (pair.lua:944)', cl_fail(s, ctx, 'READOPT', cfg), 'sup')
+                    if s.code == 'READOPT' and not s.stopped:
+                        return out                           # pair.outside_recheck (finding 5): the hold checks also with nothing owned
+                    # G5: the check sits in the loop over the owned clients: a session owning none ends STOPPED (free choice)
+
+                def finished(n):
+                    if ctx == 'st':
+                        return st_post(n)
+                    return n._replace(sup=IDLE, resume=True) if ctx == 'rec' else n._replace(sup=IDLE)
+                add('CL6 clients down, unguard, STOPPED (pair.lua:954)',
+                    finished(s._replace(guard='none', sess='STOPPED', code='-', ran=False, ho=False)), 'sup')
+                if s.ext != 'net' and boot_window(s, cfg):
+                    # G2 variant C: the boot resume will press Start and every owned client is up (free): the clients and the guard stay
+                    add('CL6 boot_keep: clients kept for the Start, the guard stays (pair.lua boot_keep)',
+                        finished(s._replace(sess='STOPPED', code='-', ran=False, ho=False, kept=True)), 'sup')
         return out
 
     # --------------------------------------------------------------------------------- pair.begin (pair.lua:638-701)
@@ -448,14 +538,16 @@ def sup_steps(s, cfg):
                 add('BEGIN0 preflight: PAIR-PROFILES-UNVERIFIED (pair.lua:651)', tick_error(s, 'OTHER'), 'sup')
             elif ('P' if s.kern == 'F' else s.kern) != live:
                 add('BEGIN0 preflight: kernel does not match the live order (pair_preflight attest)', tick_error(s, 'OTHER'), 'sup')
+            elif key_pin(cfg) == 'directional' and key_on_carrying(s):
+                add('BEGIN0 SERVER-KEY-UNACCEPTED: the Start is refused, nothing taken (pair.begin)', tick_error(s, 'OTHER'), 'sup')
             elif handover and not (s.kern == 'R' and s.uci == 'R' and s.rUp):
-                n = s._replace(sess='HELD', ho=False, ran=True)
+                n = s._replace(sess='HELD', ho=False)
                 add('BEGIN0 handover not adoptable: BOOT-RESERVE-UNVERIFIED (pair.lua:657, 1339-1342)',
                     n._replace(intent='off', fresh=False, code='OTHER', sup=IDLE), 'sup')
             else:
                 n = s._replace(ext='none', uci='P' if s.uci == 'F' else s.uci, kern='P' if s.kern == 'F' else s.kern)
                 add('BEGIN1 session STARTING (pair.lua:675)',
-                    n._replace(sess='STARTING', code='-', ran=False, ho=False, fresh=False,
+                    n._replace(sess='STARTING', code='-', ran=False, ho=False, kept=False, fresh=False,
                                sup=('BEGIN', 2, 'ho' if handover else 'oh' if ('K4' in cfg.fixed and s.guard == 'vpn' and s.jr in SETTLED) else '')),
                     'sup', 'begin')
         elif k == 2:
@@ -474,7 +566,7 @@ def sup_steps(s, cfg):
                 add('BEGIN4 guard(devices) + RUNNING (pair.lua:694-697)', n, 'sup')
         elif k == 4:
             add('BEGIN5 adopt the handed-over journal: COMMITTED BOOT-RESERVE-ADOPTED (pair.lua:889-897)',
-                s._replace(jr='COMMITTED', ho=False, txrev=True, sup=IDLE), 'sup')
+                s._replace(jr='COMMITTED', ho=False, txrev=True, sup=IDLE, kv=bool(key_pin(cfg))), 'sup')    # adopt_journal: remember_selected
         return out
 
     # --------------------------------------------------------------------------------- auto.recover (auto.lua:132-235)
@@ -542,6 +634,14 @@ def cl_fail(s, ctx, cls, cfg=None):
         # fix2 K9 (owner decision 03.11.2026): pair.outside_hold after a failed recovery/cleanup of a session that is not
         # running: VPN-only (or the re-armed full block) until Start or Stop; the owner's Stop releases it
         s = s._replace(guard='none' if s.stopped else 'vpn')
+        if 'T4A' in cfg.fixed and s.stopped and s.intent != 'on':
+            # T4A (c31d7332): outside_hold -> end_hold_on_stop. publish_failure wrote HELD, then the owner's Stop retires the
+            # record under the control lock (release_session adopted_by='owner-stop': archived, STOPPED, owned=[], no profile
+            # stopped, the readopt budget neither checked nor spent). One model step: a kill between the two writes leaves the
+            # HELD record with the Stop latch, which the next pass ends the same way. The 'st' context is not covered (as for
+            # K9): its HELD record ends on the next pass.
+            n = s._replace(sess='STOPPED', code='-', ran=False, ho=False)
+            return n._replace(sup=IDLE, resume=True) if ctx == 'rec' else n._replace(sup=IDLE)
     if ctx == 'st':
         return st_post(s._replace(sess='HELD', code=cls))
     if ctx == 'rec':
@@ -588,6 +688,13 @@ def tick(s, cfg):
             add('RESUME Start(programmatic) refused %s' % why, n, 'sup')
     if s.sess == 'STOPPED' and s.ho and not running:
         return out                                                   # the handover waits for the Start (pair.lua:1157)
+    if s.kept and not running:
+        # G2: no Start within KEEP_SECONDS, a Stop, a failed resume (free): the kept clients stop, the guard goes
+        add('TICK release_kept (pair.lua release_kept)', s._replace(guard='none', kept=False), 'sup')
+    if ('K9' in cfg.fixed and s.sess == 'HELD' and s.code == 'READOPT' and s.jr in SETTLED and not running and not s.stopped
+            and s.guard in ('vpn', 'full')):
+        # G1: pair.outside_hold follows the tunnels (free): VPN-only on those up, with none up the re-armed full block
+        add('TICK outside_hold: the tunnels changed (pair.lua outside_hold)', s._replace(guard='full' if s.guard == 'vpn' else 'vpn'), 'sup')
     relevant = running or s.sess in NONTERM
     if not relevant:
         # native path of iteration (auto.lua:270-330)
@@ -598,6 +705,8 @@ def tick(s, cfg):
                 s._replace(sup=('RB', 0, 'native')), 'sup', 'return:native')
         elif s.jr == 'RB' and s.uci == 'P' and s.guard != 'none':
             add('NATIVE unguard_if_restored (auto.lua:316)', s._replace(guard='none'), 'sup')
+        elif s.sess == 'STOPPED' and s.stopped and s.jr in SETTLED and s.guard != 'none' and not s.kept:
+            add('TICK release_orphan_guard after the owner Stop (finding 4, pair.lua)', s._replace(guard='none'), 'sup')
         return out
     if not running:
         add('TICK not running: cleanup (pair.lua:1170-1176)', s._replace(sup=('CL', 0, 'tick')), 'sup')
@@ -606,10 +715,20 @@ def tick(s, cfg):
         if s.sess in NONTERM:
             add('TICK new request on a held session: PAIR-RECOVERY-REQUIRED (pair.lua:1179)', tick_error(s, 'OTHER'), 'sup')
         else:
-            add('TICK begin (pair.lua:1180)', s._replace(sup=('BEGIN', 0, '')), 'sup')
+            add('TICK begin (pair.lua:1180)', s._replace(sup=('BEGIN', 0, ''), kv=False), 'sup')
         return out
     if s.ext == 'net':
-        add('TICK identity changed: PAIR-EXTERNAL-NETWORK-CHANGE (pair.lua:1192)', tick_error(s, 'READOPT'), 'sup')
+        if 'F32' in cfg.fixed:
+            # F32: readopt_class of PAIR-EXTERNAL-NETWORK-CHANGE / -CONFIG-CHANGE reads which packages changed. The model's
+            # 'net' does not say which (the network outside the pair, Wi-Fi, DHCP, DNS: ADOPT; the VPN profiles, the firewall,
+            # any other package, an unreadable or empty class: HOLD), so both outcomes are free choices.
+            if can_readopt(s):
+                add('TICK identity changed: readopt_class ADOPT (network/wireless/dhcp/gl-dns-v2 only; pair_auto.readopt_running)',
+                    readopt(s), 'sup')
+            add('TICK identity changed: PAIR-EXTERNAL-NETWORK-CHANGE, readopt_class HOLD (pair_auto.readopt_running)',
+                tick_error(s, 'READOPT', adopt=False), 'sup')
+        else:
+            add('TICK identity changed: PAIR-EXTERNAL-NETWORK-CHANGE (pair.lua:1192)', tick_error(s, 'READOPT'), 'sup')
         return out
     if s.sc[0] != '-':
         out.extend(server_pending(s, cfg))
@@ -624,25 +743,57 @@ def tick(s, cfg):
         if s.kern == 'R' and s.uci == 'R' and s.jr == 'COMMITTED':
             add('SRV0 change the failed primary server (stage 3, server_pick.lua:531)',
                 s._replace(sc=('-', 'P', False), sup=('SRV', 1, '')), 'sup')
+    if s.uci == 'F' or s.kern == 'F':
+        # G6: before the committed decision and before the reserve health (reapply_missing_policy; T3 keeps it for a lost reserve)
+        # F32: the pair's own route_policy or its order (readopt_class POLICY-OR-ORDER) is never adopted by itself: HELD
+        add('TICK order check: PAIR-EXTERNAL-POLICY-CHANGE (pair.lua reapply_missing_policy)',
+            tick_error(s, 'READOPT', adopt='F32' not in cfg.fixed), 'sup')
+        return out
+    pin = key_pin(cfg)
+    if pin and ((pin == 'blocker' and (s.kp or s.kr)) or (not s.kv and key_on_carrying(s))):
+        # reapply_missing_policy. 'blocker' (before the fix, finding 2): every pass ends BLOCKED. The code: only a Start waits, on
+        # the key of the carrying channel (a key on the other channel is left to the directional gate)
+        return out
+    if pin and not s.kv and s.jr not in RECOVERY:
+        add('TICK the route proved: selected_policy (pair.lua remember_selected)', s._replace(kv=True), 'sup')
+        return out
     if s.jr in ('COMMITTED', 'HOR'):
-        # committed_recovery_decision with the damped hold (pair.lua:1206-1245, transaction.lua:803-839)
+        # committed_recovery_decision with the damped hold (pair.lua:1206-1245, transaction.lua:803-839).
+        # The model has no return-policy dimension: it describes healthy_primary. Since 07.11.2026 (owner decision, F-80)
+        # the first term (a dead reserve, the primary stable: the rescue) also holds under hold_reserve, which now only
+        # keeps a WORKING reserve (rUp); the planned second term is healthy_primary only. The code probes the reserve
+        # once more before the rescue; here 'ENV reserve tunnel fails' is that proof (no stale/unknown health in the model).
         restore = (not s.rUp and s.pStable) or (s.pHold and s.dwell)
         n = s._replace(sess='RUNNING', code='-') if (s.sess == 'HELD' and s.ran) else s
-        if restore:
+        if s.rgen:
+            # K12 (finding 7, MT3000 04.11.2026 14:06-15:33): the vendor rebuilt the carrying reserve, only its generation
+            # changed. Before the fix every pass held RESERVE-IDENTITY-UNKNOWN: no return to a healthy primary, ever.
+            # Fixed: a healthy streak of the new generation is the same reserve (pair.reserve_rebound rebinds the journal
+            # proof, the decision goes on); anything else stays unknown, and only the planned rule may leave it.
+            if 'K12' not in cfg.fixed:
+                return out
+            if s.rUp:
+                n = n._replace(rgen=False)
+                add('TICK reserve rebuilt, healthy streak of the new generation: journal proof rebound (transaction.lua, pair.reserve_rebound)',
+                    n, 'sup')
+                return out
+            restore = s.pHold and s.dwell
+        if restore and not (pin and s.kp):      # T.committed_recovery_decision: no return onto an unaccepted key
             add('TICK committed decision RESTORE-PRIMARY (pair.lua:1211-1214)', n._replace(sup=('FIN', 0, 'ret')), 'sup',
                 'return:ret')
         elif n != s:
             add('TICK committed decision OBSERVE (resume_running)', n, 'sup')
         return out
     if not s.rUp:
-        return out                                                   # diagnostic blocker RESERVE-NOT-CONNECTED
-    if s.uci == 'F' or s.kern == 'F':
-        add('TICK order check: PAIR-EXTERNAL-POLICY-CHANGE (pair.lua:1258)', tick_error(s, 'READOPT'), 'sup')
+        # the blocker RESERVE-NOT-CONNECTED ends the pass; G6: a reserve unhealthy but connected resumes the session first
+        if s.sess == 'HELD' and s.ran and s.uci == 'P' and s.kern == 'P':
+            add('TICK resume_running (reserve unhealthy, still connected)', s._replace(sess='RUNNING', code='-'), 'sup')
         return out
     if s.uci != 'P' or s.kern != 'P':
         return out                                                   # attestation blocks / reapply (not modelled)
     n = s._replace(sess='RUNNING', code='-') if (s.sess == 'HELD' and s.ran) else s
-    if not s.pUp and s.rUp and s.dwell:
+    if (not s.pUp or cfg.fast_switch) and s.rUp and s.dwell and not (pin and s.kr):
+        # fast_switch: leave_rule may also speak for a live primary (N failed samples in a row, the heartbeat verdict)
         add('TICK failed and healthy and dwell: forward switch (pair.lua:1291)', n._replace(sup=('FWD', 0, '')), 'sup')
     elif n != s:
         add('TICK resume_running', n, 'sup')
@@ -700,14 +851,25 @@ def env_steps(s, cfg):
         add('TIME a readopt ledger entry ages out (900 s)', s._replace(readopt=s.readopt - 1), 'time')
     if s.resume:
         add('TIME boot-resume window over (boot_resume.WINDOW)', s._replace(resume=False), 'time')
+    if s.young:
+        add('TIME uptime over BOOT_KEEP_UPTIME (pair.lua resume_pending)', s._replace(young=False), 'time')
     if s.sess == 'STOPPED' and s.ho and s.intent == 'off':
         add('TIME handover not taken in KEEP_SECONDS: release_handover -> HELD (pair.lua:872)',
-            s._replace(sess='HELD', ho=False, ran=True), 'time')
+            s._replace(sess='HELD', ho=False), 'time')
     if s.kern == 'X':
         add('VENDOR rebuild finished: kernel follows UCI', s._replace(kern=s.uci), 'vendor')
+    if cfg.rebuild and s.jr in ('COMMITTED', 'HOR') and s.kern == 'R' and not s.rgen:
+        # not a 'vendor' step: the fair runs of the liveness checks would count on it never happening again
+        add('VENDOR rebuilt the carrying reserve: its generation changed (K12, finding 7)', s._replace(rgen=True), 'rebuild')
     # fix2 K4: begin() re-arms the block before every bounded step (< 90 s): it can lapse only after a lost process
     if cfg.expire and s.guard == 'full' and (s.sup[0] in ('DOWN',) or (s.sup[:2] == ('BEGIN', 3) and 'K4' not in cfg.fixed)):
         add('TIME full LAN block self-released after 90 s (backend.lua:54,825)', s._replace(guard='none'), 'expire')
+    if key_pin(cfg):
+        # the monitor compares a key only on a channel it has just measured healthy (server_pin.py, agent.py)
+        if s.pUp and not s.kp:
+            add('ENV the primary server key changes', s._replace(kp=True), 'key')
+        if s.rUp and not s.kr:
+            add('ENV the reserve server key changes', s._replace(kr=True), 'key')
     # outside changes in the GL panel
     if s.ext == 'none' and cfg.gl:
         if cfg.ext in ('both', 'net'):
@@ -721,7 +883,7 @@ def env_steps(s, cfg):
         add('POWER cut: RAM lost (guard, intent, revision, readopt ledger), kernel rebuilt from UCI',
             s._replace(sup=DOWN, guard='none', intent='off', fresh=False, txrev=False, readopt=0, kern='X',
                        boot=True if s.jr in RECOVERY or s.jr in ('COMMITTED', 'HOR') else s.boot, resume=s.marker,
-                       pStable=False, pHold=False), 'power')
+                       young=cfg.window, pStable=False, pHold=False), 'power')
     return out
 
 
@@ -735,6 +897,8 @@ def owner_steps(s, cfg):
             out.append(('OWNER Start refused %s (after a hand-over)' % why, n, frozenset({'owner'})))
     if not s.stopped or s.intent == 'on' or s.marker:
         out.append(('OWNER Stop', stop(s), frozenset({'owner', 'stop'})))
+    if s.kp or s.kr:
+        out.append(('OWNER accepts the server keys (homensai-vpn-server-key accept)', s._replace(kp=False, kr=False), frozenset({'owner'})))
     return out
 
 
@@ -746,6 +910,9 @@ def successors(s, cfg):
         res.append(item)
     for item in owner_steps(s, cfg):
         res.append(item)
+    if s.rgen:
+        # the stale proof lives in the journal of this switch: it ends with the switch
+        res = [(label, n._replace(rgen=False) if n.jr not in ('COMMITTED', 'HOR', 'RESTORING') else n, tags) for label, n, tags in res]
     return res
 
 
@@ -813,8 +980,12 @@ def transition_checks(s, n, label, tags):
     v = []
     if 'armed' in tags and s.jr not in SETTLED:
         v.append('TWO-TRANSACTIONS')
+    if 'armed' in tags and s.kr:
+        v.append('MOVE-ONTO-UNACCEPTED-KEY')     # --key-pin: a key that changes during a transaction ends with it, as in the code
     if 'begin' in tags and s.jr in RECOVERY:
         v.append('BEGIN-DURING-TRANSACTION')
+    if 'begin' in tags and key_on_carrying(s):
+        v.append('BEGIN-WITH-UNACCEPTED-KEY')    # --key-pin: no session, guard or client for a Start with an unaccepted key on the carrying channel
     if 'move-to-R' in tags and s.stopped:
         v.append('SWITCH-AFTER-STOP')
     if 'committed' in tags and s.stopped:
@@ -831,6 +1002,8 @@ def transition_checks(s, n, label, tags):
             ctx = t.split(':')[1]
             if s.rUp and s.marker and not s.stopped and not s.pHold:
                 v.append('RETURN-BEFORE-HOLD:' + ctx)
+            if ctx == 'ret' and s.kp:
+                v.append('MOVE-ONTO-UNACCEPTED-KEY')
     if 'undo-forward' in tags and s.jr in ('APPLYING', 'WAIT') and not s.pUp and s.rUp and s.marker and not s.stopped:
         v.append('ROLLBACK-ONTO-DEAD-PRIMARY:' + ('power-cut' if s.boot else 'crash'))
     return v
@@ -854,6 +1027,7 @@ class Graph:
         self.index = {}
         self.states = []
         self.parent = []
+        self.begin_other_key = 0
         self.plabel = []
         self.edges = []          # list of lists (target, kinds)
 
@@ -874,6 +1048,8 @@ class Graph:
                 for v in transition_checks(s, n, label, tags):
                     if len(tviol[v]) < 3:
                         tviol[v].append((i, label))
+                if 'begin' in tags and (s.kp or s.kr) and not key_on_carrying(s):
+                    self.begin_other_key += 1    # the witness of the rule of 05.11.2026: a Start with a key only on the other channel goes on
                 j = self.index.get(n)
                 if j is None:
                     j = len(self.states)
@@ -998,10 +1174,10 @@ class Graph:
 
 def fmt_state(s):
     sc = '' if s.sc[0] == '-' else ' sc=%s:%s%s' % (s.sc[0], s.sc[1], '+' if s.sc[2] else '')
-    return ('intent=%s%s marker=%d stopped=%d | sess=%s%s%s%s | jr=%s%s%s%s | uci=%s kern=%s guard=%s | '
+    return ('intent=%s%s marker=%d stopped=%d | sess=%s%s%s%s%s | jr=%s%s%s%s | uci=%s kern=%s guard=%s | '
             'P=%s R=%s stable=%d hold=%d dwell=%d | ext=%s prep=%d readopt=%d | sup=%s%s%s%s' % (
                 s.intent, '*' if s.fresh else '', s.marker, s.stopped, s.sess,
-                '(' + s.code + ')' if s.code != '-' else '', '+ran' if s.ran else '', '+handover' if s.ho else '',
+                '(' + s.code + ')' if s.code != '-' else '', '+ran' if s.ran else '', '+handover' if s.ho else '', '+kept' if s.kept else '',
                 s.jr, ' rtp' if s.rtp else '', ' fails=%d' % s.fails if s.fails else '', ' fres' if s.fres else '',
                 s.uci, s.kern, s.guard, 'up' if s.pUp else 'DOWN', 'up' if s.rUp else 'DOWN', s.pStable, s.pHold,
                 s.dwell, s.ext, s.prep, s.readopt, ':'.join(str(x) for x in s.sup if x != ''),
@@ -1022,7 +1198,7 @@ def run(cfg):
     tviol = g.explore(INIT)
     n = len(g.states)
     edges = sum(len(e) for e in g.edges)
-    res = {'variant': 'fix2' if cfg.fixed == ALL_FIXES else 'fix' if cfg.fix else 'alpha6', 'fixed': sorted(cfg.fixed), 'options': {k: getattr(cfg, k) for k in ('faults', 'server', 'gl', 'ext', 'crash', 'power', 'expire')},
+    res = {'variant': 'fix2' if cfg.fixed == ALL_FIXES else 'fix' if cfg.fix else 'alpha6', 'fixed': sorted(cfg.fixed), 'options': {k: getattr(cfg, k) for k in ('faults', 'server', 'fast_switch', 'gl', 'ext', 'crash', 'power', 'expire', 'rebuild', 'window', 'key_pin')},
            'states': n, 'transitions': edges}
     lines = ['=== variant %s, options %s: %d states, %d transitions (%.1f s)' % (
         res['variant'], res['options'], n, edges, time.time() - t0)]
@@ -1050,12 +1226,13 @@ def run(cfg):
         lines.append('INVARIANTS LeakFree, Consistency: hold')
     # --- transition assertions
     res['transition'] = {k: len(v) for k, v in tviol.items()}
+    res['begin_other_key'] = g.begin_other_key
     for k, v in tviol.items():
         i, label = min(v)
         lines.append('TRANSITION %s: e.g. from state below by "%s"' % (k, label))
         print_trace(g, i, lines, 'next: ' + label)
     for k in ('TWO-TRANSACTIONS', 'BEGIN-DURING-TRANSACTION', 'SWITCH-AFTER-STOP', 'SERVER-WRITE-ON-CARRYING',
-              'SERVER-WRITE-DURING-TRANSACTION'):
+              'SERVER-WRITE-DURING-TRANSACTION', 'MOVE-ONTO-UNACCEPTED-KEY', 'BEGIN-WITH-UNACCEPTED-KEY'):
         if k not in tviol:
             lines.append('TRANSITION %s: never' % k)
 
@@ -1090,8 +1267,9 @@ def run(cfg):
 
     # --- liveness: primary dead, reserve healthy, Auto on -> eventually on the reserve (strong fairness)
     fair = lambda tags: bool(tags & {'sup', 'time', 'vendor'}) and 'fault' not in tags
+    # --key-pin: towards a reserve with an accepted key, whatever the key of the primary, on a session past its Start (finding 2)
     starts = [i for i, s in enumerate(g.states) if not s.pUp and s.rUp and s.intent == 'on' and s.sess == 'RUNNING'
-              and not s.fresh and s.ext == 'none' and s.sup == IDLE and s.uci != 'F']
+              and not s.fresh and s.ext == 'none' and s.sup == IDLE and s.uci != 'F' and not s.kr and (s.kv or not s.kp)]
     bottoms, sub = g.bottom_sccs(starts, fair)
     bad = [c for c in bottoms if not any(g.states[i].kern == 'R' for i in c)]
     res['liveness_failover'] = {'start_states': len(starts), 'bottom_sccs': len(bottoms), 'bad': len(bad)}
@@ -1102,6 +1280,22 @@ def run(cfg):
         print_trace(g, i, lines, 'stays here forever under fairness (no owner action)')
     else:
         lines.append('LIVENESS failover (P dead, R healthy, Auto on => eventually kernel on R): holds (%d start states, %d bottom SCCs)'
+                     % (len(starts), len(bottoms)))
+
+    # --- liveness: Auto on, on the reserve, primary stably healthy, reserve healthy => eventually back on the primary (K12)
+    # --key-pin: towards a primary with an accepted key, whatever the key of the reserve, the reserve healthy or not (finding 2)
+    starts = [i for i, s in enumerate(g.states) if s.jr in ('COMMITTED', 'HOR') and s.kern == 'R' and s.uci == 'R' and s.pUp and s.pHold
+              and (s.rUp or key_pin(cfg)) and s.intent == 'on' and s.sess == 'RUNNING' and not s.fresh and s.ext == 'none' and s.sup == IDLE
+              and not s.kp and (s.kv or not s.kr)]
+    bottoms, sub = g.bottom_sccs(starts, fair)
+    bad = [c for c in bottoms if not any(g.states[i].kern == 'P' for i in c)]
+    res['liveness_return'] = {'start_states': len(starts), 'bottom_sccs': len(bottoms), 'bad': len(bad)}
+    if bad:
+        c = min(bad, key=min)
+        lines.append('LIVENESS return VIOLATED: %d bottom SCCs stay on the reserve with a healthy primary; example end state:' % len(bad))
+        print_trace(g, min(c), lines, 'stays here forever under fairness (no owner action)')
+    else:
+        lines.append('LIVENESS return (on the reserve, primary stably healthy => eventually kernel on P): holds (%d start states, %d bottom SCCs)'
                      % (len(starts), len(bottoms)))
 
     # --- liveness: owner Stop wins (no owner action afterwards, faults excluded)
@@ -1126,6 +1320,22 @@ def run(cfg):
         else:
             lines.append('LIVENESS stop-wins (primary %s): every fair run ends STOPPED, journal settled, guard released'
                          % ('up' if p_up else 'down'))
+
+    # --- liveness (T4A, 07.11.2026): the owner's Stop ends a hold of an outside change (no owner action afterwards, faults
+    # excluded): a HELD readopt record with a settled journal, the Stop latch standing, Auto off => eventually a terminal record
+    starts = [i for i, s in enumerate(g.states) if s.stopped and s.intent == 'off' and s.sess == 'HELD' and s.code == 'READOPT'
+              and s.jr in SETTLED]
+    bottoms, sub = g.bottom_sccs(starts, fair)
+    bad = [c for c in bottoms if not any(g.states[i].sess in TERM for i in c)]
+    res['liveness_stop_hold'] = {'start_states': len(starts), 'bottom_sccs': len(bottoms), 'bad': len(bad)}
+    if bad:
+        c = min(bad, key=min)
+        lines.append('LIVENESS stop-ends-hold VIOLATED: %d bottom SCCs keep the outside-change hold after the owner Stop; example:'
+                     % len(bad))
+        print_trace(g, min(c), lines, 'stays HELD forever under fairness (no owner action)')
+    else:
+        lines.append('LIVENESS stop-ends-hold (owner Stop on an outside-change hold => eventually STOPPED): holds (%d start states, '
+                     '%d bottom SCCs)' % (len(starts), len(bottoms)))
     return res, lines
 
 
@@ -1134,12 +1344,16 @@ def main():
     ap.add_argument('--variant', choices=['alpha6', 'fix', 'fix2', 'both', 'all'], default='both')
     ap.add_argument('--faults', action='store_true', help='kernel apply/verify failures (rtp2, ROLLBACK-UNVERIFIED)')
     ap.add_argument('--server', action='store_true', help='server pick stages 2/3')
+    ap.add_argument('--fast-switch', action='store_true', help='the fast end: a decision and a recheck that do not prove the primary dead')
     ap.add_argument('--no-gl', action='store_true')
     ap.add_argument('--ext', choices=['both', 'net', 'pol'], default='both',
                     help='which outside GL-panel changes the owner may make (CI bound: one kind only)')
     ap.add_argument('--no-crash', action='store_true')
     ap.add_argument('--no-power', action='store_true')
     ap.add_argument('--no-expire', action='store_true', help='no 90 s self-release of the full LAN block')
+    ap.add_argument('--rebuild', action='store_true', help='the vendor rebuilds the carrying reserve (K12, finding 7)')
+    ap.add_argument('--window', action='store_true', help='the uptime window of the boot hand-over and variant C as a state field (G2, G3)')
+    ap.add_argument('--key-pin', choices=['directional', 'blocker'], help='server_key_pin enforce: the code, or the code before the fix (findings 1, 2)')
     ap.add_argument('--fixed', default='', help='with --variant fix: comma-separated list of K fixes assumed to be in the code (%s)' % ','.join(sorted(ALL_FIXES)))
     ap.add_argument('--json')
     ap.add_argument('--out')
@@ -1151,8 +1365,8 @@ def main():
         fixed = ALL_FIXES if v == 'fix2' else frozenset(x for x in a.fixed.split(',') if x) if v == 'fix' else frozenset()
         if not fixed <= ALL_FIXES:
             ap.error('unknown fix in --fixed: %s' % ','.join(sorted(fixed - ALL_FIXES)))
-        cfg = argparse.Namespace(fix=v in ('fix', 'fix2'), fixed=fixed, faults=a.faults, server=a.server, gl=not a.no_gl, ext=a.ext,
-                                 crash=not a.no_crash, power=not a.no_power, expire=not a.no_expire)
+        cfg = argparse.Namespace(fix=v in ('fix', 'fix2'), fixed=fixed, faults=a.faults, server=a.server, fast_switch=a.fast_switch, gl=not a.no_gl, ext=a.ext,
+                                 crash=not a.no_crash, power=not a.no_power, expire=not a.no_expire, rebuild=a.rebuild, window=a.window, key_pin=a.key_pin)
         res, lines = run(cfg)
         results.append(res)
         text.extend(lines)

@@ -46,6 +46,8 @@ function M.rollback(env,value,reason,restore_order)
   local policy=require('pair').policy
   local pair=require('pair')
   local restore_started=env.run.wall()
+  -- R2-01: never restore while a dispatched policy writer may still run (its exit was not established)
+  if type(env.backend.writer_unresolved)=='function' and env.backend.writer_unresolved() then refuse('WRITER-UNRESOLVED') end
   T.bind_policy_context(env,value)
   if value.activation_reapply==true and same_list(value.before,value.after)
      and (value.phase=='ARMED' or value.phase=='APPLYING' or value.phase=='RESTORING')
@@ -72,7 +74,9 @@ function M.rollback(env,value,reason,restore_order)
     -- When the kernel is no longer the one recorded before our move, the vendor's own reload from the restored UCI
     -- makes it follow again (the same rebuild every route-policy change triggers). Best effort: a failure keeps
     -- the previous behaviour (journal ROLLED-BACK, kernel_policy_verified=false, the loop's attestation blocks).
-    if ctl.hex(value.kernel_before_fingerprint,64) then
+    -- Only in the recovery (a power cut is where the boot rebuilt it): inside a running pass this transaction wrote no
+    -- kernel, a changed graph there is foreign and stays, as in Python (trace conformance 04.11.2026).
+    if reason=='SUPERVISOR-RECOVERY' and ctl.hex(value.kernel_before_fingerprint,64) then
       local kok,live=pcall(env.backend.kernel_fingerprint)
       if kok and live~=value.kernel_before_fingerprint then pcall(env.backend.apply) end
     end
@@ -186,9 +190,16 @@ function M.rollback(env,value,reason,restore_order)
   local proof={}
   if pair_context~=nil then
     local helpers=rr(env)
+    -- T3 (trace conformance 04.11.2026): a reserve that is simply not connected says nothing about the route back to the
+    -- primary. diagnostic() answers RESERVE-NOT-CONNECTED without a selection, so the proof of a return was refused with
+    -- the kernel already on the primary: the journal stayed RESTORING, ROLLBACK-UNVERIFIED, then ROLLBACK-GIVEN-UP (and
+    -- settled() kept the LAN blocked for its whole wait). attest_policy() without a selection tolerates exactly this
+    -- blocker, as it does for the proof before the return. Python: native_switch.rollback.
+    local tolerated=policy.role(pair_context,restore_order)=='source' and 'RESERVE-NOT-CONNECTED' or nil
     local blockers,current
-    if helpers and helpers.settled then blockers,current=helpers.settled(env) else blockers,current=env.backend.diagnostic() end
-    if #blockers==0 and current then proof=env.backend.attest_policy(current) end
+    if helpers and helpers.settled then blockers,current=helpers.settled(env,tolerated) else blockers,current=env.backend.diagnostic() end
+    if #blockers==0 and current then proof=env.backend.attest_policy(current)
+    elseif tolerated~=nil and #blockers==1 and blockers[1]==tolerated then proof=env.backend.attest_policy() end
     if proof.verified~=true or proof.role~=policy.role(pair_context,restore_order) then
       env.backend.guard(env.backend.devices())
       refuse('ROLLBACK-UNVERIFIED')
@@ -223,10 +234,14 @@ function M.count_failure(env,value)
   pcall(T.journal_write,env,value)
 end
 
+-- R4-03: a writer whose exit is not yet established (WRITER-UNRESOLVED) is a pending condition, not a failed rollback:
+-- it is never charged to rollback_failures (which would reach ROLLBACK-GIVEN-UP while the writer merely runs on).
+function M.pending(err) return type(err)=='table' and err.code=='WRITER-UNRESOLVED' end
+
 function M.rollback_counted(env,value,reason)
   local ok,err=pcall(M.rollback,env,value,reason)
   if ok then return err end
-  M.count_failure(env,value)
+  if not M.pending(err) then M.count_failure(env,value) end
   error(err,0)
 end
 

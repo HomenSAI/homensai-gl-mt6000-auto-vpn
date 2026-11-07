@@ -74,13 +74,20 @@ t.test('validate_journal refusal codes',function()
   journal.validate(with({monotonic_deadline=json.null,pid=1234,rollback_failures=2,proof_scope='router-probed-ipv4'}))
 end)
 
+-- F-39 (07.11.2026): the reader now validates pair_transition itself, so the record pinned here is a valid one
+local function transition(session)
+  return json.object({source_rule='a',target_rule='b',direction='first',generic_rules=json.array({'a','b'}),source_id='s',
+    target_id='r',destination_role='target',before_policy_role='source',session_order=json.array(session),primary_order=json.array({'a','b'})})
+end
 t.test('delegated records are only copied from a Python-validated journal',function()
-  local v=sample();v.pair_transition=json.object({direction='first'})
+  local v=sample();v.pair_transition=transition({'b','a'})
   t.code('JOURNAL-DELEGATED-UNVERIFIED',journal.write,{fs=memory_fs(),now=function() return 1 end},v)
-  local template=sample();template.pair_transition=json.object({direction='first'})
+  local template=sample();template.pair_transition=transition({'b','a'})
   journal.write({fs=memory_fs(),now=function() return 1 end,template=template},v)
-  template.pair_transition=json.object({direction='last'})
+  template.pair_transition=transition({'a','b'})
   t.code('JOURNAL-DELEGATED-UNVERIFIED',journal.write,{fs=memory_fs(),now=function() return 1 end,template=template},v)
+  local bad=sample();bad.pair_transition=json.object({direction='first'})
+  t.code('JOURNAL-INTEGRITY-FAILED',journal.write,{fs=memory_fs(),now=function() return 1 end,template=bad},bad)
 end)
 
 t.test('note_phase keeps the last 31 valid rows',function()

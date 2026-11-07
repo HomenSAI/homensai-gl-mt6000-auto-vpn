@@ -26,6 +26,19 @@ def unittest_counts(result):
     return int(match.group(1)),int(skipped.group(1)) if skipped else 0
 
 
+def tlc_crosscheck(path):
+    """Result of the OPTIONAL TLC cross-check, which scripts/offline-ci.ps1 runs on the host (TLC needs docker) and mounts here.
+    SKIPPED (no image/docker) and NOT-RUN (no result handed in) are recorded as such; a difference was already red on the host."""
+    if not path:
+        return dict(status='NOT-RUN',reason='no TLC result handed in (run through scripts/offline-ci.ps1)',seconds=0,states={})
+    data=json.loads(Path(path).read_text(encoding='utf-8'))
+    status=data.get('status')
+    if status=='FAIL':raise RuntimeError('CI-TLC-CROSSCHECK-FAILED: '+'; '.join(data.get('problems') or [data.get('reason','')])[:500])
+    if status not in ('PASS','SKIPPED'):raise RuntimeError('CI-TLC-CROSSCHECK-STATUS: %r' % (status,))
+    return dict(status=status,reason=data.get('reason',''),seconds=data.get('seconds',0),
+                states={name:cfg['tlc_states'] for name,cfg in sorted((data.get('configs') or {}).items())})
+
+
 def lab_exclusions(root):
     """Only reviewed offline entries run; never import hardware acceptance scripts."""
     allowed=set(LAB_UNIT_TESTS+LAB_SCRIPT_TESTS+LAB_NODE_TESTS)
@@ -38,6 +51,9 @@ def lab_exclusions(root):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--manifest',type=Path,required=True)
     parser.add_argument('--source',required=True);parser.add_argument('--runtime-only',action='store_true')
+    parser.add_argument('--tlc-result',type=Path,default=None,help='JSON of the optional TLC cross-check (see tools/formal/tla/README.md)')
+    parser.add_argument('--trace-check',action='store_true',help='also run the optional trace conformance of the code '
+                        'against the formal model (tools/formal/trace_check.py, fast profile, about 1-3 min)')
     args=parser.parse_args()
     if not re.fullmatch('[a-f0-9]{40}',args.source):parser.error('SOURCE-SHA')
     root=Path(__file__).resolve().parents[1]
@@ -47,6 +63,7 @@ def main():
             print(result.stdout);print(result.stderr,file=sys.stderr)
             raise RuntimeError('CI-CHECK-FAILED: exit=%s command=%s' % (result.returncode, ' '.join(argv)))
         return result
+    check([sys.executable,'scripts/secret_scan.py','--manifest',str(args.manifest),'--root','.'])
     check([sys.executable,'qa/privacy_audit.py','--manifest',str(args.manifest)])
     application=check([sys.executable,'-m','unittest','discover','-s','router/tests','-q'])
     qa=check([sys.executable,'-m','unittest','discover','-s','qa','-q'])
@@ -57,6 +74,16 @@ def main():
     formal=check([sys.executable,'tools/formal/ci_check.py'])
     formal_summary=re.search(r'FORMAL-CI summary: profiles=(\d+) states=(\d+) seconds=([\d.]+) peak_child_rss_mb=(\S+) new=0 xpass=0 xfail=(\d+)',formal.stdout)
     if not formal_summary:raise RuntimeError('CI-FORMAL-SUMMARY-MISSING')
+    # Optional TLC cross-check (own limit of 1500 s, run by the host script): recorded in the receipt as PASS, SKIPPED or NOT-RUN.
+    tlc=tlc_crosscheck(args.tlc_result)
+    print('CI-TLC-CROSSCHECK %s %s' % (tlc['status'],tlc['reason']))
+    # Optional (--trace-check): the real Python and Lua supervisors on fake routers, every recorded abstract step checked
+    # against model.py (code-to-model fidelity). Known gaps/bugs are listed in tools/formal/trace_expected.json.
+    trace_summary=None
+    if args.trace_check:
+        trace=check([sys.executable,'tools/formal/trace_check.py']+([] if args.runtime_only else ['--require-lua']))
+        trace_summary=re.search(r'TRACE-CHECK summary: runtimes=(\S+) steps=(\d+) seconds=([\d.]+) new=0',trace.stdout)
+        if not trace_summary:raise RuntimeError('CI-TRACE-SUMMARY-MISSING')
     lab_skipped_scripts=lab_exclusions(root)
     for name in lab_skipped_scripts:
         print('CI-LAB-SKIP '+name+': not an offline test entry point; VM/router/network acceptance excluded')
@@ -107,6 +134,7 @@ def main():
                      lua_available=bool(shutil.which('lua5.1')),lua_tests=lua_count,runtime_only=args.runtime_only,
                      tools_tests=tools_count,tools_skipped_tests=tools_skipped,
                      formal_profiles=int(formal_summary.group(1)),formal_states=int(formal_summary.group(2)),formal_xfail=int(formal_summary.group(5)),
+                     tlc_crosscheck=tlc['status'],tlc_crosscheck_reason=tlc['reason'],tlc_crosscheck_seconds=tlc['seconds'],tlc_crosscheck_states=tlc['states'],
                      lab_tests=lab_count,lab_skipped_tests=lab_skipped,lab_node_suites=lab_node_suites,
                      lab_skipped_scripts=lab_skipped_scripts,
                      application_tests=int(re.search(r'Ran (\d+) tests',application.stderr).group(1)),
@@ -115,6 +143,7 @@ def main():
                      qa_skipped_tests=int(re.search(r'skipped=(\d+)',qa.stderr).group(1)) if 'skipped=' in qa.stderr else 0,
                      artifact=first.name,bytes=len(data),sha256=hashlib.sha256(data).hexdigest(),
                      scope='isolated source archive; no physical/virtual router acceptance')
+        if trace_summary:receipt.update(trace_runtimes=trace_summary.group(1),trace_steps=int(trace_summary.group(2)))
     print('CI-RECEIPT '+json.dumps(receipt,sort_keys=True))
 
 

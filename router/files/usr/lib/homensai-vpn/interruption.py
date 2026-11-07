@@ -34,7 +34,11 @@ TEXT={
     'RESTART-INTERRUPTED-RESERVE-HOLD':'power lost while the reserve channel was held',
     'RESTART-INTERRUPTED-OPERATION':'power lost during normal operation with Auto on',
     'RESTART-INTERRUPTED-AUTO-OFF':'power lost while Auto was off',
+    # GL-SENSORS-2026-11-04 item 5 (boot_cause.py): a reboot by the GL timer and a kernel crash are no power cut
+    'RESTART-PLANNED-REBOOT':'planned reboot by the router timer (gl_timer), not an interruption',
+    'RESTART-KERNEL-CRASH':'the router kernel crashed (a new record in the GL crash log): not a power cut',
 }
+REASONS=('reboot','planned-reboot')
 
 
 def _decode(text):
@@ -61,6 +65,14 @@ def previous(text):
     return state if state in ('stopped','starting','running') else 'invalid'
 
 
+def previous_reason(text):
+    '''The shutdown reason the init script stored with 'stopped' (system shutdown only), else None.'''
+    row=_decode(text)
+    if not row or row.get('state')!='stopped':return None
+    reason=row.get('reason')
+    return reason if reason in REASONS else None
+
+
 def auto_on(read,runtime,persist):
     """The Auto intent of the run that ended (boot_resume.wanted's marker/stop-latch decision after a boot)."""
     intent=_decode(read(runtime+'/pair-auto-control.json'))
@@ -79,8 +91,9 @@ def auto_on(read,runtime,persist):
 def classify(f):
     if not f['fresh']:
         return 'RESTART-CLEAN' if f['previous']=='stopped' or f['stopped_since'] else 'RESTART-PROCESS'
-    if f['previous']=='stopped':return 'RESTART-CLEAN'
+    if f['previous']=='stopped':return 'RESTART-PLANNED-REBOOT' if f.get('reason')=='planned-reboot' else 'RESTART-CLEAN'
     if f['previous'] is None:return 'RESTART-FIRST-START'
+    if f.get('crash'):return 'RESTART-KERNEL-CRASH'
     if f['phase'] in SWITCH:return 'RESTART-INTERRUPTED-SWITCH'
     if f['previous']=='starting':return 'RESTART-INTERRUPTED-BOOT'
     if f['phase'] in HOLD:return 'RESTART-INTERRUPTED-RESERVE-HOLD'
@@ -124,12 +137,17 @@ def _emit(ctx,code,line,recorded):
 
 def start(ctx,phase):
     persist_path=ctx['persist']+'/'+MARKER
-    prior=previous(ctx['read'](persist_path))
-    facts={'previous':prior,'phase':phase if isinstance(phase,str) else None}
+    prior_text=ctx['read'](persist_path)
+    prior=previous(prior_text)
+    facts={'previous':prior,'phase':phase if isinstance(phase,str) else None,'reason':previous_reason(prior_text),'crash':False}
     try:facts['auto_on']=auto_on(ctx['read'],ctx['runtime'],ctx['persist']) is True
     except Exception:facts['auto_on']=False
     def code_of(fresh,since):
         facts['fresh']=fresh;facts['stopped_since']=since
+        # the first start of a boot only: the crash verdict of the boot that ended (boot_cause.evaluate)
+        if fresh and ctx.get('crash'):
+            try:facts['crash']=ctx['crash']()=='crash'
+            except Exception:facts['crash']=False
         return classify(facts)
     code,fresh,_,recorded,up=_ram_marker(ctx,ctx['runtime']+'/'+SUPERVISOR,code_of)
     facts['uptime']=up
@@ -189,5 +207,8 @@ def context(runtime,persist,record=None,stopping=None,log=None):
         except (ValueError,IndexError):return None
     if log is None:
         from pair_auto import _log as log
+    def crash():
+        import boot_cause
+        return boot_cause.evaluate(persist,write=lambda path,value:write(path,json.dumps(value)))
     return {'runtime':str(runtime),'persist':str(persist),'read':read,'mtime':mtime,'write_ram':write,'write_persist':write,
-            'now':time.time,'uptime':uptime,'log':log,'record':record,'stopping':stopping}
+            'now':time.time,'uptime':uptime,'log':log,'record':record,'stopping':stopping,'crash':crash}

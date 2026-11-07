@@ -6,6 +6,7 @@ session must all agree before any retry can be dispatched.
 """
 import copy
 import re
+import time
 
 
 def order_steps(before,target):
@@ -232,6 +233,42 @@ def vendor_lock_pid():
     return int(text)  # pid reused by an unrelated process
 
 
+def vendor_busy_seen(scan=False):
+    """What can be seen of a VENDOR-WORKER-BUSY right now: {kind,mark,pid,workers}, for a status code only. It changes no
+    decision: rtp_lock_busy stays true for the same lock and nothing here removes anything. An observation, not a proof: a dead
+    holder does not mean the work ended (a SIGKILLed rtp2 leaves its child running), no file does not mean GL is quiet (a first
+    run can erase the mark of a second). Only no /proc/<pid> or a process that is not rtp2 is a dead holder; a failed read is
+    not. scan: also count the workers (the whole of /proc, not on every tick). Lua: platform.vendor_busy_seen."""
+    from pathlib import Path
+    row={'kind':'unidentified','mark':'no-file'}
+    path=Path(VENDOR_LOCK)
+    try:st=path.lstat()
+    except OSError:st=None
+    if st is not None:
+        row['mark']='rtp-lock:%d'%st.st_ino
+        try:raw=None if path.is_symlink() else path.read_bytes()
+        except OSError:raw=None
+        text=raw.decode('ascii','replace').strip() if raw is not None and len(raw)<=32 else ''
+        if re.fullmatch('[1-9][0-9]{0,9}',text):
+            row['pid']=int(text);row['mark']+=':'+text
+            base=Path('/proc')/text
+            if not base.exists():row['kind']='rtp-lock-dead'
+            else:
+                try:row['kind']='rtp-lock-live' if b'rtp2' in (base/'cmdline').read_bytes() else 'rtp-lock-dead'
+                except OSError:pass
+    elif list(Path('/var/run').glob('tunnel-switch*.lock')):row.update(kind='tunnel-switch',mark='tunnel-switch')
+    if scan:
+        from mt3000_manual_platform import _workers
+        try:
+            seen=_workers(time.monotonic()+2,ignore_lock=True)
+            if seen.get('verified') is True:row['workers']=seen.get('busy')
+        except (OSError,ValueError):pass
+        if row['mark']=='no-file':
+            queues=any((Path('/var/run')/name).is_symlink() or (Path('/var/run')/name).exists() and (not (Path('/var/run')/name).is_dir() or any((Path('/var/run')/name).iterdir())) for name in ('gl_reload_service','gl_restart_service'))
+            if row.get('workers') or queues:row['kind']='workers'
+    return row
+
+
 def rtp_lock_busy():
     """Any vendor lock is busy, except the one stale lock a rebuild proof just proved."""
     from pathlib import Path
@@ -256,12 +293,14 @@ def vendor_rebuild_applies(backend,journal):
             and unrouted_kernel())
 
 
-def settled(backend,clock=None,sleep=None):
+def settled(backend,clock=None,sleep=None,tolerated=None):
     """diagnostic(), waiting a bounded time while it is only not ready yet.
 
     A supervisor restart (upgrade, reboot) also restarts the monitor, which
     renews every vendor generation; the pair stays unsettled for ~30 s. Nothing
     is written while waiting; the caller decides on the last reading.
+    tolerated: the one blocker that ends the wait at once (T3: the caller holds the LAN blocked and this blocker does
+    not concern its route).
     """
     import time
     clock=clock or time.monotonic;sleep=sleep or time.sleep
@@ -269,7 +308,7 @@ def settled(backend,clock=None,sleep=None):
     import native_switch as n
     while True:
         blockers,current=backend.diagnostic()
-        if not blockers and isinstance(current,dict) or clock()>=until or n.STOP:return blockers,current
+        if not blockers and isinstance(current,dict) or clock()>=until or n.STOP or blockers==[tolerated]:return blockers,current
         sleep(SETTLE_POLL)
 
 
@@ -434,7 +473,9 @@ def rebuild(backend,journal,reason,target):
         if args[0]=='/usr/bin/rtp2.sh':
             if lock[0] is not None:
                 # Remove only the lock just proven stale (same dead pid); rtp2.sh
-                # would wait 30 s and remove it itself, inside our RTP bound.
+                # would wait 30 s and remove it itself, inside our RTP bound. The rule (owner 05.11.2026, docs/ROADMAP.md): a vendor
+                # lock is deleted only when its holder is provably dead and only here, in recovery; everywhere else locks are
+                # never deleted. Lua: recovery.lua.
                 try:same=vendor_lock_pid()==lock[0]
                 except (OSError,ValueError):same=False
                 if not same:refuse('VENDOR-WORKER-BUSY')

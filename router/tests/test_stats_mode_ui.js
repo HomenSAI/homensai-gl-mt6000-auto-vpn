@@ -10,7 +10,8 @@ function node(tag,attrs,children){const n={tag,attrs:attrs||{},children:[],liste
 for(const language of ['en','ru']){
   const c={locale:language,Date,Math,Number,String,Object,Array,JSON,Promise,saves:[],notes:[]};
   c.bi=(en,ru)=>language==='ru'?ru:en;c.E=node;
-  vm.createContext(c);vm.runInContext(fs.readFileSync('router/stats_page.inc.js','utf8'),c);
+  vm.createContext(c);vm.runInContext(/function hvCss\(el,css\)\{[\s\S]*?\n\}/.exec(fs.readFileSync('router/element_guard.inc.js','utf8'))[0],c);  // the page's CSSOM style helper (F-77)
+  vm.runInContext(fs.readFileSync('router/stats_page.inc.js','utf8'),c);
   const model={diagnostic:false,until:0,storage:{'flash:checkpoint.json':977000,'ram:status.json':316000},
     save:(mode,hours)=>{c.saves.push([mode,hours]);return Promise.resolve({saved:true});},notify:t=>c.notes.push(t)};
   const page=c.renderCollectionPage(model),all=page.all();

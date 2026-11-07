@@ -78,6 +78,12 @@ def current_revision(runtime=None, rotate=False):
     with control_lock(runtime):return revision_locked(runtime,rotate)
 
 
+def maintenance_blocker():
+    """Plan item 54: MAINTENANCE-IN-PROGRESS while the package hooks hold the maintenance marker (PERSIST), else None."""
+    from maintenance import blocker
+    return blocker(PERSIST)
+
+
 @contextmanager
 
 
@@ -204,8 +210,34 @@ def _owner_resume_wanted():
     except (OSError,ValueError,TypeError,KeyError,AttributeError):return False
 
 
+# BH-04 (bug hunt 07.11.2026): the init's self-check gate (homensai-vpn-integrity boot) may decide that Auto must not
+# run: mode no-auto (the self-check tool is missing or not verifiable) starts no native/pair supervisor, mode stopped
+# starts no service at all. A Start accepted then would only queue an intent nobody consumes, and that stale intent
+# would start Auto later, after a reinstall. Start is refused instead while RUNTIME/integrity.json (RAM, rewritten at
+# every service start) names one of these modes. No report / another mode / an unreadable report: the gate decides.
+INTEGRITY_NO_AUTO=('no-auto','stopped')
+
+
+def integrity_blocker(runtime=None):
+    try:record=read_json((runtime or RUNTIME)/'integrity.json',None)
+    except (OSError,ValueError,TypeError,RecursionError):return None
+    if isinstance(record,dict) and record.get('mode') in INTEGRITY_NO_AUTO:return 'INTEGRITY-AUTO-BLOCKED'
+    return None
+
+
+# Owner decision 07.11.2026 15:10 (MONITOR-BOOT-NOTE.md): the init always starts the monitor, but with option enabled
+# other than 1 it starts no Auto supervisor and writes RUNTIME/service-auto.json {"code":"SERVICE-AUTO-OFF"} (RAM,
+# removed at every service start). As with BH-04, a Start accepted then would queue an intent nobody consumes that
+# starts Auto later: it is refused instead. No record / another code / an unreadable record: the init gate decides.
+def service_auto_blocker(runtime=None):
+    try:record=read_json((runtime or RUNTIME)/'service-auto.json',None)
+    except (OSError,ValueError,TypeError,RecursionError):return None
+    if isinstance(record,dict) and record.get('code')=='SERVICE-AUTO-OFF':return 'SERVICE-AUTO-OFF'
+    return None
+
+
 def start(control_revision=None,trial_nonce=None,request_source=None):
-    from native_switch import Linux, journal_read, deadline, Refused
+    from native_switch import Linux, journal_read, deadline, Refused, key_blockers
     arrived=time.time()
     source='test' if trial_nonce is not None else normalize_request_source(request_source)
     if not isinstance(control_revision,str) or not re.fullmatch(r'[a-f0-9]{32}',control_revision):
@@ -213,8 +245,13 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     with control_lock():
         if control_revision!=revision_locked(RUNTIME):
             return {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+        # Plan item 54 (F-16): a package install/upgrade/removal is running (maintenance.py): nothing starts meanwhile.
+        maintenance=maintenance_blocker()
+        if maintenance:return {'accepted':False,'blockers':[maintenance]}
         from speed_pause import public as pause_status
         if pause_status().get('active'):return {'accepted':False,'blockers':['SPEED-BUSY']}
+        integrity=integrity_blocker() or service_auto_blocker()
+        if integrity:return {'accepted':False,'blockers':[integrity]}
     # Read-only diagnostics may be slow. They must not hold the lock needed by
     # Stop; a Stop received during preflight invalidates this pending Start.
     backend = Linux()
@@ -240,25 +277,32 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     # otherwise preparation (which refuses while a session is HELD) would block that hand-over for good.
     # K1 tail (formal model 03.11.2026): also the boot/restart resume's programmatic Start of the owner's Auto (the
     # owner's resume marker, no newer Stop latch: boot_resume.wanted); release_for_start keeps every other check.
+    handover=False
     if trial_nonce is None and (source=='manual' or source=='programmatic' and _owner_resume_wanted()):
         from pair_auto import release_for_start
         refused=release_for_start(control_revision,settings,arrived)
         if refused:return {'accepted':False,'blockers':[refused]}
+        handover=True
+    # Review 04.11.2026 (finding 4): a Start refused after the hand-over leaves no session for the K9 VPN-only guard
+    # (pair_auto.release_orphan_guard: only the guard of a handed-over record nobody took over).
+    def orphan_guard():
+        if handover:
+            from pair_auto import _orphan_guard_safe
+            _orphan_guard_safe(backend,start_refused=True)
     # The Auto button sets up what it needs by itself; the owner does nothing else.
     if trial_nonce is None:
         prepared=auto_prepare(settings,control_revision)
-        if prepared.get('code'):return {'accepted':False,'blockers':[prepared['code']],'prepared':prepared.get('repaired',[])}
+        if prepared.get('code'):
+            orphan_guard()
+            return {'accepted':False,'blockers':[prepared['code']],'prepared':prepared.get('repaired',[])}
     from pair_auto import MODE, request as pair_request
     if trial_nonce is None and settings.get('pair_auto_mode')==MODE:
         reply=pair_request(control_revision,request_source=source)
-        # Owner decision 31.10.2026: the owner's own Start is remembered on flash, so Auto comes back after a power cut
-        if source=='manual' and isinstance(reply,dict) and reply.get('accepted') and not reply.get('already_requested'):
-            try:
-                from boot_resume import remember
-                remember()
-            except (OSError,ValueError):pass
+        if not (isinstance(reply,dict) and reply.get('accepted')):orphan_guard()
         return reply
     blockers, selection = backend.diagnostic()
+    # A Start only arms the watch: the owner's rule of 05.11.2026 asks for the carrying channel. A trial moves onto the other one.
+    blockers = key_blockers(blockers, selection, backend if trial_nonce is None else None)
     try:
         consumed=read_json(PERSIST/'native-attempts.json',{})
         reasons = (readiness(settings, read_json(PERSIST/'native-certificate.json',{}),consumed,selection,blockers,time.time())
@@ -268,6 +312,9 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     with control_lock():
         if control_revision!=revision_locked(RUNTIME):
             return {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+        # F-16: the guard writes its marker under this same lock before it assesses; checked again right before the write
+        maintenance=maintenance_blocker()
+        if maintenance:return {'accepted':False,'blockers':[maintenance]}
         # A damaged journal is a refusal with a code, never a traceback.
         try:phase=journal_read().get('phase')
         except Refused:return {'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']}
@@ -321,10 +368,14 @@ def stop(runtime=None,persist=None,request_source=None):
         revision_error=None
         try:revision_locked(runtime,rotate=True)
         except (OSError,ValueError) as error:revision_error=error
+        volatile_error=None
         if (runtime/'pair-auto-control.json').exists():
-            # Same serialized Stop cancels preparation and all later hops.
-            marker=read_json(runtime/'auto-control-revision.json',{}).get('revision','unverified')
-            atomic_json(runtime/'pair-auto-control.json',{'mode':'off','revision':marker,'time':time.time(),'request_source':normalize_request_source(request_source)})
+            # Same serialized Stop cancels preparation and all later hops. Review F-26 (06.11.2026): a failed RAM write
+            # never skips the durable latch below (the rotated revision already fences the pair); the reply says so.
+            try:
+                marker=read_json(runtime/'auto-control-revision.json',{}).get('revision','unverified')
+                atomic_json(runtime/'pair-auto-control.json',{'mode':'off','revision':marker,'time':time.time(),'request_source':normalize_request_source(request_source)})
+            except (OSError,ValueError,TypeError,AttributeError) as error:volatile_error=error
         # The stopped pair no longer consumes its queue. Cancel the exact
         # pending command now; a corrupt result file must never prevent Stop.
         try:
@@ -343,9 +394,16 @@ def stop(runtime=None,persist=None,request_source=None):
         except (OSError,ValueError):old={}
         if not isinstance(old,dict):old={}
         extra={'settings_unverified':True} if unverified else {}
+        if volatile_error is not None:extra['pair_intent_unverified']=True
         previous = old.get('requested')
         requested = request.get('time',0)
         if type(requested) not in (int,float) or not math.isfinite(requested):requested=float('inf')
+        # T1 (trace conformance 04.11.2026): pair mode never writes the legacy auto-control.json (time 0), so a Stop after
+        # Start, Stop, Start answered already_requested with the older latch: the Start's marker stayed newer and Auto came
+        # back after the next power cut. The owner's Start is the later of the request and the resume marker.
+        from boot_resume import marker_time
+        started=marker_time(persist)
+        requested=max(requested,started)
         needs_global = unverified or not trial or changed
         if (revision_error is None and not old.get('control_revision_failed')
                 and old and type(previous) in (int, float) and math.isfinite(previous) and previous > 0
@@ -353,9 +411,13 @@ def stop(runtime=None,persist=None,request_source=None):
                 and previous >= requested):
             return dict({'queued':True,'already_requested':True},**extra)
         floor=previous if type(previous) in (int,float) and math.isfinite(previous) else 0
+        # The router has no RTC: after a boot the wall clock can stand behind a marker written before the power cut. The
+        # Stop is still the newer one (boot_resume.wanted: stopped>=at).
+        if math.isfinite(started):floor=max(floor,started)
         record = {'requested':max(time.time(),floor),'trial':trial,'request_source':normalize_request_source(request_source)}
         if revision_error is not None:record['control_revision_failed']=True
-        if needs_global or revision_error is not None:
+        # a refreshed latch never narrows a global one (a give-up, a Stop with unverified settings)
+        if needs_global or revision_error is not None or old.get('all_trials') is True:
             record['all_trials'] = True
         atomic_json(persist/'native-stop.json',record)
         if revision_error is not None:raise revision_error
@@ -367,6 +429,8 @@ def return_request(runtime=None):
     runtime=runtime or RUNTIME
     from native_switch import journal_read, Refused
     with control_lock(runtime):
+        maintenance=maintenance_blocker()
+        if maintenance:return {'accepted':False,'code':maintenance}
         try:journal=journal_read()
         except (Refused,OSError,ValueError):return {'accepted':False,'code':'JOURNAL-UNVERIFIED'}
         if journal.get('phase') not in ('HELD-ON-RESERVE','COMMITTED'):

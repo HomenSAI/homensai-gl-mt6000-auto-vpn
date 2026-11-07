@@ -17,10 +17,32 @@ t.test('switch_timing.read: bounds and rounding',function()
   t.eq(page.switch_timing(env),canon.null)
   put(R,'/etc/hv/switch-timing.json',obj({avg_seconds=canon.float(4.26),count=3,last_seconds=canon.float(3.9),updated=canon.float(1761825000.5)}))
   local v=page.switch_timing(env)
-  t.eq(canon.encode(v),'{"avg_seconds":4.3,"count":3,"last_seconds":3.9,"updated":1761825000.5}')
+  t.eq(canon.encode(v),'{"avg_seconds":4.26,"count":3,"last_seconds":3.9,"updated":1761825000.5}')
+  put(R,'/etc/hv/switch-timing.json',obj({avg_seconds=canon.float(0.76),count=1}));t.eq(page.switch_timing(env).avg_seconds,0.76)
+  put(R,'/etc/hv/switch-timing.json',obj({avg_seconds=0,count=1}));t.eq(page.switch_timing(env),canon.null)
   put(R,'/etc/hv/switch-timing.json',obj({avg_seconds=700,count=3}));t.eq(page.switch_timing(env),canon.null)
   put(R,'/etc/hv/switch-timing.json',obj({avg_seconds=5,count=0}));t.eq(page.switch_timing(env),canon.null)
   R.files['/etc/hv/switch-timing.json']='{bad';t.eq(page.switch_timing(env),canon.null)
+end)
+
+t.test('deps.record_switch_time: sub-second bounds and the unrounded average (F-51, F-52)',function()
+  local deps=require('deps')
+  local path='/etc/hv/switch-timing.json'
+  for _,x in ipairs({0.76,0.999,1,600}) do
+    local R=t.fake_runner();local env=page.env(R,'/run/hv','/etc/hv')
+    local out=deps.record_switch_time(env,canon.float(x))
+    t.truthy(out~=nil,'accepted '..x);t.eq(out.count,1);t.eq(canon.number(out.avg_seconds),x)
+    t.eq(canon.number(canon.decode(R.files[path]).avg_seconds),x)
+  end
+  for _,bad in ipairs({600.001,0,-3,0/0,1/0,true,'10'}) do
+    local R=t.fake_runner();local env=page.env(R,'/run/hv','/etc/hv')
+    t.eq(deps.record_switch_time(env,bad),nil);t.eq(R.files[path],nil)
+  end
+  -- 1, 1.2, 1 s: A = 1, 1.06, 1.042 (Python switch_timing gives the same floats); the page shows milliseconds: 1.042
+  local R=t.fake_runner();local env=page.env(R,'/run/hv','/etc/hv')
+  for _,x in ipairs({1,1.2,1}) do deps.record_switch_time(env,canon.float(x)) end
+  t.eq(string.match(R.files[path],'"avg_seconds":([0-9.]+)'),'1.042')
+  t.eq(page.switch_timing(env).avg_seconds,1.042);t.eq(page.switch_timing(env).count,3)
 end)
 
 t.test('auto_control.public_status: modes, stop latch, return result, revision creation only with a free lock',function()

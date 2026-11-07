@@ -1,0 +1,155 @@
+/* HomenS.AI Auto VPN: owner-approved F1 «Золотая сетка» (04.11.2026), copied from private/ui-fibonacci-2026-11-03/_src/fib-base.css without the mockup-only parts (the "MOCK" banner and the «Как применён Фибоначчи» overlay). Scoped to .hvx by router/build_sidebar_ui.py. */
+/* =====================================================================
+   Fibonacci base layer, shared by F1–F3. Applied AFTER core.css (design A).
+   Colours, fonts, components, content: unchanged. Only measurements move
+   onto the Fibonacci scale: 2 3 5 8 13 21 34 55 89 (+ 16 = 13+3 for the
+   phone gutter that the owner fixed, and 44 = 34+5+5 for tap areas).
+   ===================================================================== */
+:root{
+  --f2:2px;--f3:3px;--f5:5px;--f8:8px;--f13:13px;--f21:21px;--f34:34px;--f55:55px;--f89:89px;
+  --gut:16px;--pad:13px;--gap:13px;--r:13px;--r-s:8px;--phi:1.618034;
+}
+@media (min-width:761px){:root{--gut:21px;--pad:21px;--gap:21px}}
+body{line-height:1.4}
+.wrap{padding-left:var(--gut);padding-right:var(--gut)}
+main{padding:var(--f21) 0 var(--f34)}
+@media (max-width:760px){main{padding-top:var(--f13)}}
+h1,h2,h3{text-wrap:balance}
+
+/* header: 55 px, brand + badge, nav, tools */
+.hdr .wrap{min-height:var(--f55)}
+.hdr .wrap.hdr-in{display:flex;align-items:center;gap:var(--f8) var(--f13);padding-top:var(--f8);padding-bottom:var(--f8)}
+.hdr-in .hb{display:flex;align-items:center;gap:var(--f8);min-width:0}
+.hdr-in .bv{order:1;display:flex}
+.hdr-in .topnav{order:2;margin-left:auto}
+.hdr-in .hdr-tools{order:3}
+.topnav{display:flex;gap:var(--f5);align-items:center}
+.topnav button{border:0;background:transparent;font-weight:600;color:var(--mute);cursor:pointer}
+.topnav button[aria-current="page"]{background:var(--acc-soft);color:var(--acc)}
+.logo{width:34px;height:34px;border-radius:var(--f8)}
+.badge-ver{font-size:13px;padding:5px 8px}
+.brand b{font-size:16px}
+.devline{font-size:13px}
+.topnav button{min-height:34px;padding:5px 13px;border-radius:var(--f8);position:relative}
+.hdr-tools{gap:var(--f8)}
+.iconbtn{min-width:34px;height:34px;border-radius:var(--f8);position:relative;font-size:13px}
+.viewsw{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--f8);background:var(--card2)}
+.viewsw .iconbtn{border:0;background:transparent;font-size:16px;line-height:1}
+.viewsw .iconbtn[aria-pressed="true"]{background:var(--acc-soft);color:var(--acc)}
+.viewsw .vlabel{font-size:13px;font-weight:600;color:var(--mute);padding:0 3px 0 8px;white-space:nowrap}
+@media (max-width:900px){.viewsw .vlabel{display:none}}
+@media (max-width:560px){.topnav .hl{display:none}}
+@media (max-width:760px){
+  .hdr .wrap.hdr-in{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"hb badge" "nav tools";gap:var(--f8)}
+  .hdr-in .hb{grid-area:hb}.hdr-in .hdr-tools{grid-area:tools;margin-left:0;gap:var(--f5);justify-self:end}
+  .hdr-in .topnav{grid-area:nav;justify-self:start;margin-left:calc(-1 * var(--f8));gap:var(--f2);min-width:0}
+  .hdr-in .topnav button{padding:5px 8px}
+  .hdr-in .bv{grid-area:badge;justify-self:end}
+  .hdr .devline{display:block}
+}
+
+/* tap areas: 34 px visual + 5 + 5 invisible = 44 px target */
+.btn,.iconbtn,.topnav button,.filters button{position:relative}
+.btn::after,.iconbtn::after,.topnav button::after,.filters button::after{content:"";position:absolute;inset:-5px}
+.btn{min-height:34px;padding:5px 13px;border-radius:var(--f8);gap:var(--f8)}
+.btn.sm{min-height:34px;padding:5px 13px;font-size:13px}
+.btn.lg{min-height:55px;padding:13px 21px;border-radius:var(--f13)}
+.btn.pri,.btn.ok{min-height:44px}
+.filters{gap:var(--f8);margin:var(--f8) 0 var(--f13)}
+.filters button{min-height:34px;padding:5px 13px;font-size:13px}
+details.more>summary{display:flex;align-items:center;min-height:34px;padding:0;position:relative;font-size:13px}
+details.more>summary::after{content:"";position:absolute;inset:-5px 0}
+details.more{margin-top:var(--f5)}
+
+/* cards & rhythm */
+.card{padding:var(--pad);border-radius:var(--r)}
+.card+.card{margin-top:var(--gap)}
+.card h2,.card h3{margin-bottom:var(--f8)}
+.row{gap:var(--f13)}
+.grid2,.grid3{gap:var(--gap)}
+.grp{font-size:13px;margin:var(--f34) var(--f2) var(--f13)}
+.kv{gap:var(--f3) var(--f13);font-size:13px}
+.note{padding:var(--f8) var(--f13)}
+hr.sep{margin:var(--f13) 0}
+
+/* small text: 13 / 21 */
+.small,.tiny{font-size:13px;line-height:21px}
+
+/* lamps: 13 / 21 / 34 */
+.lamp{width:13px;height:13px}
+.lamp.l{width:21px;height:21px}
+.lamp.xl{width:34px;height:34px}
+
+/* Auto switch: track 55 x 34, knob 24 inset 5 */
+.aswitch{gap:var(--f13);min-height:55px}
+.aswitch .trk{width:55px;height:34px}
+.aswitch .trk::after{top:5px;left:5px;width:24px;height:24px}
+.aswitch[aria-checked="true"] .trk::after{left:26px}
+
+/* channel cards */
+.ch{padding:var(--pad);border-radius:var(--r)}
+.ch .role{font-size:13px}
+.ch .nm{font-size:16px}
+.ch .top{gap:var(--f8)}
+.ch .top>span:last-child{margin-left:auto}
+.ch .ms{font-size:34px;line-height:1.1}
+.ch .ms small{font-size:13px}
+.ch .foot{margin-top:var(--f13);gap:var(--f8)}
+
+/* events */
+.evl li{padding:0}
+.ev-h{padding:var(--f13) var(--f2);gap:var(--f13);min-height:44px}
+.ev-h .tm{font-size:13px;min-width:89px}
+.ev-why{margin:0 0 var(--f13) 102px;font-size:13px;line-height:21px}
+@media (max-width:560px){.ev-why{margin-left:0}.ev-h .tm{min-width:0}}
+.code{font-size:13px;padding:1px 5px}
+
+/* stats tiles */
+.tiles{gap:var(--f13)}
+.tile{padding:var(--f13);border-radius:var(--f8)}
+.tile b{font-size:21px;line-height:34px}
+.tile span{font-size:13px;line-height:21px}
+
+/* settings */
+details.sec{margin-bottom:var(--f13);border-radius:var(--r)}
+details.sec>summary{padding:var(--f13) var(--f21);min-height:55px}
+details.sec>.body{padding:0 var(--f21) var(--f21)}
+.f{padding:var(--f8) 0;gap:var(--f3) var(--f13)}
+.f label{display:flex;align-items:center;min-height:34px}
+.f .h{font-size:13px}
+.f input[type=number],.f input[type=text],.f input[type=password],.f select{min-height:34px;padding:5px 8px;border-radius:var(--f8)}
+.tg{width:55px;height:34px}
+.tg::after{top:5px;left:5px;width:24px;height:24px}
+.tg:checked::after{left:26px}
+.presets{gap:var(--f8)}
+.presets label{padding:var(--f13);border-radius:var(--f13);min-height:55px}
+.savebar{gap:var(--f8);margin-top:var(--f13);padding-top:var(--f13)}
+.modal{padding:var(--f21);border-radius:var(--f21)}
+.modal .acts{gap:var(--f8);margin-top:var(--f21)}
+.tbl th,.tbl td{padding:var(--f8) var(--f5)}
+.attr .wrap{gap:var(--f5) var(--f21);padding-top:var(--f13);padding-bottom:var(--f21);font-size:13px;line-height:21px}
+.attr .copy{font-size:13px}
+
+/* wizard (first run, scenario «Первый запуск») */
+.wiz{margin:0 auto}
+.wz-lead{font-size:13px;margin:0 0 var(--f13)}
+.steps{display:flex;gap:var(--f8);margin:0 0 var(--f21);list-style:none;padding:0}
+.steps li{flex:1;border-top:5px solid var(--line);padding-top:var(--f8);font-size:13px;line-height:21px;color:var(--mute);font-weight:600}
+.steps li.done{border-color:var(--ok);color:var(--ok)}
+.steps li.cur{border-color:var(--acc);color:var(--acc)}
+.wiz .card h2{font-size:21px;line-height:34px}
+.wiz .nav{display:flex;justify-content:space-between;gap:var(--f8);margin-top:var(--f21);flex-wrap:wrap}
+.prof{display:grid;gap:var(--f8)}
+.prof div{display:flex;gap:var(--f13);align-items:center;border:1px solid var(--line);border-radius:var(--f8);padding:var(--f8) var(--f13);background:var(--card2);min-height:44px}
+@media (max-width:560px){.steps li span{display:none}}
+
+.grid2>.card+.card,.grid3>.card+.card{margin-top:0}
+
+.topnav button{min-width:34px}
+.attr a{display:inline-flex;align-items:center;min-height:34px;position:relative}
+.attr a::after{content:"";position:absolute;inset:-5px -3px}
+.code{display:inline-block;position:relative;line-height:21px}
+.code::after{content:"";position:absolute;inset:-12px -5px}
+.brand{min-height:44px}
+details.sec>summary .t span{font-size:13px;line-height:21px}
+.lvl,details.sec>summary .t span.lvl{font-size:13px;line-height:21px;padding:0 5px;vertical-align:0;border-radius:5px}

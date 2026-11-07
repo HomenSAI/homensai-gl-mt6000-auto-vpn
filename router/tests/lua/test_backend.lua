@@ -89,6 +89,26 @@ t.test('the idle tick costs reads, not processes: the second diagnostic starts n
   t.eq(grew('exec:nft'),0,'nft --version once per process')
 end)
 
+t.test('a vendor lock is the VENDOR-WORKER-BUSY blocker, whatever its holder: no observation takes it away',function()
+  local function blockers(change)
+    local w=world()
+    w.ubus['system board']=O({board_name='glinet,gl-mt6000'})
+    change(w)
+    local B=backend(w)
+    local found=B.diagnostic()
+    local busy=false
+    for _,code in ipairs(found) do if code=='VENDOR-WORKER-BUSY' then busy=true end end
+    return busy,B
+  end
+  t.eq((blockers(function() end)),false,'no lock')
+  local busy,B=blockers(function(w) w.files[platform.RTP_LOCK]='24680\n' end)
+  t.eq(busy,true,'the rtp2 file of a dead holder')
+  local row=B.vendor_busy_seen(false)
+  t.eq(row.kind,'rtp-lock-dead');t.eq(row.pid,24680)
+  t.eq((B.diagnostic()),B.diagnostic(),'reading it changed nothing')
+  t.eq((blockers(function(w) w.dirs['/var/run']={'tunnel-switch-1.lock'} end)),true,'a tunnel-switch lock')
+end)
+
 t.test('uci reorder: one move per changed index, then one commit; write_command gets the facts record_step checks',function()
   local w=world();local B,sys=backend(w)
   local reordered=false
@@ -112,6 +132,103 @@ t.test('uci reorder: one move per changed index, then one commit; write_command 
   t.truthy(reordered)
   local live=B.order()
   t.eq(live[3],order[4])
+end)
+
+-- R2-01: a `uci reorder` that never exits is terminated; only a confirmed exit is a plain COMMAND-FAILED, an exit that
+-- cannot be established leaves the writer recorded as unresolved so no rollback runs over it
+t.test('a hung uci writer: confirmed termination is COMMAND-FAILED, an unconfirmed one is WRITER-UNRESOLVED and blocks rollback',function()
+  local function hung_world(terminate)
+    local w=world();local B,sys,env=backend(w)
+    w.terminate=terminate
+    sys.wait=function() return nil end  -- never finishes in time
+    B.use_process_bindings(O({wgclient1=4096,ovpnclient2=45056}))
+    local order=B.order()
+    local target=A({order[1],order[2],order[4],order[3],order[5]})
+    local through=function(kind,fn) local r=fn();if type(r)=='function' then r=r() end;return r end
+    return w,B,sys,env,target,through
+  end
+  local w,B,sys,env,target,through=hung_world(true)
+  local err=t.raises(B.reorder,target,nil,through)
+  t.eq(err.code,'COMMAND-FAILED');t.eq(sys.terminated,1,'the writer was terminated');t.eq(B.writer_unresolved(),false)
+  w,B,sys,env,target,through=hung_world(false)
+  err=t.raises(B.reorder,target,nil,through)
+  t.eq(err.code,'WRITER-UNRESOLVED');t.eq(err.unresolved,true)
+  t.truthy(w.files['/run/hv/writer-unresolved'],'the handle is recorded in RAM')
+  t.eq(B.writer_unresolved(),true,'still unresolved while no exit status exists')
+  local rollback=require('rollback')
+  local rerr=t.raises(rollback.rollback,env,O({phase='APPLYING',before=A({}),after=A({}),hash=t.HEX64 or string.rep('a',64)}),'TRANSACTION-FAILED')
+  t.eq(rerr.code,'WRITER-UNRESOLVED','no rollback while the writer may still run')
+  w.finished=true
+  t.eq(B.writer_unresolved(),false,'the exit status appeared: resolved');t.eq(w.files['/run/hv/writer-unresolved'],nil,'marker dropped')
+end)
+
+-- R4-01 (night2 N3-regress 2): the writer ownership record is on flash before the writer starts; a RAM marker that
+-- could not be saved (RAM full) never reads as 'no unresolved writer'; a record that cannot be written starts nothing
+t.test('writer record: written to flash before dispatch, dropped after a confirmed exit, kept while unresolved',function()
+  local RECORD='/etc/hv/writer-pending.json'
+  local function hung_world(terminate)
+    local w=world();local B,sys,env=backend(w)
+    w.terminate=terminate
+    sys.wait=function() return nil end
+    B.use_process_bindings(O({wgclient1=4096,ovpnclient2=45056}))
+    local order=B.order()
+    local target=A({order[1],order[2],order[4],order[3],order[5]})
+    local through=function(kind,fn) local r=fn();if type(r)=='function' then r=r() end;return r end
+    return w,B,sys,env,target,through
+  end
+  -- a normal reorder: the record exists while the command runs and is gone afterwards
+  do
+    local w=world();local B,sys=backend(w)
+    local seen_record=false
+    w.handler=function(argv)
+      if argv[1]=='uci' and argv[2]=='reorder' then
+        seen_record=w.files[RECORD]~=nil;w.scripts['/usr/lib/homensai-vpn/native_policy.lua']=policy_text(true)
+        w.files['/tmp/.uci/route_policy']='x';return 0,''
+      end
+      if argv[1]=='uci' and argv[2]=='commit' then w.files['/tmp/.uci/route_policy']=nil;return 0,'' end
+    end
+    B.use_process_bindings(O({wgclient1=4096,ovpnclient2=45056}))
+    local order=B.order()
+    B.reorder(A({order[1],order[2],order[4],order[3],order[5]}),nil,function(kind,fn) local r=fn();if type(r)=='function' then r=r() end;return r end)
+    t.truthy(seen_record,'the record was on flash when the uci command ran')
+    t.eq(w.files[RECORD],nil,'record dropped after the confirmed exit');t.eq(B.writer_unresolved(),false)
+    local atomic=0;for _,row in ipairs(sys.writes) do if row[1]=='atomic' and row[2]==RECORD then atomic=atomic+1 end end
+    t.truthy(atomic>=1,'the record went through the durable writer')
+  end
+  -- flash refuses the record: no command starts
+  do
+    local w,B,sys,env,target,through=hung_world(true)
+    w.atomic_fail=true
+    local err=t.raises(B.reorder,target,nil,through)
+    t.eq(err.code,'COMMAND-FAILED');t.eq(#sys.spawned,0,'nothing was dispatched');t.eq(B.writer_unresolved(),false)
+  end
+  -- the RAM marker cannot be saved (RAM full): the flash record alone keeps the writer unresolved
+  do
+    local w,B,sys,env,target,through=hung_world(false)
+    w.private_fail=true
+    local err=t.raises(B.reorder,target,nil,through)
+    t.eq(err.code,'WRITER-UNRESOLVED')
+    t.eq(w.files['/run/hv/writer-unresolved'],nil,'no RAM marker could be written')
+    t.truthy(w.files[RECORD],'the flash record is still there')
+    t.eq(B.writer_unresolved(),true,'recovery still sees the unresolved writer')
+    local rerr=t.raises(require('rollback').rollback,env,O({phase='APPLYING',before=A({}),after=A({}),hash=string.rep('a',64)}),'TRANSACTION-FAILED')
+    t.eq(rerr.code,'WRITER-UNRESOLVED')
+    w.finished=true
+    t.eq(B.writer_unresolved(),false,'the status named by the record appeared: resolved');t.eq(w.files[RECORD],nil,'record dropped')
+  end
+  -- an unreadable or unparsable record is never 'no writer'; a record of another boot is resolved (no writer survives a reboot)
+  do
+    local w,B=hung_world(false)
+    w.files[RECORD]='{not json'
+    t.eq(B.writer_unresolved(),true,'garbage record: unresolved')
+    w.files[RECORD]=string.rep('x',70000)
+    t.eq(B.writer_unresolved(),true,'oversize record (read refused): unresolved')
+    w.files[RECORD]=canon.encode(O({argv=A({'uci','commit'}),status='/run/hv/.spawn-x.status',boot_id='old-boot'}))
+    w.files['/proc/sys/kernel/random/boot_id']='new-boot\n'
+    t.eq(B.writer_unresolved(),false,'another boot: the writer is gone');t.eq(w.files[RECORD],nil)
+    w.files[RECORD]=canon.encode(O({argv=A({'uci','commit'}),status='/run/hv/.spawn-x.status',boot_id='new-boot'}))
+    t.eq(B.writer_unresolved(),true,'same boot, no status: unresolved')
+  end
 end)
 
 t.test('reorder of an unknown identity or an unsafe section name is refused before any write',function()
@@ -176,6 +293,23 @@ t.test('probe bridge: one Python process per health check; a negative answer is 
   t.eq(B.health('wireguard:peer_2002',30),true)
   t.eq(sys.calls['exec:python3'],6,'after a failure the next answer is live')
   t.eq(B.health('unknown:x'),false)
+  -- F-40: the remembered answer belongs to one channel generation; a rebound channel is probed afresh
+  w.clock=w.clock+31;healthy=true
+  t.eq(B.health('wireguard:peer_2002',30),true)
+  local before=sys.calls['exec:python3']
+  local rebound=canon.decode(INVENTORY);rebound.profiles[1].vendor_tunnel_id='wireguard:wgclient9';rebound.profiles[1].interface='wgclient9'
+  w.scripts['/usr/lib/homensai-vpn/inventory.lua']=canon.encode(rebound);B.invalidate()
+  healthy=false
+  t.eq(B.health('wireguard:peer_2002',30),false,'a rebound channel does not inherit the old healthy result')
+  t.eq(sys.calls['exec:python3'],before+1,'probed afresh')
+  w.scripts['/usr/lib/homensai-vpn/inventory.lua']=INVENTORY;B.invalidate();healthy=true
+  t.eq(B.health('wireguard:peer_2002'),true,'nor a former failure inside the 10 s window')
+  t.eq(sys.calls['exec:python3'],before+2)
+  t.truthy(B.health_key('wireguard:peer_2002',rebound.profiles[1])~=B.health_key('wireguard:peer_2002',canon.decode(INVENTORY).profiles[1]))
+  t.eq(B.health('wireguard:peer_2002',30),true);t.eq(sys.calls['exec:python3'],before+2,'same generation: reused by the hold')
+  B.process_bindings=O({['wireguard:peer_2002']=O({pid=4242})})
+  t.eq(B.health('wireguard:peer_2002',30),true);t.eq(sys.calls['exec:python3'],before+3,'a changed process binding is a new generation')
+  B.process_bindings=nil
   w.handler=function(argv) if argv[1]=='python3' then return 0,'{"code":"EXIT-TRACE-FAILED"}\n' end end
   t.eq(t.raises(B.trace,O({id='wireguard:peer_2002'})).code,'EXIT-TRACE-FAILED')
   w.handler=function(argv) if argv[1]=='python3' then return 0,'{"exit":"198.51.100.7"}\n' end end
@@ -338,15 +472,21 @@ t.test('bind() wires env.net and the deps transaction/pair/rollback call',functi
   t.eq(env.deps.testing_profile('x'),false)
 end)
 
-t.test('net.configs hashes a config file once per change',function()
+t.test('net.configs hashes a config file once per change of its content (F-41: read on every call, hashed once)',function()
   local w=world();local B,sys,env=backend(w)
   for _,name in ipairs(require('net').CONFIGS) do w.files['/etc/config/'..name]="config x '"..name.."'\n" end
+  local hashes=0
+  local real=canon.sha256
+  canon.sha256=function(text) hashes=hashes+1;return real(text) end
   local first=env.net.configs(identity.LEGACY)
+  local after_first=hashes
   local reads=sys.calls['read:/etc/config/firewall']
   env.net.configs(identity.LEGACY)
-  t.eq(sys.calls['read:/etc/config/firewall'],reads,'unchanged: not read again')
+  t.eq(sys.calls['read:/etc/config/firewall'],reads+1,'unchanged: read again (bounded), compared by content')
+  t.eq(hashes,after_first,'unchanged: not hashed again')
   w.files['/etc/config/firewall']="config x 'firewall2'\n"
   local second=env.net.configs(identity.LEGACY)
+  canon.sha256=real
   t.truthy(second.firewall~=first.firewall and second.dhcp==first.dhcp)
 end)
 
@@ -403,6 +543,31 @@ t.test('autostart_after_stop: one python child per change of the deciding files,
   B.autostart_after_stop();t.eq(runs,2,'a new Stop is looked at')
   w.files['/run/hv/pair-auto-control.json']='{"mode": "on", "revision": "r"}'
   t.eq(B.autostart_after_stop(),nil);t.eq(runs,2,'Auto runs: no child')
+end)
+
+t.test('autostart_after_stop: a rewritten session record with the same decision starts no python child (review 04.11, finding 3)',function()
+  local w=world();local B,sys,env=backend(w)
+  local runs=0
+  w.commands['python3 /usr/lib/homensai-vpn/preparation_control.py restore-autostart']=function()
+    runs=runs+1;return 0,'{"code": null, "kept": [], "restored": []}'..string.char(10) end
+  w.dirs['/etc/hv/preparation-changes']={'0123456789abcdef0123456789abcdef.json'}
+  local mtime=1
+  local function write(phase,code,owned)
+    mtime=mtime+1
+    w.files['/etc/hv/pair-auto-state.json']=string.format('{"data": {"id": "%s", "owned": [%s], "phase": "%s", "recovery_error": "%s", "started": 1000.0}, "sha256": "x"}',
+      string.rep('a',32),owned or '"wgclient1"',phase,code)
+    w.mtimes['/etc/hv/pair-auto-state.json']=mtime
+  end
+  write('HELD','PAIR-RECOVERY-REQUIRED')
+  B.autostart_after_stop();t.eq(runs,1)
+  for _=1,3 do
+    write('STOPPING','PAIR-RECOVERY-REQUIRED');write('HELD','PAIR-RECOVERY-REQUIRED')
+    B.autostart_after_stop()
+  end
+  t.eq(runs,1,'python3 on every pass before the fix')
+  write('HELD','PAIR-EXTERNAL-NETWORK-CHANGE');B.autostart_after_stop();t.eq(runs,2,'the code decides')
+  write('STOPPED','PAIR-EXTERNAL-NETWORK-CHANGE');B.autostart_after_stop();t.eq(runs,3,'the phase decides')
+  write('STOPPED','PAIR-EXTERNAL-NETWORK-CHANGE','');B.autostart_after_stop();t.eq(runs,4,'the owned list decides')
 end)
 
 t.run()

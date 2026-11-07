@@ -11,7 +11,11 @@ assert.equal(model({time:now-200},{settings:{enabled:true}},now,false).lamp,'yel
 assert.equal(model({time:now-200},{settings:{enabled:true}},now,true).lamp,'yellow');
 assert.equal(model({time:now-4000},{settings:{enabled:true}},now,false).lamp,'red');
 assert.equal(model({time:now-4000},{settings:{enabled:false}},now,false).lamp,'red');
-assert.equal(model({time:now-5},{settings:{enabled:false}},now,false).key,'problem');
+// owner decision 07.11.2026 15:10: fresh data is a running monitor whatever the service option enabled says
+assert.equal(model({time:now-5},{settings:{enabled:false}},now,false).key,'ok');
+assert.equal(model({time:now-5},{settings:{enabled:false}},now,false).serviceOff,true);
+assert.equal(model({time:now-5},{settings:{}},now,false).serviceOff,false);
+assert.equal(model({time:now-200},{settings:{enabled:false}},now,false).lamp,'yellow');
 assert.equal(model({},{settings:{enabled:true}},now,false).lamp,'red');
 const cyrillic=/[А-Яа-я]/;
 for(const key of ['system','recovery','monitoring','telegram','speed']){
@@ -77,13 +81,30 @@ console.log('monitor and guide tests OK');
   for(const section of ['1.','2.','3.','4.','5.','6.','7.','8.']){assert(en.includes(section),'EN section '+section);assert(ru.includes(section),'RU section '+section);}
   for(const text of [en,ru]){
     assert(/Auto/.test(text)&&/03-verify\.sh/.test(text)&&/sha256/i.test(text)&&/gl-mt6000/i.test(text));
-    assert(text.includes('7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a'));
+    // Version-neutral since 07.11.2026: the agent takes size and sha256 from the .sha256 file of the release the owner chose,
+    // never from a hash pinned in the prompt; signature and chain are checked by the same-tag 02-install.sh.
+    assert(!/[0-9a-f]{64}/.test(text),'no pinned package hash');
+    for(const need of ['.sha256','.ipk.sig','CHAIN.jsonl','02-install.sh','04-uninstall.sh','--allow-unsigned','--allow-downgrade','native_enabled','terms_version','ERROR_CODES.md'])assert(text.includes(need),'prompt names '+need);
     assert(!/\d{8,12}:[A-Za-z0-9_-]{30,}/.test(text),'token-like text in the prompt');
     assert(!text.includes('${')&&!text.includes('`'));
   }
   assert(en.includes('Default: monitor, Auto off.')&&ru.includes('По умолчанию — мониторинг, Auto выключен.'));
   assert(en.includes('never call terms_accept')&&ru.includes('не вызывай terms_accept'));
   assert(en.includes('actual device on that LAN')&&ru.includes('лишь с устройства этой LAN'));
+  // Owner rules of 07.11.2026: ask first, show every command, yes before each change, never start Auto, stop at any refusal.
+  assert(en.includes('FIRST ASK ME')&&ru.includes('СНАЧАЛА СПРОСИ МЕНЯ'));
+  assert(en.includes('Show each command')&&ru.includes('Показывай каждую команду'));
+  assert(en.includes('only after my explicit yes')&&ru.includes('только после моего явного «да»'));
+  assert(en.includes('Never start Auto')&&ru.includes('Никогда не включай Auto'));
+  assert(en.includes('Stop and ask on any refusal')&&ru.includes('Остановись и спроси при любом отказе'));
+  assert(en.includes('Backup before any change')&&ru.includes('Резервная копия до любых изменений'));
+  assert(en.includes('Never change unrelated settings')&&ru.includes('Никогда не меняй посторонние настройки'));
+  // The step-by-step install guide sits right after the prompt; every section has both languages and real kit scripts.
+  assert.equal(ctx.HELP_TOPICS[1].id,'install-guide');ctx.richText=t=>[t];ctx.helpCommand=c=>({t:'pre',c});assert(ctx.renderInstallGuide().c.length===ctx.INSTALL_GUIDE.length);
+  const guide=JSON.stringify(ctx.INSTALL_GUIDE);
+  for(const script of ['01-preflight.sh','02-install.sh','03-verify.sh','04-uninstall.sh'])assert(guide.includes(script),'guide uses '+script);
+  for(const section of ctx.INSTALL_GUIDE){assert(section.h.length===2&&/[А-Яа-я]/.test(section.h[1]));for(const item of section.items){assert(item.t.length===2&&!/[А-Яа-я]/.test(item.t[0])&&/[А-Яа-я]/.test(item.t[1]),section.id);if(item.c)assert(!/[А-Яа-я]/.test(item.c),'command '+item.c);}}
+  assert(!/--force-(?!reinstall)/.test(guide.replace(/opkg --force-…/g,'')),'no force flags in guide commands');
   assert(ctx.renderAiPrompt());assert.equal(ctx.HELP_TOPICS[0].id,'ai-prompt');
   console.log('AI prompt tests OK ('+en.length+' / '+ru.length+' characters)');
 }

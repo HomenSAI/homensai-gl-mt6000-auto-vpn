@@ -11,10 +11,11 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '2.1.0-alpha8-1'
+VERSION = '2.1.0-alpha10-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency',
-              'usr/sbin/homensai-vpn-integrity'}
+              'usr/sbin/homensai-vpn-integrity', 'usr/sbin/homensai-vpn-diag', 'usr/sbin/homensai-vpn-server-key',
+              'usr/sbin/homensai-vpn-trust-key'}
 
 
 def archive(items):
@@ -69,6 +70,20 @@ def selected_ui(source):
 # installed service, so it is not shipped to the router.
 NOT_SHIPPED=frozenset('usr/lib/homensai-vpn/'+name+'.py' for name in ('cascade_model','cascade_executor','candidate_runtime','configuration_migrations'))
 
+# Line endings are normalised (a Windows checkout may hold CRLF) only for this explicit list of text files; every other
+# member, a known binary or an unknown type, ships byte for byte. The brand style tree is never rewritten (.gitattributes -text).
+TEXT_SUFFIXES=frozenset(('.py','.lua','.js','.css','.json','.md','.txt','.svg','.pem','.ps1','.cmd','.sh','.conf','.html'))
+TEXT_DIRECTORIES=('etc/config/','etc/init.d/','etc/hotplug.d/','etc/homensai-vpn/keys/','lib/upgrade/keep.d/','usr/libexec/rpcd/',
+                  'usr/sbin/','usr/share/gl-download.d/','usr/share/homensai-vpn/','usr/share/licenses/')
+
+def text_member(name):
+    """True for a payload member whose CRLF line endings are normalised to LF."""
+    if '/style/' in name:return False
+    base=name.rsplit('/',1)[-1]
+    suffix=base[base.rindex('.'):].lower() if '.' in base.lstrip('.') else ''
+    if suffix:return suffix in TEXT_SUFFIXES
+    return name.startswith(TEXT_DIRECTORIES)
+
 def selected_files(source=None):
     """The payload: the selected source files plus the integrity manifest (both builders, custom IPK and SDK)."""
     return with_manifest(selected_source_files(source))
@@ -108,9 +123,9 @@ def selected_source_files(source=None):
         if '..' in Path(name).parts:
             raise ValueError('unsafe package member')
         payload = path.read_bytes()
-        if '/style/' not in name and path.suffix.lower() not in ('.woff2','.woff','.ttf','.otf','.png','.jpg','.jpeg','.ico','.so'):
+        if text_member(name):
             payload = payload.replace(b'\r\n', b'\n')
-        files.append((name, payload, 0o755 if name in EXECUTABLE else 0o644))
+        files.append((name, payload, 0o755 if name in EXECUTABLE else 0o600 if name in CONFFILES else 0o644))
     return files
 
 
@@ -148,7 +163,7 @@ def build(output=None):
                'Depends: python3, lua, lua-cjson, libuci-lua, ip-full, ubus, rpcd, luci-base, ca-bundle\n'
                'Description: HomenSAI VPN monitor; bounded controlled native trials; optional speed tests\n'
                'Source: https://homensai.com\nInstalled-Size: %d\n' % (NAME, VERSION, unpacked)).encode()
-    hooks=lifecycle_scripts()
+    hooks=lifecycle_scripts(VERSION)
     preinst=hooks['preinst'].encode();postinst=hooks['postinst'].encode();prerm=hooks['prerm'].encode()
     controls = archive([('control', control, 0o644), ('conffiles', b'/etc/config/homensai_vpn\n', 0o644),
                         ('preinst', preinst, 0o755), ('postinst', postinst, 0o755), ('prerm', prerm, 0o755)])

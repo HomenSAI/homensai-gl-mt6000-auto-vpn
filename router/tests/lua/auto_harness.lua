@@ -111,6 +111,19 @@ function H.settings(overrides)
   return s
 end
 
+-- route_policy sections as the helper reports them (backend.policy().sections, the shape of the Python fixture in
+-- tests/test_pair_server_pick_stage3.py): the global policy section, then one '.type'='rule' section per row of
+-- `rules` (each row carries its '.name' and its options: via, via_type, group_id, client_id/peer_id, tunnel_id)
+function H.route_policy_sections(rules)
+  local out={canon.object({['.name']='global',['.type']='policy',enabled='1'})}
+  for _,rule in ipairs(rules or {}) do
+    local row={['.type']='rule'}
+    for k,v in pairs(rule) do row[k]=v end
+    out[#out+1]=canon.object(row)
+  end
+  return canon.array(out)
+end
+
 ------------------------------------------------------------------------------------------------------
 -- fake Linux backend: UCI order (`uci`) and kernel order (`kernel`) with an attestation derived from them
 ------------------------------------------------------------------------------------------------------
@@ -119,7 +132,14 @@ function H.backend(run,selection,settings)
   local B={uci={'r1','r2'},kernel={'r1','r2'},hash=selection.hash,selection=selection,settings=settings,blockers={},guarded=false,guard_calls={},
            health_of={},trace_of={['wireguard:peer_1']='198.51.100.1',['openvpn:1_1']='203.0.113.5'},probe_ok=true,fail_apply=nil,on_probe=nil,fast=true,cleared=0,leases={}}
   local function copy(t) local o={};for i,x in ipairs(t) do o[i]=x end;return canon.array(o) end
-  function B.policy() return canon.object({settings=B.settings,sections=canon.array({})}) end
+  -- B.sections: the route_policy sections the helper reports (a list or a function returning one, read on every
+  -- policy() call). Default: none, as before; suites that need the real rules set it (H.route_policy_sections).
+  B.sections=canon.array({})
+  function B.policy()
+    local sections=B.sections
+    if type(sections)=='function' then sections=sections() end
+    return canon.object({settings=B.settings,sections=canon.decode(canon.encode(sections))})
+  end
   function B.order() return copy(B.uci),B.hash end
   function B.diagnostic() local b={};for i,x in ipairs(B.blockers) do b[i]=x end;return b,(#b==0) and B.selection or nil end
   function B.kernel_fingerprint() return canon.sha256('kernel:'..table.concat(B.kernel,',')) end

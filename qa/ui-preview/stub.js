@@ -5,7 +5,7 @@ window.L={resource:x=>x.indexOf('view/homensai-vpn/')===0?asset+x.replace('view/
  // Optional modules (help<N>.js, pick<N>.js): the LuCI class contract, evaluated from the same served files.
  require:name=>fetch(lazyAsset+name.replace(/\./g,'/')+'.js',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('PREVIEW-LAZY-MISSING');return r.text();}).then(s=>new Function('window','document','L','baseclass',s)(window,document,window.L,window.baseclass).instantiate([]))};
 window.baseclass={extend:o=>({instantiate:()=>o})};
-window.request={get:url=>fetch(url,{cache:'no-store'}).then(r=>({ok:r.ok,text:()=>r.text()}))};window.view={extend:x=>x};
+window.request={get:url=>fetch(url,{cache:'no-store'}).then(r=>r.text().then(t=>({ok:r.ok,text:()=>t})))};window.view={extend:x=>x};
 window.poll={add:fn=>{window.fixturePoll=fn;}};
 window.ui={showModal:(title,children)=>{ui.hideModal();document.body.appendChild(E('section',{id:'qa-modal',role:'dialog','aria-label':title},[E('h2',{},title),children]));},hideModal:()=>{document.getElementById('qa-modal')?.remove();},addNotification:(_,node)=>{document.querySelector('.qa-notice')?.remove();document.body.appendChild(E('aside',{class:'qa-notice',role:'status'},node));}};
 const now=Date.now()/1000,day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());

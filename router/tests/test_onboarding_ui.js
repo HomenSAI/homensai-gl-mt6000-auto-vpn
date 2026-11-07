@@ -166,6 +166,14 @@ function advance(f,target='review'){
   assert.deepEqual(full[1],{interval:45,checkpoint:1200,probe_limit:24,planning_enabled:true,live_log_limit:1500,history_days:2});assert.deepEqual(full[2],customRecovery);assert.deepEqual(full[3],customSpeed);
   assert.deepEqual(full[4],{configure:true,token,chat:'-1001234567890',enabled:true,interval:120,schedule:'daily',hour:22,weekly:false,monthly:false,items:'servers,events,traffic,delta,controller,controller_events,controller_totals'});
   assert.deepEqual(full[5],{language:'ru',theme:'light',design:'b',router_model:'auto'});assert.equal(f.store['homensai-vpn-language'],'ru');assert.equal(f.store['homensai-vpn-theme'],'light');assert.equal(f.store['homensai-vpn-design'],'b');
+  // Explicit brief survives review and the actual save RPC; saved brief reopens selected.
+  const briefInv=baseInventory();briefInv.settings.telegram_items='brief';
+  const b=fixture({language:'ru',inventory:briefInv});advance(b,'telegram');b.set('telegram.configure',true);
+  assert(b.field('telegram.brief').checked);b.set('telegram.chat','123456789');b.set('telegram.token',token);b.set('telegram.enabled',true);
+  b.click('next');assert(text(b.root).includes('Кратко по-русски'));await b.click('save');assert.equal(b.calls[0].args[4].items,'brief');
+  const opt=fixture();advance(opt,'telegram');opt.set('telegram.configure',true);assert(!opt.field('telegram.brief').checked);
+  opt.set('telegram.brief',true);opt.set('telegram.chat','123456789');opt.set('telegram.token',token);opt.set('telegram.enabled',true);
+  opt.click('next');await opt.click('save');assert.equal(opt.calls[0].args[4].items,'brief');
   // Router defaults survive an empty browser, browser overrides win, and Settings reopens the same values/draft.
   const saved=baseInventory();Object.assign(saved.settings,{onboarding_complete:true,onboarding_version:1,appearance_language:'ru',appearance_design:'c',appearance_theme:'dark',probe_limit:32,recovery_cooldown:420});
   f=fixture({inventory:saved});assert.equal(f.c.locale,'ru');assert.equal(f.c.currentDesign(),'b');assert.equal(f.c.storedTheme(),'dark');assert.equal(f.c.onboardingComplete(saved),true);f.open();assert.equal(f.field('appearance.language').value,'ru');advance(f,'monitor');assert.equal(f.field('monitor.probe_limit').value,'32');f.set('monitor.checkpoint','1200');f.click('cancel');assert.equal(f.modal,null);f.open();assert.equal(f.field('monitor.checkpoint').value,'1200');advance(f,'recovery');assert.equal(f.field('recovery.cooldown').value,'420');

@@ -542,11 +542,19 @@ local function start_request(d,binding,address,direction,amount,deadline)
 end
 
 -- The outcome of a finished transfer: bytes of a complete payload, or an error code (Python request()).
--- 'window' = the request was cut by the end of the measurement window (Python: retained only completed payloads).
+-- 'window' = the request was cut by the end of the measurement window (Python SpeedWindow): it returns the payload
+-- curl moved before the deadline (size_download / size_upload, at most the request), counted once (review F-49).
 local function outcome(d,result,direction,amount,deadline)
   local out=M.parse_write_out(result.out)
+  -- R2-02: a reply with another status (429, 403 ...) is never payload, however many bytes of its body curl moved
+  -- before the window ended (Python request() rejects the status before it reads the body); 000 = no reply yet.
+  if out and out.http~=0 and out.http~=200 then return nil,'SPEED-HTTP' end
   if result.exit==28 or (result.exit~=0 and d.clock()>=deadline) then
-    if d.clock()>=deadline then return nil,'window' end
+    if d.clock()>=deadline then
+      local moved=0
+      if out then moved=(direction=='upload' and out.size_upload or out.size_download) or 0 end
+      return math.max(0,math.min(moved,amount)),'window'
+    end
     return nil,'SPEED-NETWORK'
   end
   if direction=='upload' and result.exit==63 then return nil,'SPEED-RESPONSE-LIMIT' end
@@ -619,7 +627,7 @@ function M.stage(d,binding,address,direction,budget,duration,streams,cancelled,p
       if result==nil then still[#still+1]=job
       else
         local bytes,code=outcome(d,result,direction,job.amount,deadline)
-        if bytes then total=total+bytes;report(bytes)
+        if bytes then total=total+bytes;if bytes>0 then report(bytes) end
         elseif code~='window' and failure==nil then failure=code end
       end
     end

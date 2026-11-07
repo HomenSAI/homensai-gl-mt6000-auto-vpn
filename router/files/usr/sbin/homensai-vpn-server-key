@@ -1,0 +1,12 @@
+#!/bin/sh
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
+# Administrator command for the pinned VPN server keys (trust on first use; option server_key_pin warn|enforce|off).
+#   homensai-vpn-server-key list                       remembered servers, unaccepted key changes (JSON)
+#   homensai-vpn-server-key accept <profile|all>       trust the key a changed server shows now (check it first)
+#   homensai-vpn-server-key forget <profile|all>       drop a profile's pins; the next healthy check pins anew
+#   add --offline when the service is stopped (otherwise the running monitor applies the request at its next pass)
+# Design: docs/architecture/AGE-TOFU-2026-11-04.ru.md. Lua by default (lua/server_pin.lua), Python as the fallback.
+if [ -x /usr/bin/lua ] && [ -f /usr/lib/homensai-vpn/lua/server_pin.lua ]; then
+  exec /usr/bin/lua /usr/lib/homensai-vpn/lua/server_pin.lua "$@"
+fi
+exec /usr/bin/python3 /usr/lib/homensai-vpn/server_pin.py "$@"

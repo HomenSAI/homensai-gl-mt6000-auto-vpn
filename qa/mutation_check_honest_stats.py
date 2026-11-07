@@ -18,8 +18,11 @@ MUTANTS = [
     ("return float((1 - _frac(conf))) ** (1.0 / n)", "return float((1 - _frac(conf))) ** (1.0 / (n + 1))"),
     ("return float((1 - _frac(conf))) ** (1.0 / n)", "return float((1 - _frac(conf))) ** n"),
     ("honest=n >= need", "honest=n > need"),
-    ("if n >= need:\n        return '%s=%s (n=%d)'", "if n > need:\n        return '%s=%s (n=%d)'"),
-    ("if n >= MIN_N:\n        return '%d / %s / %s / %s'", "if n > MIN_N:\n        return '%d / %s / %s / %s'"),
+    ("if n >= need:\n        return '%s≈%s (n=%d, %s)'", "if n > need:\n        return '%s≈%s (n=%d, %s)'"),
+    ("if n >= need:\n        return '%d / %s / ≈%s / %s'", "if n > need:\n        return '%d / %s / ≈%s / %s'"),
+    ("need = min_n(Q, conf)\n    if n >= need:", "need = MIN_N\n    if n >= need:"),                # F-60: fixed 95 % threshold
+    ("cover = float(cdf[high - 1] - cdf[low - 1])", "cover = float(cdf[high - 1] - cdf[low - 1] if low > 1 else cdf[high - 1])"),  # F-57
+    ("and math.isfinite(v))", "and v == v)"),                                # F-58: infinities would count again
     ("return max(1, math.ceil(_frac(q) * n))", "return max(1, math.floor(_frac(q) * n))"),
     ("if cdf[r - 1] <= half:", "if cdf[r - 1] < half / 2:"),
     ("if cdf[s - 1] >= 1 - half:", "if cdf[s - 1] > 1 - half / 2:"),

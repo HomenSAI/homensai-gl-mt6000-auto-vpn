@@ -87,7 +87,10 @@ local function request(direction)
     deadline=canon.float(1761830520.25),trial=false,trial_nonce='pair-1',pid=canon.null,proof_scope='router-probed-ipv4',
     control_revision=REVISION,manual_request_id=string.rep('e',32),manual_instant=true,forward_policy_touched=true,
     rtp_dispatched=true,process_bindings=canon.object({wgclient1=4096,ovpnclient2=45056}),
-    pair_transition=canon.object({destination_role='target',direction='first'})})
+    -- F-39 (07.11.2026): the journal reader validates pair_transition like pair_policy.metadata: a complete record
+    pair_transition=canon.object({destination_role='target',direction='first',source_rule='a_5841',target_rule='a_4192',
+      generic_rules=canon.array({'a_5841','a_4192'}),source_id='wireguard:peer_1',target_id='openvpn:1_2',before_policy_role='source',
+      session_order=canon.array({'gl_process_vpn','a_4192','a_5841'}),primary_order=canon.array({'gl_process_vpn','a_5841','a_4192'})})})
   return canon.object({direction=direction or 'reserve',control_revision=REVISION,journal=value,
     names=canon.object({gl_process_vpn='gl_process_vpn',a_5841='cfg01',a_4192='cfg02'}),
     tunnel_order=canon.array({'4192','5841'})})

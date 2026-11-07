@@ -39,8 +39,13 @@ M.BOOT_AGE=900                  -- only a monitor started within 15 min of the b
 M.SUPERVISOR='supervisor-start.json'  -- runtime: {id=<hex32>,time=} written by each supervisor start after recovery
 M.RESTART_LIMIT=3               -- resumes after supervisor restarts within RESTART_WINDOW (monotonic seconds)
 M.RESTART_WINDOW=900
+-- false = final: the refusal cannot clear within this service run, the resume ends FAILED with that code at once.
+-- IR-03 (integration review 07.11.2026): INTEGRITY-AUTO-BLOCKED (BH-04) reads integrity.json, rewritten only at a
+-- service start. MAINTENANCE-IN-PROGRESS stays a waiting code on purpose (a package operation ends within the window).
+-- Python: boot_resume.FINAL.
 M.RETRY={['TRANSACTION-IN-PROGRESS']=true,['PAIR-RECOVERY-REQUIRED']=true,['START-STATE-UNVERIFIED']=true,
-  ['CONTROL-REVISION-STALE']=true,['PAIR-STATE-UNVERIFIED']=true,['JOURNAL-INTEGRITY-FAILED']=false}
+  ['CONTROL-REVISION-STALE']=true,['PAIR-STATE-UNVERIFIED']=true,['JOURNAL-INTEGRITY-FAILED']=false,
+  ['INTEGRITY-AUTO-BLOCKED']=false,['MAINTENANCE-IN-PROGRESS']=true}
 
 function M.marker(now)
   return canon.encode(canon.object({enabled=true,time=canon.float(now),request_source='manual'}))
@@ -61,6 +66,20 @@ function M.wanted(read,persist)
     if stopped==nil or stopped>=at then return false,'AUTO-RESUME-STOPPED' end
   end
   return true
+end
+
+-- T1 (trace conformance 04.11.2026): the moment of the owner's last Start as this file tells it, for every writer of the
+-- stop latch: 0 without a marker, math.huge for a marker that cannot be read (a Stop then always writes). A Stop must be
+-- newer than this, or wanted() stays true and Auto comes back after the next power cut against the owner's last Stop.
+-- Python: boot_resume.marker_time.
+function M.marker_time(read,persist)
+  local rok,text=pcall(read,persist..'/'..M.MARKER)
+  if not rok then return math.huge end
+  if text==nil then return 0 end
+  local ok,marker=pcall(canon.decode,text)
+  local at=ok and canon.is_object(marker) and canon.number(marker.time) or nil
+  if at==nil or at~=at or at==math.huge or at==-math.huge then return math.huge end
+  return at
 end
 
 -- token(read,runtime) -> the id of the supervisor start that finished its recovery, or nil

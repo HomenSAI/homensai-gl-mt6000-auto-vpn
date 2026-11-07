@@ -49,7 +49,15 @@ function F.new(world)
   function S.exists(path) return S.stat(path)~=nil end
   function S.dir(path) local d=world.dirs[path];if not d then return nil end;local out={};for i,x in ipairs(d) do out[i]=x end;return out end
   function S.remove(path) world.files[path]=nil;S.writes[#S.writes+1]={'remove',path} end
-  function S.write_private(path,text) world.files[path]=text;S.writes[#S.writes+1]={'write',path,text} end
+  function S.write_private(path,text)
+    if world.private_fail then error(setmetatable({code='DISK-FULL',value_error=true},require('auto_control').Refused),0) end
+    world.files[path]=text;S.writes[#S.writes+1]={'write',path,text}
+  end
+  -- the durable flash write (R4-01 writer record); world.atomic_fail makes it fail like a full or read-only flash
+  function S.write_atomic(path,text)
+    if world.atomic_fail then error(setmetatable({code='DISK-FULL',value_error=true},require('auto_control').Refused),0) end
+    world.files[path]=text;S.writes[#S.writes+1]={'atomic',path,text}
+  end
   function S.mkdir(path) world.dirs[path]=world.dirs[path] or {};return true end
   function S.rmdir(path) world.dirs[path]=nil end
   function S.unique() generation=generation+1;return string.format('%08x',generation)..'-'..generation end
@@ -78,6 +86,9 @@ function F.new(world)
     return {rc=rc}
   end
   function S.wait(handle) return handle and handle.rc or nil end
+  -- R2-01: world.terminate = true (the writer is confirmed gone) | false (its exit cannot be established)
+  function S.terminate(handle,seconds) S.terminated=(S.terminated or 0)+1;if world.terminate==nil then return true end;return world.terminate end
+  function S.finished(handle) return world.finished==true end
   function S.guard_release(generation_) count('guard_release');world.released=generation_;return true end
   function S.ubus(object,method)
     count('ubus:'..object)

@@ -56,6 +56,28 @@ function M.read(env)
   return row
 end
 
+-- The 60 s of a queued click end outside consume too (review 04.11.2026, finding 4): a pass that fails before it never
+-- reached the expiry, the row stayed QUEUED and the page busy. Only an old row is touched, with consume's own result.
+-- Never fails a pass. Python: pair_manual.expire_queued.
+function M.expire_queued(env)
+  local function stale(row)
+    if row.state~='QUEUED' then return false end
+    local now,asked=env.run.wall(),num(row.requested)
+    return not (asked<=now and now<=asked+60)
+  end
+  local ok,done=pcall(function()
+    if not stale(M.read(env)) then return false end
+    return env.run.lock(function()
+      local row=M.read(env)
+      if not stale(row) then return false end
+      row.state='CANCELLED';row.updated=canon.float(math.max(env.run.wall(),num(row.requested)));row.code='PAIR-MANUAL-EXPIRED'
+      ctl.write_json(env.run,M.path(env),row)
+      return true
+    end,env.runtime)
+  end)
+  return ok and done==true
+end
+
 function M.active(state,intent,revision)
   return state.phase=='RUNNING' and intent.mode=='on' and state.id==intent.id and state.revision==intent.revision and intent.revision==revision
 end
@@ -88,7 +110,7 @@ function M.light_gate(env,direction,settings)
   if not (phase==nil or phase=='ROLLED-BACK' or phase=='COMMITTED' or phase=='HELD-ON-RESERVE') then return 'TRANSACTION-IN-PROGRESS' end
   local target=direction=='primary' and native.source or native.target
   if not M.healthy(status,target,now,pair.valid_for(settings)) then return direction=='primary' and 'SOURCE-NOT-HEALTHY' or 'PAIR-MANUAL-TARGET-UNHEALTHY' end
-  return nil
+  return T.key_unaccepted(env,target)
 end
 
 function M.terminalize_pending_locked(env,result,code)
@@ -141,6 +163,8 @@ end
 function M.instant_manual(env,selection,until_,revision,request_id,request_source,destination,session_order,kernel_before)
   local scope=getd(selection,'proof_scope','external-lan')
   if not ctl.hex(request_id,32) or (destination~='source' and destination~='target') or scope~='router-probed-ipv4' or session_order==nil then refuse('MANUAL-REQUEST-INVALID') end
+  local pinned=T.key_unaccepted(env,selection[destination].id)
+  if pinned then refuse(pinned) end
   T.bind_policy_context(env,selection)
   T.require_control_revision(env,revision)
   local before=copy_list(selection.order)
@@ -184,13 +208,30 @@ function M.instant_manual(env,selection,until_,revision,request_id,request_sourc
   local request=canon.object({direction=destination=='source' and 'primary' or 'reserve',control_revision=revision,journal=value,names=names,tunnel_order=tunnels})
   local result=instant.switch(env.run,request,request.direction,{journal_path=T.paths(env).journal})
   T.manual_stamp(env,'switched')
-  if result.ok~=true then
-    local code=type(result.code)=='string' and result.code or 'NATIVE-SYSTEM-001'
-    local err=setmetatable({code=code},ctl.Refused)
+  -- review F-22 (06.11.2026): the final order/attestation/guard checks run inside the recovery branch, as the lua_core
+  -- path of native_switch.instant_manual: a check that fails after the HELD-ON-RESERVE journal rolls the switch back
+  -- instead of leaving the switched policy behind a REFUSED answer.
+  local kernel
+  local vok,verr=true,nil
+  if result.ok==true then
+    vok,verr=pcall(function()
+      if not order_is(env,after,selection.hash) then refuse('POLICY-CHANGED-DURING-APPLY') end
+      kernel=env.backend.attest_policy(merge(selection,{order=copy_list(after)}))
+      if kernel.verified~=true or kernel.role~=destination then refuse('KERNEL-POLICY-UNVERIFIED') end
+      if not env.backend.guard_exists() then env.backend.guard(env.backend.devices(),revision) end
+    end)
+  end
+  if result.ok~=true or not vok then
+    local err
+    if result.ok~=true then err=setmetatable({code=type(result.code)=='string' and result.code or 'NATIVE-SYSTEM-001'},ctl.Refused)
+    elseif is_refused(verr) and ctl.code_ok(verr.code) then err=verr
+    else err=setmetatable({code='NATIVE-SYSTEM-001'},ctl.Refused) end
+    local code=err.code
     local sok,saved=pcall(T.journal_read,env)
     if sok and saved.tx==tx then value=saved end
     value.failure_detail=T.record_attempt_failure(env,tx,'instant',err,mono_);value.failure_code=code
-    if result.rollback_required then
+    -- the helper wrote (rollback_required) or the journal already says HELD-ON-RESERVE: the guarded rollback (Python)
+    if result.rollback_required or value.phase=='HELD-ON-RESERVE' then
       pcall(T.journal_write,env,value)
       require('rollback').rollback_counted(env,value,'TRANSACTION-FAILED')
     else
@@ -199,12 +240,9 @@ function M.instant_manual(env,selection,until_,revision,request_id,request_sourc
       publish_pair(merge(T.pair_event_fields(value,{completed=true,outcome='refused',restoring=true}),{state='ROLLED-BACK',reason='TRANSACTION-FAILED',
         source=value.source,target=value.target,blockers=canon.array({code})}))
     end
+    if result.ok==true and not is_refused(verr) then error(verr,0) end
     error(err,0)
   end
-  if not order_is(env,after,selection.hash) then refuse('POLICY-CHANGED-DURING-APPLY') end
-  local kernel=env.backend.attest_policy(merge(selection,{order=copy_list(after)}))
-  if kernel.verified~=true or kernel.role~=destination then refuse('KERNEL-POLICY-UNVERIFIED') end
-  if not env.backend.guard_exists() then env.backend.guard(env.backend.devices(),revision) end
   T.manual_stamp(env,'verified')
   return kernel
 end
@@ -286,6 +324,8 @@ function M.consume(env,state,settings,revision)
         finish('COMPLETED','MANUAL-ALREADY-SELECTED');return
       end
       if kernel.verified~=true and kernel.repairable_missing~=true then refuse('KERNEL-POLICY-UNVERIFIED') end
+      local pinned=T.key_unaccepted(env,selection[hold].id)  -- before the lease and the budget; attempt and instant_manual refuse it too
+      if pinned then refuse(pinned) end
       if instant_on then
         pair.require_running(env,revision)
         local until_=M.lease_until(settings,state,env.run.wall()) or pair.configure_lease(env,state)
@@ -296,7 +336,7 @@ function M.consume(env,state,settings,revision)
         local recovery=pair.recovery_normalized(settings)
         pair.require_running(env,revision)
         local now=env.run.wall()
-        local events,permitted=pair.budget(ctl.read_json(env.run,select(3,pair.paths(env)),canon.object({events=canon.array({})})).events,now,recovery.attempt_window*60,recovery.attempt_limit)
+        local events,permitted=pair.budget(pair.effective_events(env,ctl.read_json(env.run,select(3,pair.paths(env)),canon.object({events=canon.array({})})),now),now,recovery.attempt_window*60,recovery.attempt_limit)
         if not permitted then refuse('PAIR-RATE-LIMIT') end
         if #events>0 and now-num(events[#events])<math.max(recovery.cooldown,recovery.min_dwell) then refuse('PAIR-MANUAL-COOLDOWN') end
         local until_=pair.configure_lease(env,state)
@@ -308,10 +348,10 @@ function M.consume(env,state,settings,revision)
         T.attempt(env,fresh,until_,false,{control_revision=revision,manual_request_id=row.id,request_source=row.request_source,pair_destination=hold,pair_session_order=state.order,
           on_dispatch=function()
             pair.require_running(env,revision);local stamp=env.run.wall()
-            local charged,allowed=pair.budget(ctl.read_json(env.run,select(3,pair.paths(env)),canon.object({events=canon.array({})})).events,stamp,recovery.attempt_window*60,recovery.attempt_limit)
+            local charged,allowed=pair.budget(pair.effective_events(env,ctl.read_json(env.run,select(3,pair.paths(env)),canon.object({events=canon.array({})})),stamp),stamp,recovery.attempt_window*60,recovery.attempt_limit)
             if not allowed then refuse('PAIR-RATE-LIMIT') end
             if #charged>0 and stamp-num(charged[#charged])<math.max(recovery.cooldown,recovery.min_dwell) then refuse('PAIR-MANUAL-COOLDOWN') end
-            charged[#charged+1]=canon.float(stamp);ctl.write_json(env.run,select(3,pair.paths(env)),canon.object({events=charged}))
+            pair.ledger_charge(env,charged,stamp)
           end})
       end
       value=T.journal_read(env);local context=P.metadata(value)
@@ -321,13 +361,15 @@ function M.consume(env,state,settings,revision)
       if kernel.verified~=true or kernel.role~=hold then refuse('KERNEL-POLICY-UNVERIFIED') end
     elseif row.direction=='reserve' then
       if not (value.phase==nil or value.phase=='ROLLED-BACK') or not order_is(env,state.order,state.policy_hash) then refuse('TRANSACTION-IN-PROGRESS') end
+      local pinned=T.key_unaccepted(env,selection.target.id)
+      if pinned then refuse(pinned) end
       if env.backend.health(selection.target.id)~=true then refuse('PAIR-MANUAL-TARGET-UNHEALTHY') end
       local recovery=pair.recovery_normalized(settings)
       pair.require_running(env,revision);local now=env.run.wall()
-      local events,permitted=pair.budget(ctl.read_json(env.run,select(3,pair.paths(env)),canon.object({events=canon.array({})})).events,now,recovery.attempt_window*60,recovery.attempt_limit)
+      local events,permitted=pair.budget(pair.effective_events(env,ctl.read_json(env.run,select(3,pair.paths(env)),canon.object({events=canon.array({})})),now),now,recovery.attempt_window*60,recovery.attempt_limit)
       if not permitted then refuse('PAIR-RATE-LIMIT') end
       if #events>0 and now-num(events[#events])<math.max(recovery.cooldown,recovery.min_dwell) then refuse('PAIR-MANUAL-COOLDOWN') end
-      pair.require_running(env,revision);events[#events+1]=canon.float(now);ctl.write_json(env.run,select(3,pair.paths(env)),canon.object({events=events}))
+      pair.require_running(env,revision);pair.ledger_charge(env,events,now)
       local until_=pair.configure_lease(env,state);local b2;b2,selection=env.backend.diagnostic()
       if #b2>0 then refuse(b2[1]) end
       T.attempt(env,selection,until_,false,{control_revision=revision,manual_request_id=row.id,request_source=row.request_source})
@@ -336,6 +378,8 @@ function M.consume(env,state,settings,revision)
       hold='target'
     else
       if getd(value,'tx',NULL)~=getd(expected,'tx',NULL) or (value.phase~='COMMITTED' and value.phase~='HELD-ON-RESERVE') then refuse('RETURN-TRANSACTION-MISMATCH') end
+      local pinned=T.key_unaccepted(env,selection.source.id)
+      if pinned then refuse(pinned) end
       local handled=T.handle_return(env,value,canon.object({time=row.requested,tx=value.tx}),0,revision)
       local record={requested_at=num(row.requested),transaction_id=value.tx,source_id=selection.source.id,target_id=selection.target.id}
       local lo,lh=env.backend.order()
@@ -372,6 +416,36 @@ end
 
 -- the steady hold re-proves its channel with a live probe at most this often (backend.health reuse)
 M.HOLD_HEALTH_REUSE=30
+-- Finding 7 in a manual hold (the same rule as transaction.committed_recovery_decision): the held channel is the recorded
+-- one, or the vendor rebuilt it. Only vendor_generation changed, the vendor is quiet (READY): a healthy streak of the NEW
+-- generation proves it (the journal proof is rebound, a primary hold may sit on a ROLLED-BACK journal), a failure
+-- streak of the new generation is left to the caller's failure check, which releases the hold. false: unknown.
+-- required: the journal must hold a proof for this role. Python: pair_manual.hold_verified.
+function M.hold_verified(env,state,value,settings,status,hold,resolved,now,age,required)
+  local expected=getd(getd(value,'vendor_profiles',canon.object({})),hold,nil);local profile=resolved[hold]
+  if resolved.coordination.state~='READY' or isnone(profile) or profile.id~=value[hold] then return false end
+  if expected==nil then return not required end
+  local live=pair.profile_identity(env,profile)
+  if live==nil then return false end
+  if canon.encode(live)==canon.encode(expected) then return true end
+  for _,key in ipairs(T.RESERVE_STABLE) do if canon.encode(getd(live,key,NULL))~=canon.encode(getd(expected,key,NULL)) then return false end end
+  local policy=pair.recovery_normalized(settings);local samples=getd(status,'samples',canon.array({}))
+  if pair.streak(samples,profile.id,policy.failures,now,age,false,profile,env) then return true end
+  if not pair.streak(samples,profile.id,policy.successes,now,age,true,profile,env) then return false end
+  pcall(pair.reserve_rebound,env,state.revision,true)
+  return true
+end
+
+-- Finding 7: a held reserve of unknown identity is no reason to stay on it once the automatic rule returns to a stably
+-- healthy primary (committed_recovery_decision: min_dwell, max(primary_stable, hold), the model gate, the owner's
+-- hold_reserve). The hold ends here; the same tick then takes that guarded return. Python: pair_manual.hold_released.
+function M.hold_released(env,state,value,settings,status,now)
+  local decision=T.committed_recovery_decision(env,value,settings,getd(status,'samples',canon.array({})),now,status,pair.ledger_hold(env,settings,now))
+  if decision.action~='RESTORE-PRIMARY' then return false end
+  state.manual_hold=nil;pair.save(env,state)
+  return true
+end
+
 function M.held_reserve(env,state,value,settings,status)
   T.bind_policy_context(env,state)
   local adopted=state.manual_selection
@@ -400,8 +474,9 @@ function M.held_reserve(env,state,value,settings,status)
     local kernel=env.backend.attest_policy()
     if kernel.verified~=true then return false end
     local resolved=env.deps.resolve_pair(status,settings,now,age,pair.settle_for(settings))
-    local expected=getd(getd(value,'vendor_profiles',canon.object({})),hold,nil);local profile=resolved[hold]
-    if resolved.coordination.state~='READY' or isnone(profile) or profile.id~=value[hold] or expected==nil or canon.encode(pair.profile_identity(env,profile) or NULL)~=canon.encode(expected) then
+    local profile=resolved[hold]
+    if not M.hold_verified(env,state,value,settings,status,hold,resolved,now,age,true) then
+      if hold=='target' and M.hold_released(env,state,value,settings,status,now) then return false end
       T.publish(env,{state='BLOCKED',reason='PROFILE-IDENTITY-CHANGED',blockers=canon.array({'PROFILE-IDENTITY-CHANGED'}),source=value.source,target=value.target,mode='continuous-pair',proof_scope=pair.MODE})
       return true
     end
@@ -419,10 +494,8 @@ function M.held_reserve(env,state,value,settings,status)
   for _,p in ipairs(getd(status,'profiles',canon.array({}))) do if p.id==value.target then row=p end end
   local recovery=pair.recovery_normalized(settings)
   local resolved=env.deps.resolve_pair(status,settings,now,age,pair.settle_for(settings))
-  local expected=getd(getd(value,'vendor_profiles',canon.object({})),'target',nil)
-  local verified=resolved.coordination.state=='READY' and not isnone(resolved.target) and resolved.target.id==value.target
-    and (expected==nil or canon.encode(pair.profile_identity(env,resolved.target) or NULL)==canon.encode(expected))
-  if not verified then
+  if not M.hold_verified(env,state,value,settings,status,'target',resolved,now,age,false) then
+    if M.hold_released(env,state,value,settings,status,now) then return false end
     T.publish(env,{state='DEGRADED-ON-RESERVE',reason='RESERVE-IDENTITY-UNKNOWN',manual=true,transition_source=getd(state,'manual_hold_source','unknown'),source=value.source,target=value.target,mode='continuous-pair',proof_scope=pair.MODE})
     return true
   end

@@ -1,0 +1,2362 @@
+{
+ "about": "Shared journal cases (F-39): accept is native_switch.validate_journal's verdict; test_journal_nested_parity.py and lua/test_journal_nested.lua must agree with it.",
+ "cases": [
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "base journal"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "valid: pair transition"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "valid: restore step"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "a",
+      "b",
+      "c"
+     ],
+     "kind": "commit",
+     "version": 1
+    },
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "valid: commit step"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "wireguard",
+      "vendor_generation": "dddddddddddddddddddddddddddddddd",
+      "vendor_tunnel_id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "valid: vendor profiles"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": null,
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "valid: null pair transition"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {},
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "defect: empty pair transition"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:9",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "defect: pair transition wrong source id"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "source",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "defect: pair transition after mismatch"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "z"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "defect: pair transition unknown generic rule"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "restore_order_step": {},
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "defect: empty restore step"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "restore_proof_source": "forward",
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "defect: restore proof source alone"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "restore_order_origin": [
+     "b",
+     "a",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "defect: restore order origin alone"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2"
+     }
+    }
+   },
+   "name": "defect: vendor profile without generation"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "extra": 1,
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "wireguard",
+      "vendor_generation": "dddddddddddddddddddddddddddddddd",
+      "vendor_tunnel_id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "defect: vendor profile extra key"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "restore_before_order": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "step defect: step on APPLYING phase"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 1,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "step defect: step not a canonical move"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_before_verified": false,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "step defect: step without verified before"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_target_order": [
+     "c",
+     "b",
+     "a"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "step defect: restore target outside policy"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "last",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "pair transition: direction last"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "pair transition: missing primary_order"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "c",
+      "b",
+      "a"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "pair transition: session order not a policy order"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "target",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "pair transition: before role wrong"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "a"
+    },
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "pair transition: same rules"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": [
+     1
+    ],
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "pair transition: pair transition list"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "ROLLED-BACK",
+    "pid": 2392,
+    "restored_order": [
+     "c",
+     "b",
+     "a"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "pair transition: restored order outside"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "ROLLED-BACK",
+    "pid": 2392,
+    "restored_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "pair transition: restored order primary"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "wireguard",
+      "section": "1",
+      "vendor_generation": "dddddddddddddddddddddddddddddddd",
+      "vendor_tunnel_id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "vendor profile: section matches"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "wireguard",
+      "section": "7",
+      "vendor_generation": "dddddddddddddddddddddddddddddddd",
+      "vendor_tunnel_id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "vendor profile: section differs"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "wireguard",
+      "vendor_generation": "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
+      "vendor_tunnel_id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "vendor profile: generation upper case"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "wireguard",
+      "vendor_generation": "ddddddddddddddddddddddddddddddd",
+      "vendor_tunnel_id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "vendor profile: generation short"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "wireguard",
+      "vendor_generation": "dddddddddddddddddddddddddddddddd",
+      "vendor_tunnel_id": "wireguard:9"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "vendor profile: tunnel mismatch"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "l2tp",
+      "vendor_generation": "dddddddddddddddddddddddddddddddd",
+      "vendor_tunnel_id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "vendor profile: protocol wrong"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "phase": "APPLYING",
+    "pid": 2392,
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "vendor_profiles": {
+     "source": {
+      "extra": null,
+      "id": "wireguard:1",
+      "interface": "1",
+      "protocol": "wireguard",
+      "vendor_generation": "dddddddddddddddddddddddddddddddd",
+      "vendor_tunnel_id": "wireguard:1"
+     },
+     "target": {
+      "id": "openvpn:2",
+      "interface": "2",
+      "protocol": "openvpn",
+      "vendor_generation": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "vendor_tunnel_id": "openvpn:2"
+     }
+    }
+   },
+   "name": "vendor profile: null key"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "forward_policy_touched": true,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "kernel_before_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "kernel_before_verified": true,
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_origin": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_proof_source": "forward",
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "forward origin: valid"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "confirmed": 5,
+    "deadline": 200,
+    "forward_policy_touched": true,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "kernel_before_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "kernel_before_verified": true,
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_origin": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_proof_source": "forward",
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "forward origin: confirmed set"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "forward_policy_touched": true,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "kernel_before_fingerprint": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "kernel_before_verified": true,
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_origin": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_proof_source": "forward",
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "forward origin: fingerprint differs"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "forward_policy_touched": true,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "kernel_before_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "kernel_before_verified": true,
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_origin": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_proof_source": "guess",
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "forward origin: unknown source"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "forward_policy_touched": true,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "kernel_before_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "kernel_before_verified": true,
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_origin": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_proof_source": "vendor-rebuild",
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "forward origin: vendor rebuild without detail"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "failure_detail": {
+     "worker_stage": "rtp-dispatch"
+    },
+    "forward_policy_touched": true,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "kernel_before_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "kernel_before_verified": true,
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_origin": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 1
+    },
+    "restore_proof_source": "vendor-rebuild",
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "forward origin: vendor rebuild"
+  },
+  {
+   "accept": true,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "forward_policy_touched": true,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "kernel_before_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "kernel_before_verified": true,
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_origin": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "a",
+      "b",
+      "c"
+     ],
+     "kind": "commit",
+     "version": 1
+    },
+    "restore_proof_source": "forward",
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "forward origin: commit step"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_step": {
+     "after": [
+      "a",
+      "b",
+      "c"
+     ],
+     "before": [
+      "b",
+      "a",
+      "c"
+     ],
+     "index": 0,
+     "kind": "reorder",
+     "section": "a",
+     "version": 2
+    },
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "restore step version 2"
+  },
+  {
+   "accept": false,
+   "journal": {
+    "after": [
+     "b",
+     "a",
+     "c"
+    ],
+    "before": [
+     "a",
+     "b",
+     "c"
+    ],
+    "deadline": 200,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "pair_transition": {
+     "before_policy_role": "source",
+     "destination_role": "target",
+     "direction": "first",
+     "generic_rules": [
+      "a",
+      "b"
+     ],
+     "primary_order": [
+      "a",
+      "b",
+      "c"
+     ],
+     "session_order": [
+      "b",
+      "a",
+      "c"
+     ],
+     "source_id": "wireguard:1",
+     "source_rule": "a",
+     "target_id": "openvpn:2",
+     "target_rule": "b"
+    },
+    "phase": "RESTORING",
+    "pid": 2392,
+    "restore_before_order": [
+     "b",
+     "a",
+     "c"
+    ],
+    "restore_before_verified": true,
+    "restore_kernel_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "restore_order_step": null,
+    "restore_target_order": [
+     "a",
+     "b",
+     "c"
+    ],
+    "rtp_dispatched": true,
+    "source": "wireguard:1",
+    "started": 90,
+    "target": "openvpn:2",
+    "trial_nonce": "nnnnnnnnnnnnnnnn",
+    "tx": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "name": "restore step null"
+  }
+ ]
+}

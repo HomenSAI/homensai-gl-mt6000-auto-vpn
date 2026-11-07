@@ -29,6 +29,8 @@ M.PRESETS={hmm={theta=0.8,dur_b=4.0},['hmm-fast']={theta=0.7,dur_b=3.0}}
 M.COST=20.0;M.SUSPECT=0.2;M.HEALTHY=0.9;M.CLEAN=300;M.FLOOR=1e-9  -- HEALTHY 0.95 -> 0.9: owner 03.11.2026
 M.WINDOW=600.0;M.FIRST_DT=10.0;M.DT_MAX=600.0;M.DENSE_GAP=7.0
 M.HTTP_NORMAL=6.0;M.HTTP_DENSE=3.0;M.DNS_WAIT=3.0;M.PUBLISHED=2.5
+-- Fast end of the master slider (channel_model.py, docs/architecture/FAST-SWITCH-2026-11-04.ru.md): M.leave_rule
+M.OR_FAILURES={2,10};M.TURBO_BEATS={3,8};M.WAKE_NAME='pair-wake.json';M.BEAT_FRESH=2.5
 
 local function num(v) return canon.number(v) end
 local function finite(x) return type(x)=='number' and x==x and x~=math.huge and x~=-math.huge end
@@ -40,19 +42,49 @@ function M.name(settings)
   return M.DEFAULT
 end
 
-local PARAMS={}
-function M.params(model)
-  local preset=type(model)=='string' and M.PRESETS[model] or nil
-  if not preset then return nil end
-  if PARAMS[model] then return PARAMS[model] end
+-- Numeric options (2.1.0-alpha9, master slider / network advisor; channel_model.custom / numeric / resolve):
+-- option hmm_theta, hmm_dur_b, return_pg; absent = the preset of failure_model, i.e. exactly alpha8.
+M.NUMERIC={hmm_theta={0.5,0.99},hmm_dur_b={1.0,15.0},return_pg={0.5,0.99}}
+local CUSTOM,CUSTOM_SIZE={},0
+function M.custom(theta,dur_b,model,healthy)
+  model=model or 'hmm';if healthy==nil then healthy=M.HEALTHY end
+  local key=string.format('%s|%.17g|%.17g|%.17g',model,theta,dur_b,healthy)
+  if CUSTOM[key] then return CUSTOM[key] end
   local L,D=M.LAM,M.DUR
-  local dur={D[1],D[2],preset.dur_b,D[4],D[5]}
+  local dur={D[1],D[2],dur_b,D[4],D[5]}
   local total=L[1]+L[2]+L[3]+L[4]+L[5]
   local ratio,weight={},{}
   for i=1,5 do ratio[i]=L[i]/total;weight[i]=exp(-M.COST/dur[i]) end
-  local p={model=model,theta=preset.theta,dur=dur,lam=L,total=total,ratio=ratio,weight=weight}
-  PARAMS[model]=p
+  local preset=M.PRESETS[model]
+  local plain=preset~=nil and preset.theta==theta and preset.dur_b==dur_b and healthy==M.HEALTHY
+  local p={model=model,theta=theta,dur=dur,lam=L,total=total,ratio=ratio,weight=weight,healthy=healthy,key=plain and model or key}
+  CUSTOM_SIZE=CUSTOM_SIZE+1
+  if CUSTOM_SIZE>64 then CUSTOM={};CUSTOM_SIZE=1 end
+  CUSTOM[key]=p
   return p
+end
+function M.params(model)
+  local preset=type(model)=='string' and M.PRESETS[model] or nil
+  if not preset then return nil end
+  return M.custom(preset.theta,preset.dur_b,model)
+end
+-- The owner's numeric option within its range, or nil (absent, malformed or out of range = the preset).
+function M.numeric(settings,key)
+  local v=type(settings)=='table' and num(settings[key]) or nil
+  if not finite(v) then return nil end
+  local range=M.NUMERIC[key]
+  if v<range[1] or v>range[2] then return nil end
+  return v
+end
+-- The constants Auto decides with: the preset of failure_model overridden by hmm_theta / hmm_dur_b / return_pg.
+function M.resolve(settings)
+  local model=M.name(settings)
+  local preset=M.PRESETS[model]
+  if not preset then return nil end
+  local theta,dur_b,healthy=M.numeric(settings,'hmm_theta'),M.numeric(settings,'hmm_dur_b'),M.numeric(settings,'return_pg')
+  if theta==nil then theta=preset.theta end
+  if dur_b==nil then dur_b=preset.dur_b end
+  return M.custom(theta,dur_b,model,healthy)
 end
 
 -- 0 O / 1 D / 2 H, or nil when the sample is not an observation of the channel's health
@@ -164,9 +196,10 @@ end
 local MEMO,MEMO_SIZE={},0
 -- evaluate(samples, identifier, now, max_age, model, profile, env) -> view | nil (see channel_model.evaluate)
 function M.evaluate(samples,identifier,now,max_age,model,profile,env)
-  local p=M.params(model)
+  local p=type(model)=='table' and model or M.params(model)   -- a preset name or M.resolve(settings)
   max_age=num(max_age)
   if p==nil or not finite(max_age) or max_age<=0 then return nil end
+  model=p.model
   if profile~=nil then
     samples=require('pair').scoped_samples(env,samples,profile)
     -- failure_diagnosis.scoped_samples: two samples of one stamp that disagree leave no evidence at all
@@ -188,7 +221,7 @@ function M.evaluate(samples,identifier,now,max_age,model,profile,env)
     local point=points[i];local obs=M.observation(point)
     times=times+num(point.time);shape=shape+i*(4+(obs or 3)+(point.dense==true and 8 or 0)+16*M.delay(point.code,true))
   end
-  local key=string.format('%s|%s|%d|%.17g|%.17g',model,tostring(identifier),#points,times,shape)
+  local key=string.format('%s|%s|%d|%.17g|%.17g',p.key,tostring(identifier),#points,times,shape)
   local hit=MEMO[key]
   if hit then pi,last,count={hit[1],hit[2],hit[3],hit[4],hit[5],hit[6]},hit.last,hit.count
   else
@@ -202,22 +235,67 @@ function M.evaluate(samples,identifier,now,max_age,model,profile,env)
   local chance=M.persist(pi,p)
   local bad=1-pi[1]-pi[2]
   return {model=model,pi=pi,time=last,observations=count,persist=chance,p_bad=bad,p_healthy=pi[1],
-    remaining=M.remaining(pi,p),failed=fresh and chance>=p.theta,suspect=fresh and bad>=M.SUSPECT,healthy=fresh and pi[1]>=M.HEALTHY}
+    remaining=M.remaining(pi,p),failed=fresh and chance>=p.theta,suspect=fresh and bad>=M.SUSPECT,healthy=fresh and pi[1]>=p.healthy}
 end
 
 -- Auto's "the channel carrying traffic failed" (pair.streak for 'consecutive').
 function M.channel_failed(samples,identifier,count,now,max_age,settings,profile,env)
   local model=M.name(settings)
   if model=='consecutive' then return require('pair').streak(samples,identifier,count,now,max_age,false,profile,env) end
-  local view=M.evaluate(samples,identifier,now,max_age,model,profile,env)
+  local view=M.evaluate(samples,identifier,now,max_age,M.resolve(settings),profile,env)
   return view~=nil and view.failed==true
+end
+
+local function whole(v)
+  if type(v)=='string' and string.find(v,'^%d+$') then v=tonumber(v) end
+  if canon.is_float(v) then return nil end
+  if type(v)=='number' and v%1==0 then return v end
+  return nil
+end
+-- channel_model.or_failures: N of "the model OR N failed samples in a row", or nil
+function M.or_failures(settings)
+  local v=type(settings)=='table' and whole(settings.hmm_or_failures) or nil
+  if not v or v<M.OR_FAILURES[1] or v>M.OR_FAILURES[2] or M.name(settings)=='consecutive' then return nil end
+  return v
+end
+-- channel_model.turbo_on: the expert opt-in (option slider_turbo, default off)
+function M.turbo_on(settings)
+  return type(settings)=='table' and (settings.slider_turbo==true or settings.slider_turbo=='1') and M.name(settings)~='consecutive'
+end
+-- channel_model.heartbeat_k: k lost heartbeats in a row that leave the primary, or nil
+function M.heartbeat_k(settings)
+  if not M.turbo_on(settings) then return nil end
+  local v=whole(settings.turbo_beats)
+  if not v or v<M.TURBO_BEATS[1] or v>M.TURBO_BEATS[2] then return nil end
+  return v
+end
+-- channel_model.heartbeat_failed: both channels silent is a WAN outage; an old or foreign row proves nothing
+function M.heartbeat_failed(beat,source,target,k,now)
+  if k==nil or type(beat)~='table' or beat==NULL or beat.reason~='heartbeat' then return false end
+  local t=num(beat.time)
+  if not finite(t) or now-t<0 or now-t>M.BEAT_FRESH then return false end
+  local lost=beat.lost
+  return beat.id==source and beat.target==target and beat.target_ok==true and type(lost)=='number' and lost%1==0 and lost>=k
+end
+-- channel_model.leave_rule: why Auto leaves the primary now: 'model', 'streak', 'heartbeat', or nil
+function M.leave_rule(samples,identifier,count,now,max_age,settings,profile,env,target,beat)
+  if M.channel_failed(samples,identifier,count,now,max_age,settings,profile,env) then
+    return M.name(settings)=='consecutive' and 'streak' or 'model'
+  end
+  local extra=M.or_failures(settings)
+  if extra~=nil and require('pair').streak(samples,identifier,extra,now,max_age,false,profile,env) then return 'streak' end
+  if M.heartbeat_failed(beat,identifier,target,M.heartbeat_k(settings),now) then
+    local view=M.evaluate(samples,identifier,now,max_age,M.resolve(settings),profile,env)
+    if view~=nil and view.time~=nil and now-view.time<=max_age then return 'heartbeat' end
+  end
+  return nil
 end
 
 -- The extra gate of a planned return from a healthy reserve (channel_model.return_ready).
 function M.return_ready(samples,identifier,count,now,max_age,settings,profile,env)
   local model=M.name(settings)
   if model=='consecutive' then return true end
-  local view=M.evaluate(samples,identifier,now,max_age,model,profile,env)
+  local view=M.evaluate(samples,identifier,now,max_age,M.resolve(settings),profile,env)
   if view~=nil and view.healthy then return true end
   local pair=require('pair')
   local points=samples
@@ -253,7 +331,7 @@ function M.row_view(samples,row,now,max_age,settings)
       if same then points[#points+1]=s end
     end
   end
-  return M.public(M.evaluate(points,identifier,now,max_age,model))
+  return M.public(M.evaluate(points,identifier,now,max_age,M.resolve(settings)))
 end
 
 return M

@@ -1,0 +1,35 @@
+{
+  "comment": "Plan item 54: the package maintenance marker. Shared by test_maintenance.py (maintenance.py) and lua/test_maintenance.lua (maintenance.lua). marker null = no file, \"UNREADABLE\" = a file that does not decode.",
+  "boot": "0f0e0d0c-0b0a-4908-8706-050403020100",
+  "other_boot": "11111111-2222-4333-8444-555555555555",
+  "cases": [
+    {"name": "no marker", "marker": null, "uptime": 100, "now": 1000, "expect": {"state": "none"}},
+    {"name": "fresh upgrade in this boot", "marker": {"action": "upgrade", "boot_id": "BOOT", "uptime": 90.5, "time": 990.25}, "uptime": 100, "now": 1000, "expect": {"state": "active", "action": "upgrade", "since": 990.25}},
+    {"name": "install at the limit", "marker": {"action": "install", "boot_id": "BOOT", "uptime": 100, "time": 5}, "uptime": 1000, "now": 1000, "expect": {"state": "active", "action": "install", "since": 5}},
+    {"name": "removal past the limit", "marker": {"action": "remove", "boot_id": "BOOT", "uptime": 99, "time": 5}, "uptime": 1000, "now": 1000, "expect": {"state": "stale", "action": "remove", "reason": "timeout", "since": 5}},
+    {"name": "power cut mid-upgrade: another boot", "marker": {"action": "upgrade", "boot_id": "OTHER", "uptime": 90, "time": 990}, "uptime": 30, "now": 995, "expect": {"state": "stale", "action": "upgrade", "reason": "reboot", "since": 990}},
+    {"name": "uptime behind the marker in the same boot", "marker": {"action": "upgrade", "boot_id": "BOOT", "uptime": 500, "time": 990}, "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": "upgrade", "reason": "invalid", "since": 990}},
+    {"name": "a wall clock jump never keeps it active in the same boot", "marker": {"action": "upgrade", "boot_id": "BOOT", "uptime": 90, "time": 990}, "uptime": 100, "now": 1700000000, "expect": {"state": "active", "action": "upgrade", "since": 990}},
+    {"name": "no boot id: wall clock within the limit", "marker": {"action": "upgrade", "time": 990}, "uptime": 100, "now": 1000, "expect": {"state": "active", "action": "upgrade", "since": 990}},
+    {"name": "no boot id: wall clock too old", "marker": {"action": "upgrade", "time": 10}, "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": "upgrade", "reason": "timeout", "since": 10}},
+    {"name": "no boot id: far in the future", "marker": {"action": "upgrade", "time": 2000}, "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": "upgrade", "reason": "timeout", "since": 2000}},
+    {"name": "this boot unknown: wall clock decides", "marker": {"action": "install", "boot_id": "BOOT", "uptime": 90, "time": 990}, "boot": null, "uptime": null, "now": 1000, "expect": {"state": "active", "action": "install", "since": 990}},
+    {"name": "no usable time at all", "marker": {"action": "install", "boot_id": "BOOT"}, "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": "install", "reason": "invalid", "since": null}},
+    {"name": "uppercase boot id is not a boot id", "marker": {"action": "upgrade", "boot_id": "0F0E0D0C-0B0A-4908-8706-050403020100", "uptime": 90, "time": 10}, "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": "upgrade", "reason": "timeout", "since": 10}},
+    {"name": "unknown action", "marker": {"action": "reboot", "boot_id": "BOOT", "uptime": 90, "time": 990}, "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": null, "reason": "invalid", "since": null}},
+    {"name": "not an object", "marker": ["upgrade"], "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": null, "reason": "invalid", "since": null}},
+    {"name": "unreadable file", "marker": "UNREADABLE", "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": null, "reason": "invalid", "since": null}},
+    {"name": "negative or non-finite stamps", "marker": {"action": "upgrade", "boot_id": "BOOT", "uptime": -5, "time": -1}, "uptime": 100, "now": 1000, "expect": {"state": "stale", "action": "upgrade", "reason": "invalid", "since": null}}
+  ],
+  "files_comment": "IR-06 (integration review 07.11.2026): the marker FILE as both twins read it from disk (maintenance.read_marker / maintenance.lua read_marker with its default reader). layout: regular = the marker itself, symlink = a link to a file holding it, directory = a folder in its place. uptime/now: this boot's /proc/uptime and the wall clock. clear_stale null = the marker stays.",
+  "files": [
+    {"name": "a regular active marker blocks", "layout": "regular", "marker": {"action": "upgrade", "boot_id": "BOOT", "uptime": 90, "time": 990}, "uptime": 100, "now": 1000,
+     "expect": {"read": "value", "state": "active", "blocker": "MAINTENANCE-IN-PROGRESS", "clear_stale": null}},
+    {"name": "a symlink to an active marker is never followed: stale, invalid, removed", "layout": "symlink", "marker": {"action": "upgrade", "boot_id": "BOOT", "uptime": 90, "time": 990}, "uptime": 100, "now": 1000,
+     "expect": {"read": "invalid", "state": "stale", "reason": "invalid", "blocker": null, "clear_stale": {"code": "MAINTENANCE-INTERRUPTED", "reason": "invalid", "action": ""}}},
+    {"name": "a dangling symlink is stale, invalid", "layout": "dangling", "marker": null, "uptime": 100, "now": 1000,
+     "expect": {"read": "invalid", "state": "stale", "reason": "invalid", "blocker": null, "clear_stale": {"code": "MAINTENANCE-INTERRUPTED", "reason": "invalid", "action": ""}}},
+    {"name": "a directory in the marker's place is stale, invalid", "layout": "directory", "marker": null, "uptime": 100, "now": 1000,
+     "expect": {"read": "invalid", "state": "stale", "reason": "invalid", "blocker": null}}
+  ]
+}

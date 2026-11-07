@@ -207,6 +207,8 @@ M.COMMANDS={
   native_policy=function() return M.NATIVE_POLICY end,
   nft_fault_list=function() return 'nft list table inet homensai_vpn_fault' end,
   nft_fault_delete=function() return 'nft delete table inet homensai_vpn_fault' end,
+  -- GL repeater status (captive portal flag) for the WAN diagnosis (gl_sensors.lua; only while the primary fails)
+  repeater_status=function() return 'ubus call repeater status' end,
 }
 function M.command(name,...)
   local build=M.COMMANDS[name]
@@ -478,7 +480,9 @@ function M.datagram(kind,device,host,port,packet,seconds,accept,cb)
   if not safe_word(device,15) or not dotted(host) then cb(nil,'unavailable');return end
   local sock,ufd,guard
   local key={}
+  local finished=false
   local function finish(...)
+    if finished then return end;finished=true
     M.live[key]=nil
     if guard then guard.cancel() end
     if ufd then pcall(function() ufd:delete() end) end
@@ -496,20 +500,31 @@ function M.datagram(kind,device,host,port,packet,seconds,accept,cb)
   if not ok then finish(nil,'unavailable');return end
   local sent_at=M.hires()
   local fd=sock:fileno()
-  ufd=uloop.fd_add(fd,function()
+  local function receive()
     for _=1,32 do
       local data,peer=sock:recvfrom(4096)
       local received_at=M.hires()
-      if data==false then return end  -- would block
+      if data==false then return 'wait' end  -- would block
       if data==nil then
         -- nixio: nil, errno, message. EAGAIN: wait for the next event; any other error ends the check now
         -- (a level-triggered error must not spin until the deadline).
         local eagain=(nixio.const and nixio.const.EAGAIN) or 11
-        if peer~=eagain and peer~=11 then finish(nil,'transport') end
-        return
+        if peer~=eagain and peer~=11 then return 'failed' end
+        return 'wait'
       end
-      if accept(data,peer) then finish(data,nil,sent_at,received_at);return end
+      if accept(data,peer) then return 'answer',data,received_at end
     end
+    return 'wait'
+  end
+  ufd=uloop.fd_add(fd,function()
+    -- a read that raises would leave the socket readable and this callback firing without end under a guarded loop:
+    -- the check ends here as a failed one, the same way a read error does
+    local ok,what,data,received_at=pcall(receive)
+    if not ok then
+      pcall(M.log,'datagram read failed on '..device)
+      finish(nil,'transport')
+    elseif what=='failed' then finish(nil,'transport')
+    elseif what=='answer' then finish(data,nil,sent_at,received_at) end
   end,uloop.ULOOP_READ or 1)
   M.live[key]={sock=sock,ufd=ufd}
   guard=M.after(seconds*1000,function() finish(nil,'timeout') end)
@@ -525,13 +540,17 @@ end
 M.SEND_POLICY={[1]=true,[13]=true}  -- EPERM EACCES: refused by the router's firewall (datagram kind 'refused')
 
 -- beat_socket(device) -> handle | nil, 'missing'|'unavailable'  (fast_detect.lua, Lua plan item 5)
--- One persistent non-blocking raw ICMP socket bound to the tunnel device (no SO_MARK, as datagram()). It is
--- never watched by uloop: the pulse sends one echo per beat and reads the answers of the previous beat without
--- blocking, so a beat costs a few syscalls and no loop object. handle:send(target, packet) -> true | nil, kind
--- ('refused': the kernel/firewall refused the send; 'missing': the device is gone; 'unavailable'); handle:recv()
--- -> data | nil (nothing more now); handle:close().
+-- One persistent non-blocking raw ICMP socket bound to the tunnel device (no SO_MARK, as datagram()). The pulse sends
+-- one echo per beat and reads the answers of the previous beat without blocking. handle:send(target, packet) -> true |
+-- nil, kind ('refused': the kernel/firewall refused the send; 'missing': the device is gone; 'unavailable');
+-- handle:recv() -> data, arrival | nil (nothing more now); handle:close().
+-- Round trip (CUSUM-TRIGGER-2026-11-04.ru.md): under a loop the socket is watched only to stamp each datagram with
+-- its arrival time (the same M.hires as datagram()); the datagrams wait in `arrived` for the next beat. The raw socket
+-- sees every ICMP of the device, so an ICMP flood cannot wake the monitor more than BEAT_WAKES times per beat: the
+-- watch stops there and the next send starts it again. A datagram read without the watch has no arrival stamp.
 M.SEND_REFUSED={[1]=true,[13]=true,[100]=true,[101]=true,[105]=true,[113]=true}  -- EPERM EACCES ENETDOWN ENETUNREACH ENOBUFS EHOSTUNREACH
 M.SEND_MISSING={[6]=true,[19]=true}                                               -- ENXIO ENODEV
+M.BEAT_WAKES=16;M.BEAT_QUEUE=32
 function M.beat_socket(device)
   if not nixio or not safe_word(device,15) then return nil,'unavailable' end
   local sock=nixio.socket('inet','raw','icmp')
@@ -540,8 +559,24 @@ function M.beat_socket(device)
   if not bound then pcall(function() sock:close() end);return nil,M.SEND_MISSING[code] and 'missing' or 'unavailable' end
   if not sock:setblocking(false) then pcall(function() sock:close() end);return nil,'unavailable' end
   local handle={}
+  local arrived,ufd,wakes={},nil,0
+  local function unwatch() if ufd then pcall(function() ufd:delete() end);ufd=nil end end
+  local function watch()
+    if ufd or not uloop or not uloop.fd_add then return end
+    local ok,value=pcall(uloop.fd_add,sock:fileno(),function()
+      wakes=wakes+1
+      if wakes>M.BEAT_WAKES then unwatch();return end
+      for _=1,M.BEAT_QUEUE do
+        local data=sock:recvfrom(4096)
+        if type(data)~='string' then return end
+        if #arrived<M.BEAT_QUEUE then arrived[#arrived+1]={data,M.hires()} end
+      end
+    end,uloop.ULOOP_READ or 1)
+    if ok then ufd=value end
+  end
   function handle:send(target,packet)
     if not dotted(target) then return nil,'unavailable' end
+    wakes=0;watch()
     -- sendto, never connect(): nixio refuses port 0 as a service name on the router (see datagram())
     local ok,err=sock:sendto(packet,target,0)
     if ok then return true end
@@ -550,11 +585,13 @@ function M.beat_socket(device)
     return nil,'unavailable'
   end
   function handle:recv()
+    local first=table.remove(arrived,1)
+    if first then return first[1],first[2] end
     local data=sock:recvfrom(4096)
     if type(data)~='string' then return nil end  -- false: would block; nil: an error (read again next beat)
     return data
   end
-  function handle:close() pcall(function() sock:close() end) end
+  function handle:close() unwatch();pcall(function() sock:close() end) end
   return handle
 end
 

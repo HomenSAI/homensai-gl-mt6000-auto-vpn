@@ -1,0 +1,137 @@
+{
+ "checks": [
+  {
+   "name": "age-keygen -y reads our identity",
+   "ok": true
+  },
+  {
+   "name": "our recipient of an age-keygen identity",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=0 armored=False",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=0 armored=False",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=0 armored=True",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=0 armored=True",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=1 armored=False",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=1 armored=False",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=1 armored=True",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=1 armored=True",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=65535 armored=False",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=65535 armored=False",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=65535 armored=True",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=65535 armored=True",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=65536 armored=False",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=65536 armored=False",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=65536 armored=True",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=65536 armored=True",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=65537 armored=False",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=65537 armored=False",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=65537 armored=True",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=65537 armored=True",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=196608 armored=False",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=196608 armored=False",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=196608 armored=True",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=196608 armored=True",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=200001 armored=False",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=200001 armored=False",
+   "ok": true
+  },
+  {
+   "name": "age decrypts ours size=200001 armored=True",
+   "ok": true
+  },
+  {
+   "name": "we decrypt age size=200001 armored=True",
+   "ok": true
+  },
+  {
+   "backend": "cryptography",
+   "name": "cryptography backend loaded",
+   "ok": true
+  },
+  {
+   "name": "age decrypts the cryptography-backend output",
+   "ok": true
+  }
+ ],
+ "passed": 32,
+ "result": "PASS",
+ "tool": "1.2.1",
+ "total": 32
+}

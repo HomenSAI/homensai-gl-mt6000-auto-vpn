@@ -128,10 +128,18 @@ function M.sha256(text) return canon.sha256(text) end
 -- files: journal_read / atomic_json rules
 ------------------------------------------------------------------------------------------------------
 M.fs={}
+-- read(path): the text, or nil ONLY when the file does not exist (ENOENT). Any other failure - a directory in its
+-- place, no permission, an I/O error - is an error, never 'no file' (F-38; Python read_json: FileNotFoundError ->
+-- default, every other OSError raises).
+M.ENOENT=2
 function M.fs.read(path)
-  local f=io.open(path,'rb')
-  if not f then return nil end
-  local text=f:read('*a');f:close()
+  local f,err,code=io.open(path,'rb')
+  if not f then
+    if code==M.ENOENT then return nil end
+    error('STATE-READ-FAILED: '..tostring(err),0)
+  end
+  local text,rerr=f:read('*a');f:close()
+  if text==nil then error('STATE-READ-FAILED: '..tostring(rerr or path),0) end
   return text
 end
 -- key(path): (inode, size, mtime, ctime) for caches of unchanged files; nil without nixio (no caching)

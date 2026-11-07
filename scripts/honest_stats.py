@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Honest percentile statistics: distribution-free confidence for a quantile from n samples (Python 3.9+, stdlib only).
 
-The "59-sample rule". A P95 estimated from n samples is a guaranteed upper bound of the true 95th percentile
-(with 95 % confidence) only when n >= 59, because the chance that all n samples fall below the true P95 is 0.95**n
-and 0.95**59 = 0.0485 < 0.05 (0.95**58 = 0.0510 is not). With fewer samples the printed "P95" is just a point
-estimate - for n <= 19 it is simply the sample maximum - and must not be presented as a bound.
+The "59-sample rule". The empirical P95 printed from n samples is only an ESTIMATE at every n: it is the sample's own
+order statistic X_(ceil(0.95 n)), and it lies above the true 95th percentile in only about 57 % of cases at n = 59, 35 %
+at n = 60, 38 % at n = 100 and 43 % at n = 300; over the whole range 59 <= n <= 300 that coverage stays between 35 % and
+57 %, so the empirical P95 is never a 95 % upper bound. A one-sided 95 %-confidence UPPER BOUND of the true P95 is a
+different, separately computed order statistic X_(s) (see upper_rank): the smallest s with P(Binomial(n, 0.95) <= s-1)
+>= 0.95 - the maximum for 59 <= n <= 92, X_(n-1) for 93 <= n <= 123, X_(99) at n = 100, X_(292) at n = 300. It exists
+only from n >= 59, where the maximum is enough: the chance that all n samples fall below the true P95 is 0.95**n and
+0.95**59 = 0.0485 < 0.05 (0.95**58 = 0.0510 is not). The 95 % holds for independent, identically distributed samples
+only; repeated cycles on one bench are autocorrelated, so the effective n is smaller and the real coverage of the bound
+is lower than 95 %. With fewer samples the printed "P95" is just a point estimate - for n <= 19 it is simply the sample
+maximum - and no bound can be named.
 
 What can be said honestly about a small sample (n < 59):
   * the sample maximum is above the true q-quantile with probability 1 - q**n (n=4: 18.5 %, n=14: 51.2 %);
@@ -18,7 +25,7 @@ q-quantile Q, P(X_(r) <= Q) = P(B >= r) and P(X_(s) >= Q) = P(B <= s-1), so [X_(
 probability P(l <= B <= u-1) = F_B(u-1) - F_B(l-1). No distribution assumption is needed (samples are treated as
 independent and identically distributed; repeated cycles on one bench are an approximation).
 
-Public API: quantile_summary(), max_coverage(), max_confidence(), min_n(), format_p95(), format_max_claim(),
+Public API: wilson_interval(), format_wilson(), quantile_summary(), max_coverage(), max_confidence(), min_n(), format_p95(), format_max_claim(),
 cell_text(). Everything is exact binomial arithmetic on fractions where it matters for the tests.
 """
 import math
@@ -43,6 +50,47 @@ def binom_cdf(k, n, p):
     if k >= n:
         return Fraction(1)
     return sum(math.comb(n, i) * p ** i * (1 - p) ** (n - i) for i in range(k + 1))
+
+
+Z95 = 1.959964  # two-sided 95 % normal quantile
+
+
+def wilson_interval(k, n, z=Z95):
+    """Wilson score interval (low, high) for a proportion k of n, as fractions in 0..1; None when n < 1 or k is not 0..n.
+
+    p = k/n, d = 1 + z^2/n, centre c = (p + z^2/2n)/d, half-width h = z*sqrt(p(1-p)/n + z^2/4n^2)/d, interval c -/+ h.
+    Unlike the plain k/n it never claims certainty from a short run: 3 of 3 gives 43.8..100 %, 59 of 59 gives 93.8..100 %,
+    0 of 10 gives 0..27.8 %. The ends are clamped to 0 and 1 (the formula gives exactly 0 / 1 there up to rounding)."""
+    if not isinstance(k, int) or not isinstance(n, int) or isinstance(k, bool) or isinstance(n, bool) or n < 1 or not 0 <= k <= n:
+        return None
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return (0.0 if k == 0 else max(0.0, c - h), 1.0 if k == n else min(1.0, c + h))
+
+
+def _tenths(x, up):
+    """x (0..1) in percent with one decimal, rounded outwards: DOWN for a lower bound, UP for an upper bound. The
+    round(..., 6) removes binary noise first, so an exact 43.8 % stays 43.8 and never becomes 43.7 or 43.9."""
+    tenths = round(x * 1000, 6)
+    return '%.1f' % ((math.ceil(tenths) if up else math.floor(tenths)) / 10)
+
+
+def format_wilson(k, n, lang='ru'):
+    """'43.8–100 %' style text of the 95 % Wilson interval for k of n (one decimal, a trailing .0 dropped); '' when undefined.
+
+    The display is conservative (owner decision 07.11.2026): the lower bound is rounded DOWN and the upper bound UP to one
+    decimal, so the printed interval always contains the computed one. 3 of 3: 43.85 % is shown as 43.8 %, not 43.9 %;
+    59 of 59: 93.89 % -> 93.8 %; 0 of 10: 27.75 % -> 27.8 %."""
+    w = wilson_interval(k, n)
+    if w is None:
+        return ''
+    lo, hi = _tenths(w[0], False), _tenths(w[1], True)
+    lo, hi = (t[:-2] if t.endswith('.0') else t for t in (lo, hi))
+    if lang == 'ru':
+        lo, hi = lo.replace('.', ','), hi.replace('.', ',')
+    return '%s–%s %%' % (lo, hi)
 
 
 def min_n(q=Q, conf=CONF):
@@ -108,13 +156,16 @@ def quantile_summary(samples, q=Q, conf=CONF):
     """Empirical q-quantile plus distribution-free confidence statements.
 
     Returns a dict:
-      n, q, conf, min_n, honest (n >= min_n), value (empirical quantile = X_(ceil(q n)), None for n = 0), max,
+      n, q, conf, min_n, honest (n >= min_n: only means that an upper bound EXISTS; it does NOT make `value` a bound),
+      value (empirical quantile = X_(ceil(q n)), an estimate at every n; None for n = 0), max,
       rank (1-based rank of value), ci = (low, high, coverage) two-sided order-statistic interval at `conf`
       (low/high None when n is too small to bound that side), upper = one-sided upper confidence bound at `conf`
       (the smallest order statistic X_(s) with P(B <= s-1) >= conf; None when even the maximum is not enough),
       max_confidence (P(max >= true quantile)), max_coverage (with `conf`, this fraction of cases <= max).
     """
-    vals = sorted(float(v) for v in samples if isinstance(v, (int, float)) and not isinstance(v, bool))
+    # Only finite observations count: NaN or an infinity is not a measurement and must not raise n (review F-58).
+    vals = sorted(float(v) for v in samples
+                  if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v))
     n = len(vals)
     need = min_n(q, conf)
     out = dict(n=n, q=q, conf=conf, min_n=need, honest=n >= need, value=None, max=None, rank=None,
@@ -127,10 +178,39 @@ def quantile_summary(samples, q=Q, conf=CONF):
     cover = None
     if low is not None and high is not None:
         cdf = _cdf_table(n, _frac(q))
-        cover = float(cdf[high - 1] - cdf[low - 1] if low > 1 else cdf[high - 1])
+        # P(low <= B <= high-1) = F_B(high-1) - F_B(low-1); the lower tail is subtracted for every finite low rank,
+        # also for low = 1 where F_B(0) = (1-q)**n is small but not zero (review F-57: 1..6, q=0.5 -> 62/64).
+        cover = float(cdf[high - 1] - cdf[low - 1])
     out['ci'] = (vals[low - 1] if low else None, vals[high - 1] if high else None, cover)
     out['upper'] = vals[up - 1] if up else None
     return out
+
+
+def upper_rank(n, q=Q, conf=CONF):
+    """1-based rank s of the one-sided upper confidence bound X_(s) of the true q-quantile; None when n is too small.
+
+    This is a different order statistic from the empirical quantile X_(ceil(q n)): at n = 59 the empirical P95 is X_(57)
+    (only ~57 % confidence of bounding the true P95), while the 95 % upper bound is X_(59), the maximum (review F-59).
+    Further: the maximum up to n = 92, X_(92) at n = 93, X_(99) at n = 100, X_(292) at n = 300."""
+    if not isinstance(n, int) or isinstance(n, bool) or n < 1:
+        return None
+    return _ranks(n, _frac(q), _frac(conf))[2]
+
+
+def format_upper(n, max_value, lang='ru', q=Q, conf=CONF):
+    """Text of the separately computed upper confidence bound for a summary row that keeps only n / median / P95 / max:
+    the value is known when the bound is the maximum, otherwise the rank of the bounding order statistic is named."""
+    name = 'P%d' % round(q * 100)
+    c = int(round(conf * 100))
+    s = upper_rank(n, q, conf)
+    if s is None:
+        return ('верхней границы %s с %d %% уверенностью нет (нужно n ≥ %d)' % (name, c, min_n(q, conf)) if lang == 'ru' else
+                'no %d %%-confidence upper bound of the %s (needs n ≥ %d)' % (c, name, min_n(q, conf)))
+    if s == n and max_value is not None:
+        return ('верхняя граница %s с %d %% уверенностью: %s (максимум)' % (name, c, _num(max_value)) if lang == 'ru' else
+                '%d %%-confidence upper bound of the %s: %s (the maximum)' % (c, name, _num(max_value)))
+    return ('верхняя граница %s с %d %% уверенностью: X(%d) из %d' % (name, c, s, n) if lang == 'ru' else
+            '%d %%-confidence upper bound of the %s: X(%d) of %d' % (c, name, s, n))
 
 
 def _num(x):
@@ -143,11 +223,13 @@ def coverage_percent(n, conf=CONF):
 
 
 def format_p95(value, n, lang='ru', q=Q, conf=CONF):
-    """'P95=X (n=N)' when honest, else 'P95≈X (n=N, мало данных: нужно ≥ 59)' / 'P95≈X (n=N, too few: needs ≥59)'."""
+    """'P95≈X (n=N, оценка)' / 'P95≈X (n=N, estimate)' when n >= 59 (the empirical P95 stays an estimate - at n = 59..300 it
+    covers the true P95 in only 35-57 % of cases - and is never called a bound; the upper bound is named separately by
+    format_upper), else 'P95≈X (n=N, мало данных: нужно ≥ 59)' / 'P95≈X (n=N, too few: needs ≥59)'."""
     name = 'P%d' % round(q * 100)
     need = min_n(q, conf)
     if n >= need:
-        return '%s=%s (n=%d)' % (name, _num(value), n)
+        return '%s≈%s (n=%d, %s)' % (name, _num(value), n, 'оценка' if lang == 'ru' else 'estimate')
     if lang == 'ru':
         return '%s≈%s (n=%d, мало данных: нужно ≥ %d)' % (name, _num(value), n, need)
     return '%s≈%s (n=%d, too few: needs ≥%d)' % (name, _num(value), n, need)
@@ -163,17 +245,23 @@ def format_max_claim(max_value, n, lang='ru', conf=CONF):
 
 
 def cell_text(n, median, p95, maximum, conf=CONF):
-    """Compact 'n / median / P95 / max' cell for text tables. A small sample gets '≈' and '(≥k %)' after the max."""
-    if n >= MIN_N:
-        return '%d / %s / %s / %s' % (n, _num(median), _num(p95), _num(maximum))
+    """Compact 'n / median / P95 / max' cell for text tables. The P95 always carries '≈' (an estimate at every n);
+    a small sample also gets '(≥k %)' after the max.
+
+    "Small" depends on the confidence level: min_n(Q, conf), 59 at 95 % but 90 at 99 % (review F-60)."""
+    need = min_n(Q, conf)
+    if n >= need:
+        return '%d / %s / ≈%s / %s' % (n, _num(median), _num(p95), _num(maximum))
     return '%d / %s / ≈%s / %s (≥%d %%)' % (n, _num(median), _num(p95), _num(maximum), coverage_percent(n, conf))
 
 
 LEGEND = {
-    'ru': '≈P95 — мало данных (n < %d), это оценка, а не граница; «(≥k %%)» — с 95 %% уверенностью не менее k %% случаев '
-          'не медленнее max (k = 100·0,05^(1/n)). Честный P95 только при n ≥ %d.' % (MIN_N, MIN_N),
-    'en': '≈P95 — too few samples (n < %d): an estimate, not a bound; "(≥k %%)" — with 95 %% confidence at least k %% of '
-          'cases are no slower than the max (k = 100·0.05^(1/n)). An honest P95 needs n ≥ %d.' % (MIN_N, MIN_N),
+    'ru': '≈P95 — оценка (95-й процентиль самой выборки), а не граница, при любом n; «(≥k %%)» — с 95 %% уверенностью не менее k %% '
+          'случаев не медленнее max (k = 100·0,05^(1/n)). Верхняя 95 %%-я граница настоящего P95 считается отдельно и есть только '
+          'при n ≥ %d (для независимых замеров).' % MIN_N,
+    'en': '≈P95 — an estimate (the 95th percentile of the sample itself), not a bound, at every n; "(≥k %%)" — with 95 %% confidence at '
+          'least k %% of cases are no slower than the max (k = 100·0.05^(1/n)). The 95 %% upper bound of the true P95 is computed '
+          'separately and exists only from n ≥ %d (for independent samples).' % MIN_N,
 }
 
 

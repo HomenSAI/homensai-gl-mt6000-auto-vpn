@@ -17,3 +17,7 @@ router/files/www/luci-static/resources/view/homensai-vpn/style/** -text
 docs/TEST-HISTORY.html text eol=lf
 docs/test-history/*.json text eol=lf
 docs/charts/*.svg text eol=lf
+# Official C2SP/CCTV age test vectors: exact bytes (some contain CR LF on purpose).
+qa/vectors/age-cctv/** binary
+tools/formal/tla/** text eol=lf
+*.sig -text

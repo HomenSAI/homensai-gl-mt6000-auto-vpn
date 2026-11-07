@@ -8,6 +8,34 @@ def outputs():
  updated=re.sub(r'// BEGIN GENERATED LEGAL REFERENCE\n.*?// END GENERATED LEGAL REFERENCE\n',lambda _:block,source,flags=re.S) if '// BEGIN GENERATED LEGAL REFERENCE' in source else source.replace('var TERMS_POINTS=',block+'var TERMS_POINTS=')
  return p,updated
 
+# Install guide (Help topic install-guide): the same sections become docs/INSTALL.<lang>.md and the Help chapter.
+GUIDE_LINKS=[(r'docs/(AI-INSTALL\.(?:en|ru)\.md)',r'[\1](\1)'),(r'docs/(INSTALL\.(?:en|ru)\.md)',r'[\1](\1)'),(r'docs/(ERROR_CODES\.md)',r'[\1](\1)'),(r'router-test-kit/(EMERGENCY\.md)',r'[router-test-kit/\1](../router-test-kit/\1)')]
+def guide_links(text):
+ for pattern,link in GUIDE_LINKS:text=re.sub(r'(?<![\w/\[])'+pattern,link,text)
+ return text
+def guide_markdown(sections,level,lang):
+ out=[]
+ for section in sections:
+  out+=['#'*level+' '+section['title'],'']
+  for n,item in enumerate(section['items'],1):
+   indent='   ' if section['ol'] else ''
+   out+=[(str(n)+'. ' if section['ol'] else '')+guide_links(item['text']),'']
+   if item['command']:out+=[indent+'```text',indent+item['command'],indent+'```','']
+  if section['rows']:
+   out+=['| '+('Message or code' if lang=='en' else 'Сообщение или код')+' | '+('What to do' if lang=='en' else 'Что делать')+' |','|---|---|']
+   out+=['| `'+row[0]+'` | '+guide_links(row[1]).replace('|',r'\|')+' |' for row in section['rows']]+['']
+ return out
+def install_document(values,lang):
+ en=lang=='en';topic=[t for t in values['topics'] if t['id']=='install-guide'][0]
+ head=['<!-- doc-role: current-generated-install -->','# '+topic['title'],'',
+  '[README]('+('../README.md' if en else '../README.ru.md')+') · ['+('AI installation prompt' if en else 'Промпт для ИИ-агента')+'](AI-INSTALL.'+lang+'.md) · ['+('Error codes' if en else 'Коды ошибок')+'](ERROR_CODES.md) · ['+('Built-in Help' if en else 'Встроенная помощь')+'](BUILTIN-HELP.'+lang+'.md#install-guide) · ['+('Emergency' if en else 'Аварийные действия')+'](../router-test-kit/EMERGENCY.md) · ['+('Terms' if en else 'Условия')+']('+('../DISCLAIMER.md' if en else '../DISCLAIMER.ru.md')+') · ['+('Current status' if en else 'Текущее состояние')+'](CURRENT-STATUS.md) · '+('[Русский](INSTALL.ru.md)' if en else '[English](INSTALL.en.md)'),'',
+  '**'+('License' if en else 'Лицензия')+':** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — '+('source-available, not open source.' if en else 'исходный код доступен, но это не open source.'),'',
+  ('The same text is the built-in Help topic of the application (generated from router/ai_prompt.inc.js by scripts/sync-documentation.py). It is version-neutral: take every file from one release.' if en else 'Тот же текст — тема встроенной помощи приложения (создаётся из router/ai_prompt.inc.js скриптом scripts/sync-documentation.py). Руководство не привязано к версии: все файлы берите из одного выпуска.'),'',topic['when'],'']
+ prompt=['## '+('Ready prompt for Codex or Claude Code' if en else 'Готовый промпт для Codex или Claude Code'),'',
+  ('Copy the whole block into an AI agent that has a terminal on your computer. The same text is the Help topic «Prompt for your AI agent» and [AI-INSTALL.en.md](AI-INSTALL.en.md).' if en else 'Скопируйте весь блок в ИИ-агента, у которого есть терминал на вашем компьютере. Тот же текст — тема помощи «Промпт для вашего ИИ-агента» и [AI-INSTALL.ru.md](AI-INSTALL.ru.md).'),'',
+  '```text',values['install'].rstrip(),'```','','Synchronized with the application. / Синхронизировано с приложением.']
+ return '\n'.join(head+guide_markdown(values['installGuide'],2,lang)+prompt)+'\n'
+
 def generate(check=False):
  p,updated=outputs()
  if check:
@@ -37,7 +65,9 @@ def generate(check=False):
     if topic['id']=='terms':custom=re.sub(r'\]\((DISCLAIMER(?:\.ru)?\.md|LICENSE(?:-MIT-LEGACY)?|LICENSING\.md|COMMERCIAL-LICENSING\.md)\)',r'](../\1)',custom)
     body+=[custom,'']
    if topic['id']=='ai-prompt':body+=['[Full installation prompt](AI-INSTALL.'+lang+'.md)','']
+   if topic['id']=='install-guide':body+=guide_markdown(values['installGuide'],3,lang)+['[Installation guide](INSTALL.'+lang+'.md)','']
    body+=['### '+('Diagnostic prompt' if lang=='en' else 'Промпт диагностики'),'','```text',topic['diagnostic'],'```','']
+  pending[ROOT/('docs/INSTALL.'+lang+'.md')]=install_document(values,lang)
   pending[ROOT/('docs/BUILTIN-HELP.'+lang+'.md')]='\n'.join(body).rstrip()+'\n'
  body=['<!-- doc-role: current-generated-codes -->','# События, состояния и диагностика / Events, states and diagnostics','','Generated from the merged active error catalogue, including prefix families. / Сформировано из объединённого справочника приложения, включая семейства кодов.','','A listed code may describe a legacy mode or a guarded refusal; it does not prove that a route changed. Global service errors are not falsely assigned to a VPN role. / Наличие кода не доказывает выполненный переход. Общие ошибки службы не приписываются каналу.','','[Current scope](CURRENT-STATUS.md) · [History/provenance](CHANNEL-ATTRIBUTION.md)','']
  for row in data['errorRows']:

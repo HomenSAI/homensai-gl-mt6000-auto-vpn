@@ -83,7 +83,7 @@ class SharedCases(unittest.TestCase):
                 w=World(c);result=S.job(w.io,c['request'],c['now'])
                 self.assertEqual(canonical(result),canonical(c['expect']['result']))
                 self.assertEqual(w.writes,c['expect']['writes']);self.assertEqual(w.exec,c['expect']['exec']);self.assertEqual(w.logs,c['expect']['logs'])
-                self.assertEqual(canonical(S.project(json.loads(w.files['/run/server-pick.json']))),canonical(result))
+                self.assertEqual(canonical(S.project(json.loads(w.files['/run/server-pick.json']))),canonical(S.project(result)))
 
 
 class HandChecked(unittest.TestCase):

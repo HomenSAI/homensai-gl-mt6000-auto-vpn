@@ -332,23 +332,170 @@ function M.spawn(argv,opts)
     if have_timeout==nil then have_timeout=os.execute('command -v timeout >/dev/null 2>&1')==0 end
     if have_timeout then line='timeout '..string.format('%d',math.floor(opts.timeout))..' '..line end
   end
-  local status=M.RUNTIME..'/.spawn-'..canon.unique()..'.status'
-  local full='('..line..' </dev/null >/dev/null 2>&1; echo $? >'..status..'.part && mv '..status..'.part '..status..')'..closing()..' &'
+  local status=opts.status or (M.RUNTIME..'/.spawn-'..canon.unique()..'.status')
+  if string.find(status,"[%z\n' ]") then error('sys: unsafe status path',0) end
+  -- R2-01: the command runs under a shell of its own that first records its pid and start time (<status>.pid:
+  -- "<pid> <starttime>", the 22nd field of /proc/<pid>/stat, so a reused pid is never taken for ours - R4-04) and,
+  -- where setsid exists, leads its own process group, so terminate() can stop the whole writer (timeout and uci
+  -- alike) and confirm its exit through the status file the outer wrapper writes after the child is gone.
+  if M.have_setsid==nil then M.have_setsid=os.execute('command -v setsid >/dev/null 2>&1')==0 end
+  local inner='echo "$$ $(sed -e \'s/^.*) //\' '..M.PROC..'/$$/stat 2>/dev/null | cut -d\' \' -f20)" >'..status..'.pid.part && mv '..status..'.pid.part '..status..'.pid; '
+    ..'exec '..(M.have_setsid and 'setsid ' or '')..line
+  local full="(sh -c '"..string.gsub(inner,"'","'\\''").."' </dev/null >/dev/null 2>&1; echo $? >"..status..'.part && mv '..status..'.part '..status..')'..closing()..' &'
   if os.execute(full)~=0 then return nil end
   return status
+end
+-- spawn_pid(handle) -> pid, starttime (strings) of the recorded writer process; nil when nothing was recorded
+local function spawn_pid(handle)
+  local f=io.open(handle..'.pid','r')
+  if not f then return nil end
+  local text=f:read('*l') or '';f:close()
+  local pid,started=string.match(text,'^(%d+)%s*(%d*)%s*$')
+  if not pid then return nil end
+  return pid,(started~='' and started or nil)
+end
+-- R4-02 / R4-04: the process tree of a writer through /proc (the MT3000 firmware has no setsid, so no process group of
+-- ours exists there; a pid alone can be reused). proc_stat(pid) -> ppid, starttime; process_tree(pid) -> {pid=starttime}
+-- for the recorded process and every descendant, nil when /proc cannot be read; process_alive(pid, starttime).
+M.PROC='/proc'
+local function proc_stat(pid)
+  local f=io.open(M.PROC..'/'..pid..'/stat','r')
+  if not f then return nil end
+  local text=f:read('*a') or '';f:close()
+  local rest=string.match(text,'%)%s+(.*)$')
+  if not rest then return nil end
+  local fields={}
+  for word in string.gmatch(rest,'%S+') do fields[#fields+1]=word end
+  return fields[2],fields[20]  -- after "pid (comm) ": state, ppid, ..., starttime (field 22 of the whole line)
+end
+function M.process_alive(pid,started)
+  local _,now=proc_stat(pid)
+  if now==nil then return false end
+  return started==nil or now==started
+end
+function M.process_tree(pid)
+  local names=M.dir(M.PROC)
+  if not names then return nil end
+  local ppid,start={},{}
+  for _,name in ipairs(names) do
+    if string.match(name,'^%d+$') then
+      local pp,st=proc_stat(name)
+      if pp then ppid[name]=pp;start[name]=st end
+    end
+  end
+  if start[pid]==nil then return {} end
+  local function descends(p,depth)
+    if depth>128 then return false end
+    if p==pid then return true end
+    local pp=ppid[p]
+    if not pp or pp=='0' or pp==p then return false end
+    return descends(pp,depth+1)
+  end
+  local tree={}
+  for p in pairs(start) do if descends(p,0) then tree[p]=start[p] end end
+  return tree
+end
+local function signal_all(signal,tree,group)
+  if group then os.execute('kill -'..signal..' -- -'..group..' >/dev/null 2>&1') end
+  local parts={}
+  for p in pairs(tree) do parts[#parts+1]=p end
+  if #parts>0 then os.execute('kill -'..signal..' '..table.concat(parts,' ')..' >/dev/null 2>&1') end
+end
+-- <handle>.tree: the frozen tree terminate() signalled ("<pid> <starttime>" per line) - finished() counts the writer
+-- as gone only once its status exists AND none of them is alive. The line "unknown" (the tree could not be read)
+-- never resolves in this boot: the RAM directory is cleared by the reboot that ends every writer.
+local function write_tree(handle,tree)
+  local lines={}
+  if tree==nil then lines[1]='unknown' else for p,st in pairs(tree) do lines[#lines+1]=p..' '..(st or '') end end
+  local f=io.open(handle..'.tree.part','w')
+  if not f then return false end
+  f:write(table.concat(lines,'\n'),'\n');f:close()
+  return os.rename(handle..'.tree.part',handle..'.tree') and true or false
+end
+local function tree_gone(handle)
+  local f=io.open(handle..'.tree','r')
+  if not f then return true end
+  local text=f:read('*a') or '';f:close()
+  for line in string.gmatch(text,'[^\n]+') do
+    if line=='unknown' then return false end
+    local p,st=string.match(line,'^(%d+)%s*(%d*)$')
+    if p and M.process_alive(p,st~='' and st or nil) then return false end
+  end
+  return true
+end
+local function status_exists(handle)
+  local f=io.open(handle,'r')
+  if not f then return false end
+  f:close();return true
+end
+local function consume(handle)
+  local f=io.open(handle,'r')
+  if not f then return nil end
+  local text=f:read('*l');f:close()
+  os.remove(handle);os.remove(handle..'.pid');os.remove(handle..'.tree')
+  return tonumber(text)
 end
 function M.wait(handle,seconds)
   if not handle then return nil end
   local end_=M.clock()+seconds
   while true do
-    local f=io.open(handle,'r')
-    if f then
-      local text=f:read('*l');f:close();os.remove(handle)
-      return tonumber(text)
-    end
+    if status_exists(handle) and tree_gone(handle) then return consume(handle) end
     if M.clock()>=end_ then return nil end
     M.sleep(0.1)
   end
+end
+local function status_within(handle,seconds)
+  local end_=M.clock()+seconds
+  while true do
+    if status_exists(handle) then return true end
+    if M.clock()>=end_ then return false end
+    M.sleep(0.1)
+  end
+end
+-- terminate(handle, seconds) -> true when the spawned command is confirmed gone: its exit status arrived after SIGTERM,
+-- then SIGKILL, and every process of its tree (frozen with SIGSTOP first so nothing forks between the listing and the
+-- signal) is gone too; false when that could not be established within `seconds` - the caller then treats the writer
+-- as possibly still running (R2-01, R4-02). A status that already exists is taken as it is: nothing is signalled
+-- (R4-04), and a recorded pid whose start time is not ours (reused) is never signalled either.
+function M.terminate(handle,seconds)
+  if not handle then return false end
+  seconds=math.max(0.2,seconds or 2)
+  if status_exists(handle) then return M.wait(handle,seconds)~=nil end
+  local pid,started=spawn_pid(handle)
+  if not pid then return status_within(handle,seconds) and M.wait(handle,0)~=nil end
+  local group=M.have_setsid and pid or nil
+  local tree={}
+  local known=true
+  if M.process_alive(pid,started) then
+    tree=M.process_tree(pid)
+    if tree==nil then known=false;tree={[pid]=started}
+    else
+      for _=1,3 do
+        signal_all('STOP',tree,group)
+        local again=M.process_tree(pid)
+        if again==nil then known=false;break end
+        local same=true
+        for p in pairs(again) do if tree[p]==nil then same=false end end
+        tree=again
+        if same then break end
+      end
+    end
+    if not write_tree(handle,known and tree or nil) then known=false end
+  end
+  local arrived=false
+  for _,signal in ipairs({'TERM','KILL'}) do
+    signal_all(signal,tree,group);signal_all('CONT',tree,group)
+    if status_within(handle,seconds/2) then arrived=true;break end
+  end
+  if not arrived or not known then return false end
+  for p,st in pairs(tree) do if M.process_alive(p,st) then return false end end
+  return M.wait(handle,0)~=nil
+end
+-- finished(handle) -> true once the spawned command's exit status exists and no process of its signalled tree is
+-- alive (without consuming it)
+function M.finished(handle)
+  if not handle then return true end
+  return status_exists(handle) and tree_gone(handle)
 end
 
 ------------------------------------------------------------------------------------------------------
@@ -445,8 +592,9 @@ local function https_start(device,requests)
   if os.execute(group)~=0 then return files,nil end
   return files,marker
 end
--- one UDP question through the device; -> data or nil, kind ('unavailable' | 'transport' | 'timeout')
-local function dns_exchange(device,dns)
+-- one UDP question through the device, sent now and answered later: dns_send -> pending | nil, kind; dns_wait ->
+-- data or nil, kind ('unavailable' | 'transport' | 'timeout')
+local function dns_send(device,dns)
   if not nixio or not nixio.socket or type(dns.host)~='string' or not string.find(dns.host,'^%d+%.%d+%.%d+%.%d+$') then return nil,'unavailable' end
   local sock=nil
   local opened=pcall(function()
@@ -459,6 +607,10 @@ local function dns_exchange(device,dns)
   if not opened then close();return nil,'unavailable' end
   local deadline=M.clock()+dns.seconds
   if not pcall(function() assert(sock:send(dns.packet)) end) then close();return nil,'transport' end
+  return {sock=sock,close=close,deadline=deadline}
+end
+local function dns_wait(sent,dns)
+  local sock,close,deadline=sent.sock,sent.close,sent.deadline
   local eagain=(nixio.const and nixio.const.EAGAIN) or 11
   local flags=nil
   if nixio.poll and nixio.poll_flags then pcall(function() flags=nixio.poll_flags('in') end) end
@@ -482,16 +634,23 @@ local function dns_exchange(device,dns)
     end
   end
 end
--- probe_io(device, requests, dns) -> answers, dns_data|nil, dns_kind (see live_probe.lua)
-function M.probe_io(device,requests,dns)
+-- probe_begin(device, requests, dns) -> pending: every check of probe_io is under way, nothing is waited for;
+-- probe_finish(pending) waits for the answers. probe_io = both at once (see live_probe.lua).
+function M.probe_begin(device,requests,dns)
   if not probe_word(device,15) then error('sys: probe device',0) end
   local started=M.clock()
   local longest=0
   for _,r in ipairs(requests) do if type(r)=='table' and type(r.seconds)=='number' and r.seconds>longest then longest=r.seconds end end
   -- curl first: the children must not inherit the DNS socket
   local files,marker=https_start(device,requests)
-  local dns_data,dns_kind=nil,nil
-  if dns then dns_data,dns_kind=dns_exchange(device,dns) end
+  local pending={started=started,longest=longest,files=files,marker=marker,dns=dns}
+  if dns then pending.sent,pending.dns_kind=dns_send(device,dns) end
+  return pending
+end
+function M.probe_finish(pending)
+  local started,longest,files,marker,dns=pending.started,pending.longest,pending.files,pending.marker,pending.dns
+  local dns_data,dns_kind=nil,pending.dns_kind
+  if pending.sent then dns_data,dns_kind=dns_wait(pending.sent,dns) end
   local finished=marker~=nil and present(marker)
   if marker then
     local limit=started+longest+3
@@ -510,6 +669,7 @@ function M.probe_io(device,requests,dns)
   if finished then os.remove(marker) end
   return answers,dns_data,dns_kind
 end
+function M.probe_io(device,requests,dns) return M.probe_finish(M.probe_begin(device,requests,dns)) end
 
 local machine=nil
 function M.machine()

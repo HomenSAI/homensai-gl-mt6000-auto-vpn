@@ -166,5 +166,82 @@ class PrivacyScan(unittest.TestCase):
             self.assertFalse(out.exists())
 
 
+def _router_version(version='2.1.0-alpha99', runs=None):
+    return {'version': version, 'date': '2026-11-08', 'platform': 'GL-MT3000', 'role': 'test', 'scenario_ru': 'обрыв',
+            'scenario_en': 'cut', 'fault_s': 100, 'observe_s': 300, 'source': 'test', 'note': 'n',
+            'runs': runs or [
+                {'run': 1, 'detect_s': 10, 'on_reserve_s': 15, 'return_start_s': 150, 'on_primary_s': 160, 'blocked': []},
+                {'run': 2, 'detect_s': 20, 'on_reserve_s': 25, 'return_start_s': 152, 'on_primary_s': 161,
+                 'blocked': [{'at_s': 30, 'for_s': 2}]},
+                {'run': 3, 'detect_s': 30, 'on_reserve_s': None, 'return_start_s': None, 'on_primary_s': None, 'blocked': []}]}
+
+
+class RouterMeasurements(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = json.loads(RESULTS.read_text(encoding='utf-8'))
+
+    def with_block(self, *versions):
+        data = copy.deepcopy(self.data)
+        data['router_measurements'] = {'intro_ru': 'ру', 'intro_en': 'en', 'versions': list(versions)}
+        return data
+
+    def test_committed_block_is_valid_and_has_the_alpha8_baseline(self):
+        rm = self.data['router_measurements']
+        self.assertEqual(th.validate_router(rm), [])
+        v = {x['version']: x for x in rm['versions']}['2.1.0-alpha8']
+        self.assertEqual(len(v['runs']), 3)
+        runs, cols, crit, nblk = th.router_stats(v)
+        self.assertEqual(crit, {'detected': 3, 'reserve': 3, 'returned': 3, 'clean': 2, 'full': 2})
+        self.assertEqual(nblk, 2)
+        self.assertEqual([r['return_delay_s'] for r in runs], [51, 50, 51])
+        self.assertEqual((cols['detect_s']['min'], cols['detect_s']['median'], cols['detect_s']['max']), (18, 19, 28))
+        page = th.build()[0]
+        self.assertIn('id="router"', page)
+        self.assertIn('href="#router"', page)
+        self.assertIn('Router measurements per version', page)
+        self.assertIn('2/3 · 20.7–93.9 %', page)  # conservative Wilson rounding, same as scripts/honest_stats.py
+
+    def test_statistics_and_wilson_come_from_the_runs(self):
+        runs, cols, crit, nblk = th.router_stats(_router_version())
+        self.assertEqual(crit, {'detected': 3, 'reserve': 2, 'returned': 2, 'clean': 2, 'full': 1})
+        self.assertEqual(nblk, 1)
+        self.assertEqual(cols['detect_s'], {'n': 3, 'min': 10, 'median': 20, 'max': 30})
+        self.assertEqual(cols['on_reserve_s']['median'], 20)
+        self.assertEqual(cols['return_delay_s'], {'n': 2, 'min': 50, 'median': 51, 'max': 52})
+
+    def test_adding_a_version_is_a_data_only_change(self):
+        a, b = _router_version('2.1.0-alpha10'), _router_version('2.1.0-alpha8')
+        data = self.with_block(a, b)
+        th.validate_results(data)
+        versions, app = th.collect_versions()
+        html = th.render(versions, app, data)
+        self.assertLess(html.index('<span class="ver">2.1.0-alpha8</span></td><td>2026-11-08'),
+                        html.index('<span class="ver">2.1.0-alpha10</span></td><td>2026-11-08'))
+        self.assertEqual(th.privacy_findings(html), [])
+
+    def test_validation_rejects_bad_data(self):
+        bad = _router_version()
+        bad['runs'][0]['detect_s'] = 'fast'
+        bad['runs'][1]['blocked'] = [{'for_s': 2}]
+        bad['fault_s'] = 0
+        block = {'intro_ru': 'a', 'intro_en': 'b', 'versions': [bad, _router_version(), _router_version()]}
+        errs = '\n'.join(th.validate_router(block))
+        for text in ('non-negative number or null', 'entries need at_s', 'fault_s must be a positive number', 'duplicate version'):
+            self.assertIn(text, errs)
+        self.assertEqual(th.validate_router(None), [])
+
+    def test_build_refuses_a_router_block_with_a_planted_address(self):
+        v = _router_version()
+        v['source'] = 'bench 10.20.30.40'
+        data = self.with_block(v)
+        with tempfile.TemporaryDirectory() as tmp:
+            res = Path(tmp) / 'results.json'
+            res.write_text(json.dumps(data), encoding='utf-8')
+            out = Path(tmp) / 'out.html'
+            self.assertEqual(th.main(['--results', str(res), '--out', str(out), '--charts-dir', str(Path(tmp) / 'c')]), 2)
+            self.assertFalse(out.exists())
+
+
 if __name__ == '__main__':
     unittest.main()

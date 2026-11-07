@@ -23,11 +23,11 @@ function renderLiveLog(status,rows,ns,inventory,stateNames){stateNames=stateName
   function row(cls,t,fallback,lampNode,name,status){return E('div',{'class':cls||'notice'},[time(t,fallback),lampNode,E('strong',{'class':'hv-log-name'},name),E('span',{'class':'hv-log-status'},status)]);}
   var monitorKind=fresh?'green':status.rpc_error?'red':'yellow';
   var kindToHealth={green:'healthy',yellow:'checking',red:'failed',grey:'unknown'};
-  var autoKind=light.lamp==='orange'?'yellow':(light.lamp||'grey');
+  var autoKind=autoLampColor(light,false);
   var terminal=E('pre',{'class':'hv-live-terminal'},[
     E('div',{'class':'hv-live-colnames','aria-hidden':'true'},[E('span',{},bi('Time','Время')),E('span',{},''),E('span',{},bi('What','Что')),E('span',{},bi('Status','Статус'))]),
     row('notice',status.time,'—',lamp(monitorKind,fresh?bi('Monitoring works','Мониторинг работает'):bi('No fresh data','Нет свежих данных')),'HomenS.AI monitor',status.error?badge(status.error):pill(kindToHealth[monitorKind],fresh?'OK':bi('No fresh data','Нет свежих данных'))),
-    row('notice',ns.time,'—',lamp(autoKind,light.title),'Auto VPN',pill(kindToHealth[autoKind]||'unknown',stateNames[ns.state]||ns.state||'UNKNOWN'))]);
+    row('notice',ns.time,'—',lamp(autoKind,light.title),'Auto VPN',pill(kindToHealth[autoKind]||'unknown',autoStateText(light)))]);
   rows.slice(0,20).forEach(function(p){
     terminal.appendChild(row(p.code?'error':'notice',p.time,'—:—:—',lamp(liveLampKind(p,now),profileHealth(p,now).label),p.protocol+' / '+serverTitle(p),healthBadge(p)));
   });

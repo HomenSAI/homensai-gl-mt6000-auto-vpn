@@ -1,13 +1,6 @@
 /* Display only. The existing Auto control remains the sole owner of commands. */
 function simpleHomeShortcutReason(){return '';}
-function simpleHomeAutoEnabled(status,now){
-  status=status||{};var ns=status.native_failover||{},intent=status.auto_control||{};
-  if(status.rpc_error||status.error||!observationFresh(status,now)||!manualFresh(ns.time,now,30))return false;
-  if(intent.requested==='off')return false;
-  var control=autoControlModel(status,now);
-  if(intent.pair_phase)return ['RUNNING','HELD'].indexOf(intent.pair_phase)>=0&&intent.requested==='on'&&(control.on||control.transitioning||ns.state==='DEGRADED-ON-RESERVE');
-  return control.fresh&&!control.awaiting&&(control.on||control.transitioning&&intent.requested==='on');
-}
+function simpleHomeAutoEnabled(status,now,light){return autoEnabled(light||autoLightModel(status,{},now));}
 function renderSimpleHomeShortcut(getModel,goHome){
   var button=E('button',{'type':'button','class':'cbi-button hv-simple-shortcut-button','data-simple-shortcut':'1','aria-label':bi('Return to minimum','Вернуться к минимуму'),'click':function(){goHome();}},bi('← To minimum','← К минимуму'));
   var host=E('div',{'class':'hv-simple-shortcut-group','data-simple-home-available':'true'},button);
@@ -22,10 +15,11 @@ function simpleHomeModel(status,inventory,now){
   status=status||{};inventory=inventory||{};
   var ns=status.native_failover||{},control=autoControlModel(status,now);
   var source=vendorDisplayMember(status,inventory,'source',now,ns.source),target=vendorDisplayMember(status,inventory,'target',now,ns.target);
-  var path=manualConfirmedPath(status,source,target,now);
+  var waiting=ns.state==='BLOCKED'&&Array.isArray(ns.blockers)&&ns.blockers.length&&ns.blockers.every(function(code){return AUTO_TRANSIENT.indexOf(code)>=0;});
+  var path=(waiting?heldConfirmedPath:manualConfirmedPath)(status,source,target,now);
   // A lost answer, stale router data and a stale controller are different facts; a named recovery stays visible.
-  var lost=!!status.error||!!status.rpc_error,light=autoLightModel(status,inventory,now),unavailable=lost||!observationFresh(status,now)||!control.fresh&&light.key!=='problem';
-  var decision=simpleHomeEntry({statusFresh:!status.error&&!status.rpc_error&&observationFresh(status,now),controllerFresh:control.fresh,autoRunning:simpleHomeAutoEnabled(status,now)});
+  var lost=!!status.error||!!status.rpc_error,light=autoLightModel(status,inventory,now),unavailable=lost||!observationFresh(status,now);
+  var decision=simpleHomeEntry({statusFresh:!status.error&&!status.rpc_error&&observationFresh(status,now),controllerFresh:control.fresh,autoRunning:simpleHomeAutoEnabled(status,now,light)});
   var operation=typeof autoCommandOperation==='function'?autoCommandOperation(status,now):null,manual=manualOperationModel(status,now);
   var sourceHealth=simpleHomeHealth(source,now,unavailable),targetHealth=simpleHomeHealth(target,now,unavailable);
   var selected=unavailable?null:path.selected,activeHealth=selected==='source'?sourceHealth:selected==='target'?targetHealth:null;
@@ -34,13 +28,13 @@ function simpleHomeModel(status,inventory,now){
   decision.activeHealthy=!!activeHealth&&activeHealth.state==='healthy';
   decision.moving=!unavailable&&(!!path.moving||control.transitioning||manual.busy);
   decision.dataUnavailable=unavailable;decision.connectionLost=lost;decision.control=control;decision.operation=operation;
-  decision.enabled=simpleHomeAutoEnabled(status,now);decision.actionStop=control.stop||operation==='starting'||operation==='unconfirmed'||!control.fresh;decision.light=light;decision.path=path;
+  decision.enabled=simpleHomeAutoEnabled(status,now,light);decision.actionStop=control.stop||operation==='starting'||operation==='unconfirmed'||!control.fresh;decision.light=light;decision.path=path;
   decision.blockers=control.fresh&&Array.isArray(ns.blockers)?ns.blockers.slice(0,4):[];
   if(path.code&&decision.blockers.indexOf(path.code)<0)decision.blockers.push(path.code);
   decision.setupRequired=!unavailable&&control.off&&!decision.moving&&!operation&&(!source||!target||!source.id||!target.id||source.id===target.id);
   if(control.paused){decision.state='pending';decision.title=bi('Auto paused for speed test','Auto на паузе для теста скорости');decision.summary=bi('Monitoring resumes first, then Auto. Your VPNs stay connected.','Сначала возобновится мониторинг, затем Auto. VPN остаются подключёнными.');}
   else if(unavailable&&(lost||!observationFresh(status,now))){decision.state='unknown';decision.title=bi('No fresh data','Нет свежих данных');decision.summary=lost?bi('Check the connection to the router.','Проверьте связь с роутером.'):bi('The router has not sent fresh measurements.','Роутер не присылает свежие измерения.');}
-  else if(unavailable){decision.state='unknown';decision.title=light.title;decision.summary=light.hint;}
+  else if(!control.fresh){decision.state=light.key==='problem'?'error':'unknown';decision.title=light.title;decision.summary=light.hint;}
   else if(operation==='stopping'){decision.state='pending';decision.title=bi('Turning Auto off…','Выключение Auto…');decision.summary=bi('The router is carrying out the command, wait a few seconds.','Роутер выполняет команду, подождите несколько секунд.');}
   else if(operation==='starting'){decision.state='pending';decision.title=bi('Turning Auto on…','Включение Auto…');decision.summary=bi('The router is carrying out the command, wait a few seconds.','Роутер выполняет команду, подождите несколько секунд.');}
   else if(operation==='unconfirmed'||manual.uncertain){decision.state=light.key==='problem'?'error':'unknown';decision.title=light.title;decision.summary=light.hint;}

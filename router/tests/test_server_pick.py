@@ -128,7 +128,45 @@ class SharedCases(unittest.TestCase):
                 w=World(c);result=S.job(w.io,c['request'],c['now'])
                 self.assertEqual(canonical(result),canonical(c['expect']['result']))
                 self.assertEqual(w.writes,c['expect']['writes']);self.assertEqual(w.exec,c['expect']['exec']);self.assertEqual(w.logs,c['expect']['logs'])
-                self.assertEqual(canonical(S.project(json.loads(w.files['/run/server-pick.json']))),canonical(result))
+                self.assertEqual(canonical(S.project(json.loads(w.files['/run/server-pick.json']))),canonical(S.project(result)))
+
+    def test_probe_window_rotates_and_keeps_the_current(self):
+        """R3-07: a list longer than MAX_MEASURED is measured through a window that moves every round; the current
+        server is inside every window (shared cases, plus by hand)."""
+        for c in CASES['probe_window']:
+            rows=[{'profile':'1_%d'%i,'current':i==c['current']} for i in range(1,c['n']+1)]
+            self.assertEqual([i+1 for i,x in enumerate(S.probe_window(rows,c['round'])) if x],c['expect'],c['name'])
+        rows=[{'profile':'1_%d'%i,'current':i==20} for i in range(1,33)]
+        seen=set()
+        for r in range(3):
+            w=S.probe_window(rows,r)
+            self.assertEqual(sum(w),S.MAX_MEASURED,r);self.assertTrue(w[19],'the current (20th) is measured in round %d'%r)
+            seen.update(i for i,x in enumerate(w) if x)
+        self.assertEqual(len(seen),32,'32 candidates are all measured within three rounds')
+        self.assertEqual(S.probe_window(rows,0)[:12],[True]*11+[False],'round 0 starts with the old prefix')
+        self.assertEqual(S.probe_window(rows,31),S.probe_window(rows,0),'the window is periodic (31 others, steps of 11)')
+        for value,expect in ((None,0),({},0),({'round':5},6),({'round':S.ROUND_MAX-1},S.ROUND_MAX),({'round':S.ROUND_MAX},0),({'round':True},0),({'round':-1},0),({'round':1.5},0)):
+            self.assertEqual(S.next_round(value),expect,value)
+
+    def test_three_rounds_find_the_thirteenth_candidate(self):
+        """R3-07: candidates 1-12 dead, the 13th alive and 20 % faster than the current (14th). The old prefix never
+        reached it; now round 1 does, in the simple and the Bayesian mode, and the current server is probed every round."""
+        world=CASES['rounds']['world']
+        for c in CASES['rounds']['cases']:
+            with self.subTest(c['name']):
+                w=World(world);req=dict(world['request'],model=c['model']);got=[]
+                for k in range(3):
+                    before=len(w.exec);res=S.job(w.io,req,world['now']+k*S.MEASURE_EVERY);row=res['tunnels'][0]
+                    probed=[]
+                    for x in w.exec[before:]:
+                        if x[0]=='tcp' and x[1] not in probed:probed.append(x[1])
+                    got.append({'round':res['round'],'probed':probed,'best':row['best'],'code':row['code']})
+                self.assertEqual(got,c['expect'])
+                self.assertEqual([g['best'] for g in got],['1_14','1_13','1_13'])
+                self.assertEqual([g['round'] for g in got],[0,1,2])
+                for g in got:self.assertIn('10.0.0.14',g['probed']);self.assertLessEqual(len(g['probed']),S.MAX_MEASURED)
+                self.assertNotIn('10.0.0.13',got[0]['probed']);self.assertIn('10.0.0.13',got[1]['probed'])
+                if c['model']=='simple':self.assertEqual(got[1]['code'],S.REQUESTED)
 
     def test_off_never_measures_writes_or_switches(self):
         for c in CASES['job']:

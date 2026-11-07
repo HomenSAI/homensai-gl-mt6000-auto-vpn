@@ -234,6 +234,45 @@ t.test('variant C: without the Start (expiry, Stop, failed boot resume) the kept
   restore()
 end)
 
+t.test('variant C: an unaccepted key refuses the Start, the kept clients go as after any failed resume',function()
+  local restore=quiet_log()
+  local env=router({flow='committed'})
+  cut(env)
+  env.backend.health=function(id) return env.up[({['wireguard:peer_1']='wgclient1',['openvpn:1_1']='ovpnclient1'})[id]] end
+  env.backend.recovery_ready=function(id) return env.backend.health(id) end
+  t.eq(A.recover(env),'ready')
+  local old=pair.read_state(env)
+  t.truthy(old.kept~=nil,'the fixture keeps the clients')
+  env.backend.key_unaccepted=function() return 'SERVER-KEY-UNACCEPTED' end
+  local r=resume_of(env);local ctx={last_return=0,consumed=canon.object({}),last_attempt=0}
+  t.eq(r.tick(),'RESUMED')
+  A.iteration(env,ctx)
+  local intent=pair.intent(env)
+  t.eq({intent.mode,intent.failure_code},{'off','SERVER-KEY-UNACCEPTED'})
+  t.eq(pair.read_state(env).id,old.id,'no new session');t.truthy(pair.read_state(env).kept~=nil);t.eq(#env.net_log.ifdown,0)
+  env.run.fs.write_atomic(env.runtime..'/'..boot_resume.STATE,canon.encode(canon.object({state='FAILED'})))
+  A.iteration(env,ctx)
+  restore()
+  t.eq(pair.read_state(env).kept,nil);t.eq(#env.net_log.ifdown,2,'stopped as the old cleanup would have')
+end)
+
+t.test('variant C: a key on the idle reserve does not stop the Start (owner 05.11.2026)',function()
+  local restore=quiet_log()
+  local env=router({flow='committed'})
+  cut(env)
+  env.backend.health=function(id) return env.up[({['wireguard:peer_1']='wgclient1',['openvpn:1_1']='ovpnclient1'})[id]] end
+  env.backend.recovery_ready=function(id) return env.backend.health(id) end
+  t.eq(A.recover(env),'ready')
+  local old=pair.read_state(env)
+  t.truthy(old.kept~=nil,'the fixture keeps the clients')
+  env.backend.key_unaccepted=function(profiles) for _,x in ipairs(profiles) do if x=='openvpn:1_1' then return 'SERVER-KEY-UNACCEPTED' end end end
+  local r=resume_of(env);local ctx={last_return=0,consumed=canon.object({}),last_attempt=0}
+  t.eq(r.tick(),'RESUMED')
+  A.iteration(env,ctx)
+  restore()
+  t.eq(pair.intent(env).failure_code,nil);t.eq(pair.read_state(env).phase,'RUNNING');t.truthy(pair.read_state(env).id~=old.id)
+end)
+
 t.test('variant C: an owner Stop of a running session never keeps; the kept fields are validated',function()
   local restore=quiet_log()
   local env=router()
@@ -412,6 +451,70 @@ t.test('variant D: a reserve that fails the fresh check at Start - the request f
   t.eq({intent.mode,intent.failure_code},{'off','BOOT-RESERVE-UNVERIFIED'})
   local state=pair.read_state(env)
   t.eq(state.phase,'HELD');t.eq(state.handover,nil);t.eq(T.journal_read(env).phase,'HELD-ON-RESERVE','not adopted')
+end)
+
+-- Review 05.11.2026: the resume's Start meets the same refusal as the owner's: no exception for a power cut. Python: test_boot_held.py.
+local function run_resume(env)
+  local r=resume_of(env);local ctx=fresh_ctx();local final
+  for _=1,20 do
+    final=r.tick()
+    if final=='FAILED' then break end
+    A.iteration(env,ctx)
+    env.run.advance(boot_resume.EVERY)
+  end
+  return final
+end
+
+t.test('a key on the idle primary: the boot resume adopts the reserve, no return onto the primary until the owner\'s word',function()
+  local restore=quiet_log()
+  local env=router()
+  cut(env)
+  local primary=reserve_only(env)
+  t.eq(A.recover(env),'ready')
+  local held=T.journal_read(env)
+  local bad={['wireguard:peer_1']=true}
+  env.backend.key_unaccepted=function(profiles) for _,x in ipairs(profiles) do if bad[x] then return 'SERVER-KEY-UNACCEPTED' end end end
+  local ctx=fresh_ctx()
+  t.eq(resume_of(env).tick(),'RESUMED')
+  A.iteration(env,ctx)
+  local j=T.journal_read(env);local state=pair.read_state(env)
+  t.eq({j.phase,j.reason,j.tx},{'COMMITTED','BOOT-RESERVE-ADOPTED',held.tx});t.eq(state.phase,'RUNNING')
+  t.truthy(state.selected_policy~=nil,'the route is proved: no BLOCKED first pass');t.eq(env.backend.uci,{'r2','r1'})
+  primary.ok=true
+  env.run.advance(61)
+  A.iteration(env,ctx)
+  t.eq(T.journal_read(env).phase,'COMMITTED','a healthy primary with its key unaccepted: no return');t.eq(env.backend.uci,{'r2','r1'})
+  bad['wireguard:peer_1']=nil
+  env.run.advance(61)
+  A.iteration(env,ctx)
+  restore()
+  t.eq(T.journal_read(env).phase,'ROLLED-BACK','his word lets the return go');t.eq(env.backend.uci,{'r1','r2'})
+end)
+
+t.test('a key on the reserve that carries: the boot resume starts nothing, the code is visible, the handover ends on today\'s path',function()
+  local restore=quiet_log()
+  for _,id in ipairs({'openvpn:1_1'}) do
+    local env=router()
+    cut(env)
+    reserve_only(env)
+    t.eq(A.recover(env),'ready')
+    local held=T.journal_read(env)
+    t.truthy(pair.read_state(env).handover~=nil)
+    local ups=#env.net_log.ifup;local guards=#env.backend.guard_calls
+    env.backend.key_unaccepted=function(profiles) for _,x in ipairs(profiles) do if x==id then return 'SERVER-KEY-UNACCEPTED' end end end
+    t.eq(run_resume(env),'FAILED',id)
+    local row=canon.decode(env.run.fs.read(env.runtime..'/'..boot_resume.STATE))
+    t.eq({row.state,row.code},{'FAILED','SERVER-KEY-UNACCEPTED'})
+    local intent=pair.intent(env)
+    t.eq({intent.mode,intent.failure_code},{'off','SERVER-KEY-UNACCEPTED'})
+    t.eq({T.journal_read(env).phase,T.journal_read(env).tx},{'HELD-ON-RESERVE',held.tx},'not adopted')
+    t.eq(env.backend.uci,{'r2','r1'},'the traffic stays');t.eq(env.backend.guarded,true,'the guard stays')
+    t.eq(#env.net_log.ifup,ups,'no client started');t.eq(#env.backend.guard_calls,guards,'no guard written')
+    A.iteration(env,fresh_ctx())
+    local state=pair.read_state(env)
+    t.eq(state.handover,nil);t.eq(state.phase,'HELD','the failed resume releases it, as every failed resume')
+  end
+  restore()
 end)
 
 t.test('variant D: an owner Stop, a failed boot resume or no Start within KEEP_SECONDS release the handover',function()

@@ -53,6 +53,75 @@ class SpeedTests(unittest.TestCase):
             row=speed.stage({},'9.9.9.9','download',2*speed.MIB,2,1,lambda:False,transfer)
         self.assertEqual(row['payload_bytes'],speed.MIB);self.assertEqual(row['seconds'],3)
 
+    def fake_network(self,clock,requests,timeouts,cancel_at=None,cancelled=None):
+        """Real request()/stage(); only the socket, the HTTP response and the monotonic clock are fakes. Each request
+        is a list of (payload bytes, time the bytes arrive / the send completes); a step that would finish after the
+        socket timeout raises socket.timeout exactly when that timeout ends (the clock moves to it)."""
+        import socket
+        plans=iter(requests)
+        def step(sock,want):
+            if not sock.plan:return b''
+            size,at=sock.plan[0]
+            limit=None if sock.timeout is None else clock[0]+sock.timeout
+            if limit is not None and at>limit:clock[0]=limit;raise socket.timeout('timed out')
+            sock.plan.pop(0);clock[0]=max(clock[0],at)
+            if cancel_at is not None and clock[0]>=cancel_at:cancelled[0]=True
+            return b'x'*min(size,want)
+        class Sock:
+            def __init__(self):self.plan=list(next(plans));self.timeout=None
+            def settimeout(self,value):timeouts.append((clock[0],value));self.timeout=value
+            def sendall(self,data):
+                if not data.startswith((b'GET ',b'POST ')):step(self,len(data))
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+        class Response:
+            def __init__(self,sock):self.sock=sock;self.status=200
+            def begin(self):pass
+            def read1(self,amount):return step(self.sock,amount)
+            def read(self,amount):return step(self.sock,amount) if self.sock.plan else b''
+        return ExitStack(),Sock,Response
+
+    def run_stage(self,direction,budget,duration,requests,cancel_at=None):
+        clock=[0.0];timeouts=[];cancelled=[False];live=[]
+        stack,Sock,Response=self.fake_network(clock,requests,timeouts,cancel_at,cancelled)
+        with stack:
+            stack.enter_context(patch.object(speed.time,'monotonic',side_effect=lambda:clock[0]))
+            stack.enter_context(patch.object(speed,'connect',side_effect=lambda *args:Sock()))
+            stack.enter_context(patch.object(speed.http.client,'HTTPResponse',Response))
+            row=speed.stage({},'9.9.9.9',direction,budget,duration,1,lambda:cancelled[0],
+                            progress=lambda mbps,total,elapsed:live.append(total))
+        return row,timeouts,live
+
+    def test_partial_payload_at_window_expiry_is_counted_once(self):
+        # review F-49 oracle: 1 MiB completed + half of the next MiB inside a 3 s window. Payload moved inside the window
+        # is 1,572,864 bytes; Mbps = 8 * 1,572,864 / (1e6 * 3) = 4.194304 -> 4.194. (Counting completed requests only
+        # gave 1,048,576 bytes = 2.796 Mbps over the same 3 s, and the live progress already showed the 1.5 MiB.)
+        first=[(65536,0.1*(i+1)) for i in range(16)]
+        second=[(65536,1.7+0.1*i) for i in range(8)]+[(65536,3.5)]
+        row,timeouts,live=self.run_stage('download',2*speed.MIB,3,[first,second])
+        self.assertEqual(row,{'payload_bytes':1572864,'seconds':3.0,'mbps':4.194})
+        self.assertEqual(live[-1],1572864,'live and final totals are the same bytes, counted once')
+
+    def test_blocking_read_cannot_cross_the_deadline(self):
+        # review F-50: a read that would block until 4.875 s must end at the 2 s deadline; the stage is 2 s, not 4.875 s
+        # (old result: 1,048,576 bytes over 4.875 s = 1.721 Mbps). The time is not capped afterwards either.
+        first=[(65536,0.05*(i+1)) for i in range(16)]
+        row,timeouts,live=self.run_stage('download',2*speed.MIB,2,[first,[(65536,4.875)]])
+        self.assertEqual(row,{'payload_bytes':speed.MIB,'seconds':2.0,'mbps':4.194})
+        self.assertTrue(timeouts,'every blocking step sets a timeout')
+        self.assertTrue(all(0<value<=2-now+1e-9 for now,value in timeouts),timeouts)
+
+    def test_partial_upload_counts_completed_sends_inside_the_window(self):
+        blocks=[(65536,0.2*(i+1)) for i in range(4)]+[(65536,1.5)]
+        row,timeouts,live=self.run_stage('upload',speed.MIB,1,[blocks])
+        self.assertEqual(row,{'payload_bytes':262144,'seconds':1.0,'mbps':2.097})
+
+    def test_real_cancellation_inside_a_partial_request_is_not_a_window_expiry(self):
+        first=[(65536,0.1*(i+1)) for i in range(16)]
+        second=[(65536,1.7+0.1*i) for i in range(8)]
+        with self.assertRaisesRegex(speed.SpeedError,'SPEED-CANCELLED'):
+            self.run_stage('download',2*speed.MIB,3,[first,second],cancel_at=2.0)
+
     def test_real_cancel_after_completed_payload_still_cancels_the_measurement(self):
         cancelled=[False]
         def transfer(*args):cancelled[0]=True;return args[3]

@@ -21,10 +21,15 @@ for(const lang of ['ru','en']){
     for(const s of ['Свои значения (11 параметров)','Стабильность основного, если резерв отказал','Эксперт: детектор сбоя и выбор сервера',
       'Стандартный — модель HMM (по умолчанию)','Быстрый — модель HMM, уходит раньше','Прежнее правило: ошибки подряд','Простой — правило 20 % (по умолчанию)','Байесовский — реже лишние смены и пробы'])
       assert(text.includes(s),'RU: '+s);
+    // review R3-05: the field saves recovery_failures; the HMM "or N" rule reads hmm_or_failures, a separate setting
+    assert(text.includes('это поле её не меняет')&&text.includes('hmm_or_failures'),'RU: the hint does not claim the field sets the HMM extra rule');
+    assert(!text.includes('и как добавка «или N ошибок подряд»'),'RU: old wrong hint gone');
   }else{
     for(const s of ['Custom values (11 parameters)','Primary stability when the reserve failed','Expert: failure detector and server pick',
       'Standard — HMM model (default)','Fast — HMM model, leaves earlier','Previous rule: failures in a row','Simple — the 20 % rule (default)','Bayesian — fewer useless changes and probes'])
       assert(text.includes(s),'EN: '+s);
+    assert(text.includes('this field does not change it')&&text.includes('hmm_or_failures'),'EN: the hint does not claim the field sets the HMM extra rule');
+    assert(!text.includes('and as the extra'),'EN: old wrong hint gone');
     assert(!/[А-Яа-яЁё]/.test(text.slice(text.indexOf('Expert: failure detector'),text.indexOf('Expert: failure detector')+600)),'clean EN in the expert block');
   }
   // the expert block lives in the expert section «Система и диагностика» (level x), the rescue field in the rules section

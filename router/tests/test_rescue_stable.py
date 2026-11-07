@@ -28,6 +28,7 @@ def fake_backend(ready_upto,reserve_health=True):
     def ready(identifier,settings):
         seconds=stable_seconds(settings);asked.append(seconds);return seconds<=ready_upto
     backend.recovery_ready.side_effect=ready
+    if reserve_health=='unknown':reserve_health=None
     backend.health.side_effect=lambda identifier:True if identifier==PRIMARY else reserve_health
     return backend,asked
 
@@ -146,6 +147,69 @@ class Units(unittest.TestCase):
             asked.clear()
             self.assertFalse(native.finish_committed(backend,dict(journal),'PRIMARY-STABLY-RECOVERED'))
             self.assertEqual(asked,[120])
+
+
+class HoldReserveRescue(unittest.TestCase):
+    """Owner decision 07.11.2026 (F-80): hold_reserve holds a WORKING reserve only. A reserve proven failed by a fresh
+    probe is rescued to a verified primary (rescue_stable) through the same guarded path; unknown health stays a hold."""
+    JOURNAL={'source':PRIMARY,'target':RESERVE,'before':['a','b'],'after':['b','a'],'hash':'h'*64,'phase':'COMMITTED'}
+
+    def finish(self,reserve_health,ready_upto=10,reason=RESCUE_REASON):
+        backend,asked=fake_backend(ready_upto,reserve_health)
+        backend.order.return_value=(['b','a'],'h'*64)
+        backend.policy.return_value={'settings':{'recovery_return_policy':'hold_reserve'}}
+        journal=dict(self.JOURNAL)
+        with patch.object(native,'bind_policy_context'),patch('pair_policy.metadata',return_value=None), \
+             patch.object(native,'rollback') as rollback,patch.object(native,'journal_write'),patch.object(native,'publish'):
+            returned=native.finish_committed(backend,journal,reason)
+        return returned,journal,asked,rollback
+
+    def test_proven_failed_reserve_is_rescued_to_the_verified_primary(self):
+        returned,journal,asked,rollback=self.finish(False)
+        self.assertTrue(returned);rollback.assert_called_once();self.assertEqual(asked,[10],'the rescue stability, not primary_stable')
+
+    def test_proven_failed_reserve_waits_for_the_rescue_stability(self):
+        returned,journal,asked,rollback=self.finish(False,ready_upto=9)
+        self.assertFalse(returned);rollback.assert_not_called()
+        self.assertEqual((journal['phase'],journal['reason'],journal['reserve_healthy']),('HELD-ON-RESERVE','SOURCE-NOT-VERIFIED',False))
+
+    def test_unknown_reserve_health_stays_a_hold(self):
+        returned,journal,asked,rollback=self.finish('unknown')
+        self.assertFalse(returned);rollback.assert_not_called();self.assertEqual(asked,[],'the primary is not asked')
+        self.assertEqual((journal['phase'],journal['reason'],journal['reserve_healthy']),('HELD-ON-RESERVE','OPERATOR-HOLD-RESERVE',False))
+
+    def test_working_reserve_is_held_unchanged(self):
+        returned,journal,asked,rollback=self.finish(True,ready_upto=600,reason='PRIMARY-STABLY-RECOVERED')
+        self.assertFalse(returned);rollback.assert_not_called();self.assertEqual(asked,[])
+        self.assertEqual((journal['phase'],journal['reason'],journal['reserve_healthy']),('HELD-ON-RESERVE','OPERATOR-HOLD-RESERVE',True))
+
+    def test_pair_journal_hold_lets_only_the_rescue_reason_through(self):
+        """pair_hold_reason (finish_committed of a continuous-pair journal): hold_reserve still holds a planned return;
+        the rescue decided by committed_recovery_decision (RESCUE_REASON) returns."""
+        from recovery_settings import normalized
+        backend,asked=fake_backend(600)
+        journal={'source':PRIMARY,'target':RESERVE,'before':['a','b'],'after':['b','a'],'hash':'h'*64}
+        context={'primary_order':['a','b'],'session_order':['a','b']}
+        recovery=normalized({'recovery_return_policy':'hold_reserve'})
+        with patch('pair_policy.role',return_value='source'):
+            self.assertEqual(native.pair_hold_reason(backend,journal,['b','a'],context,'PRIMARY-STABLY-RECOVERED',['a','b'],{},recovery),'SOURCE-NOT-VERIFIED')
+            self.assertIsNone(native.pair_hold_reason(backend,journal,['b','a'],context,RESCUE_REASON,['a','b'],{},recovery))
+            self.assertEqual(asked[-1],10,'the rescue return is proven with rescue_stable')
+            backend,asked=fake_backend(9)
+            self.assertEqual(native.pair_hold_reason(backend,journal,['b','a'],context,RESCUE_REASON,['a','b'],{},recovery),'SOURCE-NOT-VERIFIED','a primary not yet stable holds')
+
+    def test_rescue_is_bounded_by_the_attempt_budget_not_the_return_hold(self):
+        """The rescue ignores the return_hold ledger (rescue_stable_cases 'ignores the damped return_hold'); the next
+        failover is charged against the attempt budget, so ping-pong is bounded by attempt_limit per attempt_window."""
+        from pair_auto import budget
+        from recovery_settings import normalized
+        recovery=normalized({'recovery_return_policy':'hold_reserve'})
+        self.assertEqual((recovery['attempt_limit'],recovery['attempt_window'],recovery['cooldown']),(3,15,60))
+        events=[1000,1100,1200]
+        kept,allowed=budget(events,1300,recovery['attempt_window']*60,recovery['attempt_limit'])
+        self.assertFalse(allowed,'three failovers in the window: the next forward switch is not dispatched')
+        kept,allowed=budget(events,1000+15*60+1,recovery['attempt_window']*60,recovery['attempt_limit'])
+        self.assertTrue(allowed,'the window passes: the budget opens again')
 
 
 if __name__=='__main__':unittest.main()

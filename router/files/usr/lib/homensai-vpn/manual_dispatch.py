@@ -38,7 +38,7 @@ def consume(backend, settings, revision, stopped, runtime=None, persist=None):
     from agent import RUNTIME, PERSIST, read_json, atomic_json
     from auto_control import readiness, effective_intent
     from manual_control import claim_pending, publish_result
-    from native_switch import (Refused, journal_read, require_control_revision,
+    from native_switch import (Refused, journal_read, key_blockers, require_control_revision,
         progress_read, attempt, handle_return, deadline)
     runtime = RUNTIME if runtime is None else runtime
     persist = PERSIST if persist is None else persist
@@ -60,6 +60,7 @@ def consume(backend, settings, revision, stopped, runtime=None, persist=None):
         require_control_revision(record['control_revision'])
         current = backend.policy()['settings']
         blockers, selection = backend.diagnostic()
+        blockers = key_blockers(blockers, selection)
         if blockers or not isinstance(selection, dict):
             raise Refused(blockers[0] if blockers else 'MANUAL-SELECTION-UNVERIFIED')
         if (selection.get('hash') != record['selection_hash']

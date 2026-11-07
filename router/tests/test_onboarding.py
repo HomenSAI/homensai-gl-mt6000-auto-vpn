@@ -130,6 +130,27 @@ class OnboardingTests(unittest.TestCase):
                 with patch.object(guard,'journal_read',return_value=journal),patch.object(guard,'read_json',side_effect=[state,intent]):
                     self.assertEqual(guard.blocked({}),'CONFIG-RECOVERY-UNVERIFIED')
 
+    def test_skip_marks_only_the_first_run_and_needs_no_auto_stop(self):
+        seen=[]
+        def writer(argv,input=None,**kwargs):
+            seen.append(json.loads(input.decode()));return SimpleNamespace(returncode=0,stdout=b'OK')
+        with patch.object(setup,'control_lock',return_value=nullcontext()),patch('rpc_throttle.allow',return_value=True),\
+                patch.object(guard,'blocked',side_effect=AssertionError('the Auto guard is not consulted')),\
+                patch.object(setup.subprocess,'run',side_effect=writer):
+            self.assertEqual(setup.save({},'onboarding_skip'),{'saved':True,'onboarding_complete':True,'onboarding_version':1})
+        self.assertEqual(seen,[{'main':{'onboarding_version':'1','onboarding_complete':'1'},'servers':[]}],'nothing else is written')
+        with self.assertRaisesRegex(ValueError,'RPC-UNEXPECTED-ARGS'):setup.save({'terms_version':'2'},'onboarding_skip')
+        for response in (SimpleNamespace(returncode=1,stdout=b''),subprocess.TimeoutExpired('lua',10)):
+            with patch.object(setup,'control_lock',return_value=nullcontext()),patch('rpc_throttle.allow',return_value=True),\
+                    patch.object(setup.subprocess,'run',side_effect=response if isinstance(response,Exception) else None,
+                                 return_value=None if isinstance(response,Exception) else response):
+                result=setup.save({},'onboarding_skip')
+            self.assertFalse(result['saved']);self.assertEqual(result['code'],'SETUP-SAVE-UNCONFIRMED')
+        path=Path(__file__).resolve().parents[1]/'files/usr/share/rpcd/acl.d/luci-app-homensai-vpn.json'
+        acl=json.loads(path.read_text())['luci-app-homensai-vpn']
+        self.assertIn('setup_onboarding_skip',acl['write']['ubus']['homensai-vpn'])
+        self.assertNotIn('setup_onboarding_skip',acl['read']['ubus']['homensai-vpn'])
+
     def test_rpc_and_acl_expose_aggregate_without_raw_uci_permission(self):
         import agent
         import io

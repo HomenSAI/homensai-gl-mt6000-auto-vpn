@@ -65,8 +65,8 @@ def plan(status, settings, now):
     if not streak(samples,target,recovery['successes'],now,age,True,target_row):
         return dict(result,state='TARGET-NOT-READY')
     # The owner's failure model (channel_model: 'hmm' default, 'hmm-fast', or the previous 'consecutive' streak).
-    from channel_model import channel_failed,name as failure_model
-    if not channel_failed(samples,source,recovery['failures'],now,age,settings,source_row):
+    from channel_model import leave_rule,name as failure_model
+    if leave_rule(samples,source,recovery['failures'],now,age,settings,source_row) is None:
         return dict(result,state='OBSERVE')
     result.update(state='SWITCH-RECOMMENDED',recommendation={'target':target,
                   'reason':'CURRENT-PROFILE-FAILURE-STREAK', 'failure_model':failure_model(settings),'required_failures':recovery['failures'],'required_successes':recovery['successes'],'cross_protocol':source_row.get('protocol')!=target_row.get('protocol'),

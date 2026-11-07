@@ -27,6 +27,20 @@ class HistoryTests(unittest.TestCase):
             self.assertEqual(sum(month['attempts'] for month in data['months'].values()),10)
             self.assertTrue(h.public()['event_history_truncated'])
 
+    def test_backward_clock_step_is_marked_instead_of_a_zero_duration(self):
+        # review F-56: APPLYING at 1000, COMMITTED at wall 990 used to be stored as 1000, 1000 (a fabricated 0 s recovery).
+        # The order is kept, the stepped event is marked so the page leaves its duration unknown and keeps the outcome.
+        with tempfile.TemporaryDirectory() as d:
+            h=History(d)
+            h.record({'state':'APPLYING','source':'wireguard:peer_1','target':'openvpn:1_1'},1000)
+            h.record({'state':'COMMITTED','source':'wireguard:peer_1','target':'openvpn:1_1'},990)
+            h.record({'state':'OBSERVING','source':'wireguard:peer_1','target':'openvpn:1_1'},1010)
+            events=h.public()['events']
+            self.assertEqual([(row['state'],row['time']) for row in events],[('APPLYING',1000),('COMMITTED',1000),('OBSERVING',1010)])
+            self.assertNotIn('clock_stepped_back',events[0])
+            self.assertIs(events[1].get('clock_stepped_back'),True)
+            self.assertNotIn('clock_stepped_back',events[2])
+
     def test_corrupt_attempt_metadata_recovers_explicit_backup_without_private_fields(self):
         with tempfile.TemporaryDirectory() as d:
             h=History(d);h.record({'state':'APPLYING'},100)

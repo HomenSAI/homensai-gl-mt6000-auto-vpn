@@ -320,6 +320,21 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(native.deadline('2026-10-15T14:00:00+02:00'),native.deadline('2026-10-15T12:00:00Z'))
         with self.assertRaises(native.Refused):native.deadline('2026-10-15T14:00:00')
 
+    def test_one_deadline_grammar_with_lua(self):
+        """F-42: the same answers as lua/transaction.lua deadline() (test_auto_transaction.lua): short offsets are
+        accepted on Python 3.9 and 3.11 alike, impossible calendar dates and hex strings are refused."""
+        noon=native.deadline('2026-10-30T14:00:00+00:00')
+        self.assertEqual(noon,1793368800)
+        for text in ('2026-10-30T14:00:00+0000','2026-10-30T14:00:00+00','2026-10-30T16:00:00+0200','2026-10-30T12:00:00-02'):
+            self.assertEqual(native.deadline(text),noon,text)
+        self.assertEqual(native.deadline('2024-02-29T00:00:00Z'),1709164800,'a leap day exists')
+        for text in ('2026-02-30T14:00:00+00:00','2026-02-29T14:00:00Z','2026-04-31T00:00:00Z','2026-13-01T00:00:00Z','2026-10-30T24:00:00Z',
+                     '2026-10-30T14:00:00+24:00','2026-10-30T14:00:00+23:60','0x10','0x1p4','1e400','inf','nan','soon'):
+            with self.assertRaises(native.Refused,msg=text) as got:native.deadline(text)
+            self.assertEqual(str(got.exception),'BOUNDED-DEADLINE-REQUIRED',text)
+        self.assertEqual(native.deadline('1761830400'),1761830400.0);self.assertEqual(native.deadline(' 1e3 '),1000.0)
+        self.assertEqual(native.deadline('2026-10-30T15:00:00+00:60'),noon,'datetime.timezone takes 60 minutes as one hour; Lua the same')
+
     def test_only_fresh_kernel_read_status_is_evidence(self):
         self.assertEqual(native.fresh_hook_state('[ 100.1] hnat hook is disabled',100),'disabled')
         self.assertEqual(native.fresh_hook_state('[ 100.1] hnat hook is disabled',101),'unknown')

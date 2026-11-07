@@ -1,23 +1,31 @@
 /* Monitoring is always on. The Overview shows a block next to "Check the VPNs now": lamp, title and a few numbers.
-   monitorLightModel() decides running / catching up / stopped; the block has a button only when monitoring is not running. */
+   monitorLightModel() decides running / catching up / stopped from the monitor's own data only; the block has a Restore button
+   only when monitoring produces no data. Owner decision 07.11.2026 15:10: the router always starts the monitor, whatever the
+   service option enabled says; enabled=0 keeps only the Auto supervisor off (SERVICE-AUTO-OFF), shown as a note with its own
+   "Switch the Auto service on" button (the same start request; it starts no Auto). */
 var monitorBlockHost=null,monitorBusy=false;
 var MONITOR_LAMPS=['green','yellow','red'];
 function monitorStartedRecently(now){
   try{var at=Number(window.sessionStorage.getItem('homensai-vpn-monitor-requested'));return Number.isFinite(at)&&at>0&&now-at>=0&&now-at<=90;}catch(e){return false;}
 }
 function monitorLightModel(status,inventory,now,recent){
-  var settings=(inventory||{}).settings||{},enabled=settings.enabled===true;
+  var settings=(inventory||{}).settings||{},serviceOff=settings.enabled===false;
   var age=Number.isFinite(status.time)?now-status.time:Infinity;
   var fresh=!status.rpc_error&&!status.error&&(typeof observationFresh==='function'?observationFresh(status,now):age>=-5&&age<=90);
-  function out(key,lamp,icon,title,hint,code){return {key:key,lamp:lamp,icon:icon,title:title,hint:hint,code:code||null,enabled:enabled};}
+  function out(key,lamp,icon,title,hint,code){return {key:key,lamp:lamp,icon:icon,title:title,hint:hint,code:code||null,serviceOff:serviceOff,maintenance:code==='MAINTENANCE-IN-PROGRESS'};}
   if(!status.rpc_error&&status.speed_pause&&status.speed_pause.active&&status.speed_pause.monitor_paused)return out('transition','yellow','Ⅱ',bi('Monitoring paused for speed test','Мониторинг на паузе для теста скорости'),bi('A fresh check runs after the test, before Auto continues.','После теста выполнится свежая проверка, затем продолжит работу Auto.'));
   if(status.rpc_error)return out('problem','red','!',bi('Cannot read the monitor','Не удаётся прочитать мониторинг'),bi('The page could not get the status from the router. Reload the page and sign in again; see Help → “The page is old, empty or says the monitor is not running”.','Страница не смогла получить статус от роутера. Обновите страницу и войдите снова; см. «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает».'),'RPC-UNAVAILABLE');
   if(!status.rpc_error&&status.speed_pause&&status.speed_pause.active&&status.speed_pause.phase==='RESUMING')return out('transition','yellow','⟳',bi('Monitoring is resuming','Мониторинг возобновляется'),bi('Waiting for the first post-test observation.','Ожидается первая проверка после теста.'));
-  if(enabled&&fresh)return out('ok','green','✓',bi('Monitor is running','Мониторинг работает'),bi('Fresh data arrived '+Math.max(0,Math.round(age))+' s ago. Each connected VPN is checked about every '+(Number(settings.interval)||10)+' seconds.','Свежие данные пришли '+Math.max(0,Math.round(age))+' с назад. Каждый подключённый VPN проверяется примерно раз в '+(Number(settings.interval)||10)+' с.'));
-  if(enabled&&(recent||(!status.error&&age<=300)))return out('transition','yellow','⟳',bi('Starting or catching up','Запускается или догоняет'),bi('The monitor is switched on and the first fresh data is not here yet. This takes up to a minute.','Мониторинг включён, первых свежих данных ещё нет. Это занимает до минуты.'));
-  if(enabled)return out('problem','red','!',bi('Switched on, but not running','Включён, но не работает'),bi('The router program is not producing data.','Программа на роутере не выдаёт данные.'),status.error||'STATUS-STALE');
-  return out('problem','red','!',bi('Monitoring must be running','Мониторинг должен работать'),bi('Monitoring is required for Auto. Restore monitoring before starting automatic control.','Мониторинг необходим для Auto. Восстановите мониторинг перед запуском автоматического управления.'),'SERVICE-STOPPED');
+  /* IR-01: a package install/upgrade holds the maintenance marker; the hooks stopped the service on purpose and start it
+     again when they finish. Not an error and no Restore (the router refuses a start meanwhile: MAINTENANCE-IN-PROGRESS). */
+  var maintenance=!status.rpc_error&&status.maintenance&&status.maintenance.state==='active';
+  if(maintenance&&!fresh)return out('transition','yellow','⟳',bi('Package update in progress','Идёт обновление пакета'),bi('The package installation stopped monitoring for a moment; it starts again by itself when the installation ends. Wait and reload the page.','Установка пакета ненадолго остановила мониторинг; он запустится сам, когда установка закончится. Подождите и обновите страницу.'),'MAINTENANCE-IN-PROGRESS');
+  if(fresh)return out('ok','green','✓',bi('Monitor is running','Мониторинг работает'),bi('Fresh data arrived '+Math.max(0,Math.round(age))+' s ago. Each connected VPN is checked about every '+(Number(settings.interval)||10)+' seconds.','Свежие данные пришли '+Math.max(0,Math.round(age))+' с назад. Каждый подключённый VPN проверяется примерно раз в '+(Number(settings.interval)||10)+' с.'));
+  if(recent||(!status.error&&age<=300))return out('transition','yellow','⟳',bi('Starting or catching up','Запускается или догоняет'),bi('Monitoring starts by itself and the first fresh data is not here yet. This takes up to a minute.','Мониторинг запускается сам, первых свежих данных ещё нет. Это занимает до минуты.'));
+  return out('problem','red','!',bi('ERROR: monitoring is not running','ОШИБКА: мониторинг не работает'),bi('Monitoring must always run, so this is an error (the router program stopped by a failure and produces no data). Press “Restore monitoring”; if it does not come back, reinstall the package. Auto needs monitoring.','Мониторинг должен работать всегда, поэтому это ошибка (программа на роутере остановилась из-за сбоя и не выдаёт данные). Нажмите «Восстановить мониторинг»; если он не вернулся, переустановите пакет. Для Auto нужен мониторинг.'),status.error||'SERVICE-STOPPED');
 }
+// enabled=0 (an older version's Stop monitor, a manual change or an unreadable config): monitoring runs, Auto cannot start
+function monitorServiceOffText(){return bi('The Auto service is switched off (service option enabled is not 1), so Auto cannot be started (SERVICE-AUTO-OFF). Monitoring is not affected.','Служба Auto выключена (параметр службы enabled не равен 1), поэтому Auto запустить нельзя (SERVICE-AUTO-OFF). На мониторинг это не влияет.');}
 // Numbers for the block: checks and failures of the last hour from the samples the monitor keeps.
 function monitorNumbers(status,now){
   var samples=Array.isArray(status.samples)?status.samples:[];
@@ -33,18 +41,19 @@ function fillMonitorBlock(host,status,inventory){
   var stats=light.key==='ok'||n.checks
     ?bi(n.checks+' checks in the last hour · '+n.failed+' failed'+(n.percent==null?'':' · '+n.percent+'% passed'),n.checks+' проверок за час · не прошло '+n.failed+(n.percent==null?'':' · прошло '+n.percent+'%'))
     :light.hint;
-  var button=null;
-  if(light.key==='problem'||light.key==='off'){
+  var button=null,serviceNote=null;
+  if(light.serviceOff&&light.key!=='problem')serviceNote=E('small',{'class':'hv-check-status','data-monitor-service-off':'1'},monitorServiceOffText());
+  if(light.key==='problem'||light.key==='off'||serviceNote){
     button=E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){
       if(monitorBusy)return;monitorBusy=true;button.disabled=true;
       return rpc.declare({object:'homensai-vpn',reject:true,method:'monitor_control',params:['enabled'],expect:{}})(true).then(function(result){
         if(result&&result.accepted===true){try{window.sessionStorage.setItem('homensai-vpn-monitor-requested',String((typeof statusNow==='function'?statusNow(status):Date.now()/1000)));}catch(e){}window.location.reload();return;}
         ui.addNotification(null,E('p',{},(result&&result.code)||'MONITOR-UNKNOWN'));
       }).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){monitorBusy=false;button.disabled=false;});
-    }},bi('Restore monitoring','Восстановить мониторинг'));
+    }},serviceNote?bi('Switch the Auto service on','Включить службу Auto'):bi('Restore monitoring','Восстановить мониторинг'));
   }
   host.appendChild(E('span',{'class':'hv-monitor-lamp hv-monitor-lamp-'+tone,'role':'img','aria-label':title}));
-  host.appendChild(E('div',{'class':'hv-check-text'},[E('strong',{},title),E('small',{},stats),light.key==='ok'?E('small',{'class':'hv-check-status'},bi('Checks every '+(Number(((status||{}).probe_policy||{}).effective_interval)||Number((inventory.settings||{}).interval)||10)+' s · last data '+Math.max(0,Math.round(now-status.time))+' s ago','Проверка каждые '+(Number(((status||{}).probe_policy||{}).effective_interval)||Number((inventory.settings||{}).interval)||10)+' с · последние данные '+Math.max(0,Math.round(now-status.time))+' с назад')):null,button].filter(Boolean)));
+  host.appendChild(E('div',{'class':'hv-check-text'},[E('strong',{},title),E('small',{},stats),light.key==='ok'?E('small',{'class':'hv-check-status'},bi('Checks every '+(Number(((status||{}).probe_policy||{}).effective_interval)||Number((inventory.settings||{}).interval)||10)+' s · last data '+Math.max(0,Math.round(now-status.time))+' s ago','Проверка каждые '+(Number(((status||{}).probe_policy||{}).effective_interval)||Number((inventory.settings||{}).interval)||10)+' с · последние данные '+Math.max(0,Math.round(now-status.time))+' с назад')):null,serviceNote,button].filter(Boolean)));
 }
 function renderMonitorBlock(status,inventory){
   monitorBlockHost=E('section',{'class':'hv-connectivity-control hv-monitor-block'});

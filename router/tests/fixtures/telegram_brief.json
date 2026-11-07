@@ -1,0 +1,329 @@
+[
+  {
+    "name": "minimum",
+    "now": 1761825600,
+    "status": {
+      "samples": [
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825590,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825580,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825570,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825560,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825550,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        }
+      ]
+    },
+    "id": "p"
+  },
+  {
+    "name": "too_few",
+    "now": 1761825600,
+    "status": {
+      "samples": [
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        }
+      ]
+    },
+    "id": "p"
+  },
+  {
+    "name": "boundaries",
+    "now": 1761825600,
+    "status": {
+      "samples": [
+        {
+          "id": "p",
+          "time": 1761825605,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825300,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825599,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825598,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825597,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825606,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825299,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        }
+      ]
+    },
+    "id": "p"
+  },
+  {
+    "name": "excluded",
+    "now": 1761825600,
+    "status": {
+      "samples": [
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": "CHECK-001"
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": "CHECK-LIMIT"
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": "PROFILE-INACTIVE"
+        }
+      ]
+    },
+    "id": "p"
+  },
+  {
+    "name": "mixed",
+    "now": 1761825600,
+    "status": {
+      "samples": [
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": false,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 1,
+          "code": null
+        }
+      ]
+    },
+    "id": "p"
+  },
+  {
+    "name": "other_profile",
+    "now": 1761825600,
+    "status": {
+      "samples": [
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "p",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        },
+        {
+          "id": "other",
+          "time": 1761825600,
+          "dns_ok": true,
+          "https_success": 2,
+          "code": null
+        }
+      ]
+    },
+    "id": "p"
+  }
+]

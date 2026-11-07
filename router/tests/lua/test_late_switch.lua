@@ -113,7 +113,9 @@ end)
 
 -- pair.tick against the measured MT3000 timing (late_switch_cases.json 'simulation'): real streak, recheck and
 -- transaction (fake instant switch); the diagnostic costs diagnostic_seconds, the probe answers as the primary is.
-local function run_fault(healthy_at,recheck,mtu,model)
+local function run_fault(healthy_at,recheck,mtu,model,extra,beat,reserve_ok,parallel,hold)
+  -- extra: more options; beat(offset) -> the monitor's heartbeat row fields or nil; reserve_ok(offset) -> false: a failing reserve;
+  -- parallel: the backend also has the two halves of the recheck (the same answer, the clock of the sequential probe)
   pair.late_aborts={}
   local env=t.env()
   local sel=env.backend.selection
@@ -126,7 +128,7 @@ local function run_fault(healthy_at,recheck,mtu,model)
   pair.save(env,canon.object({id=string.rep('11',16),phase='RUNNING',ran=true,started=canon.float(start-1000),revision=env.revision,network_identity=string.rep('aa',32),
     interfaces=canon.object({wgclient1='wgclient',ovpnclient1='ovpnclient'}),protected=canon.object({}),owned=canon.array({}),
     before_flags=canon.object({wgclient1='0',ovpnclient1='0'}),process_bindings=sel.process_bindings,order=canon.array({'r1','r2'}),policy_hash=t.HEX64,
-    policy_roles=pair.policy.proof(sel)}))
+    policy_roles=pair.policy.proof(sel),manual_hold=hold}))
   env.backend.recovery_ready=function() return false end
   local log={switches={},rechecks={},published={}}
   local diagnostic=env.backend.diagnostic
@@ -140,12 +142,16 @@ local function run_fault(healthy_at,recheck,mtu,model)
       return healthy
     end
   end
+  if parallel then
+    env.backend.recheck_begin=function(id,seconds) log.begun=env.run.wall()-start;log.rechecks[#log.rechecks+1]=log.begun;return {healthy=up(env.run.wall()) or mtu==true} end
+    env.backend.recheck_finish=function(pending) return pending.healthy end
+  end
   local starts={}
   for _,x in ipairs(SIM.normal_passes) do starts[#starts+1]=start+x end
   local x=SIM.dense_first
   while x<SIM['end'] do starts[#starts+1]=start+x;x=x+SIM.dense_every end
   local real_attempt,real_late,real_publish=T.attempt,pair.late_recheck,T.publish
-  T.attempt=function(...) log.switches[#log.switches+1]=env.run.wall()-start;return real_attempt(...) end
+  T.attempt=function(e,s,u,f,opts) log.switches[#log.switches+1]=env.run.wall()-start;log.evidence=opts and opts.probe_evidence;return real_attempt(e,s,u,f,opts) end
   T.publish=function(e,value) log.published[#log.published+1]={env.run.wall()-start,value};return real_publish(e,value) end
   if not recheck then pair.late_recheck=function() return nil end end
   local ok,err=pcall(function()
@@ -161,17 +167,27 @@ local function run_fault(healthy_at,recheck,mtu,model)
           local small=good or mtu==true  -- a large-packet black hole still answers the small DNS/HTTPS checks
           rows[#rows+1]=canon.object({id=sel.source.id,time=canon.float(s),code=good and NULL or (mtu and 'VPN-MTU' or 'VPN-003'),dns_ok=small,https_success=small and 3 or 0,
             interface='wgclient1',vendor_tunnel_id='wireguard:wgclient1',vendor_generation=t.GEN1})
-          rows[#rows+1]=canon.object({id=sel.target.id,time=canon.float(s),code=NULL,dns_ok=true,https_success=3,interface='ovpnclient1',vendor_tunnel_id='openvpn:ovpnclient1',vendor_generation=t.GEN2})
+          local fine=reserve_ok==nil or reserve_ok(s-start)
+          rows[#rows+1]=canon.object({id=sel.target.id,time=canon.float(s),code=fine and NULL or 'VPN-003',dns_ok=fine,https_success=fine and 3 or 0,interface='ovpnclient1',vendor_tunnel_id='openvpn:ovpnclient1',vendor_generation=t.GEN2})
         end
       end
       env.run.fs.write_atomic(env.runtime..'/status.json',canon.encode(canon.object({time=canon.float(now),samples=rows})))
-      t.eq(pair.tick(env,t.settings({failure_model=model or 'consecutive'}),env.revision),true)
+      local row=beat and beat(now-start) or nil
+      if row then
+        local wake=canon.object({reason='heartbeat',time=canon.float(now),id=sel.source.id,target=sel.target.id})
+        for k,v in pairs(row) do wake[k]=v end
+        env.run.fs.write_atomic(env.runtime..'/pair-wake.json',canon.encode(wake))
+      end
+      local options={failure_model=model or 'consecutive'}
+      for k,v in pairs(extra or {}) do options[k]=v end
+      t.eq(pair.tick(env,t.settings(options),env.revision),true)
       tick=math.max(tick+SIM.tick_every,env.run.wall())
     end
   end)
   T.attempt,pair.late_recheck,T.publish=real_attempt,real_late,real_publish
   if not ok then error(err,0) end
   log.kernel=env.backend.kernel[1]
+  log.leases=#env.backend.leases;log.hold=pair.read_state(env).manual_hold
   return log
 end
 local function blackout(seconds,recheck) return run_fault(function(o) return not (o>=0 and o<seconds) end,recheck) end
@@ -230,6 +246,87 @@ if os.getenv('LATE_SWITCH_REPORT') then
     io.stderr:write('blackout ',s,' before ',tostring(b.switches[1]),' after ',tostring(a.switches[1]),' rechecks ',#a.rechecks,' aborts ',#aborts(a),'\n')
   end
 end
+
+t.test('the fast end with the same timing (leave_rule, FAST-SWITCH-2026-11-04.ru.md)',function()
+  local function outage(seconds) return function(o) return not (0<=o and o<seconds) end end
+  local model=run_fault(outage(40),true,false,'hmm')
+  local two=run_fault(outage(40),true,false,'hmm',{hmm_or_failures=2})
+  local three=run_fault(outage(40),true,false,'hmm',{hmm_or_failures=3})
+  t.truthy(two.switches[1]<model.switches[1],'2 in a row leaves earlier than the model: '..two.switches[1]..' < '..model.switches[1])
+  t.truthy(two.switches[1]<=three.switches[1],'and not later than 3 in a row')
+  t.eq(two.evidence.failure_rule,'streak');t.eq(model.evidence.failure_rule,'model')
+  t.eq(#two.rechecks,1,'the late recheck is not skipped')
+  -- one failed sample is no streak; the recheck still cancels a blackout that ended
+  t.eq(#run_fault(outage(4),true,false,'hmm',{hmm_or_failures=2}).switches,0,'a 4 s blackout stays')
+  local short=run_fault(outage(12),true,false,'hmm',{hmm_or_failures=2})
+  if #short.switches==0 then t.truthy(#aborts(short)>=0) end
+  -- the reserve guard: without a healthy reserve nothing moves
+  local bad=run_fault(outage(40),true,false,'hmm',{hmm_or_failures=2},nil,function(o) return o<0 end)
+  t.eq(#bad.switches,0,'a failing reserve holds the switch');t.eq(bad.kernel,'r1')
+end)
+
+t.test('the heartbeat verdict with the same timing',function()
+  local function outage(seconds) return function(o) return not (0<=o and o<seconds) end end
+  local options={slider_turbo=true,turbo_beats=5}
+  local function lost(reserve) return function(o) if o>=5 and o<40 then return {lost=math.floor(o),target_ok=reserve} end;return nil end end
+  local beat=run_fault(outage(40),true,false,'hmm',options,lost(true))
+  local plain=run_fault(outage(40),true,false,'hmm')
+  t.truthy(beat.switches[1]<plain.switches[1]-5,'earlier by far: '..beat.switches[1]..' against '..plain.switches[1])
+  t.eq(beat.evidence.failure_rule,'heartbeat');t.eq(#beat.rechecks,1,'the late recheck is not skipped')
+  -- the reserve silent too: a WAN outage, no heartbeat verdict; without the opt-in the row means nothing
+  local wan=run_fault(outage(40),true,false,'hmm',options,lost(false))
+  t.truthy(wan.switches[1]>=plain.switches[1]-1,'no earlier than the model: '..wan.switches[1]);t.eq(wan.evidence.failure_rule,'model')
+  local off=run_fault(outage(40),true,false,'hmm',nil,lost(true))
+  t.eq(off.evidence.failure_rule,'model')
+  -- a primary that answers the recheck stays, whatever the heartbeats say (a filtered ICMP target)
+  local filtered=run_fault(function() return true end,true,false,'hmm',options,lost(true))
+  t.eq(#filtered.switches,0,'the live recheck holds it');t.truthy(#aborts(filtered)>0)
+end)
+
+t.test('a refuted heartbeat run costs one lease (review 04.11.2026, finding 3)',function()
+  local options={slider_turbo=true,turbo_beats=5}
+  local function run(since) return function(o) if o>=5 then return {lost=math.floor(o),target_ok=true,since=since(o)} end end end
+  local function outage(from,to) return function(o) return not (from<=o and o<to) end end
+  local same=function() return canon.float(1000.5) end
+  local filtered=run_fault(function() return true end,true,false,'hmm',options,run(same))
+  t.eq(#filtered.switches,0);t.eq({filtered.leases,#filtered.rechecks},{1,1},'one lease on flash and one probe for the whole run')
+  local seen=false
+  for _,p in ipairs(filtered.published) do if p[2].late_recheck=='same-run' then seen=true end end
+  t.truthy(seen,'published as the same run')
+  -- without `since` (an older monitor row) nothing is remembered: as before
+  local old=run_fault(function() return true end,true,false,'hmm',options,function(o) if o>=5 then return {lost=math.floor(o),target_ok=true} end end)
+  t.truthy(old.leases>1)
+  -- a new run of lost beats is new evidence: looked at once more, once
+  local two=run_fault(function() return true end,true,false,'hmm',options,run(function(o) return canon.float(o<30 and 1000.5 or 2000.5) end))
+  t.eq({two.leases,#two.rechecks},{2,2})
+  -- the refutation ends where the monitor sees the failure itself
+  local dying=run_fault(outage(20,60),true,false,'hmm',options,run(same))
+  t.truthy(#dying.switches>0,'a real failure is never hidden by the refuted run');t.eq(dying.evidence.failure_rule,'model')
+end)
+
+t.test('a refuted decision keeps the owner hold; the switch ends it (finding 3)',function()
+  local options={slider_turbo=true,turbo_beats=5}
+  local beat=function(o) if o>=5 then return {lost=math.floor(o),target_ok=true,since=canon.float(1000.5)} end end
+  local kept=run_fault(function() return true end,true,false,'hmm',options,beat,nil,nil,'source')
+  t.eq(#kept.switches,0);t.eq(kept.hold,'source')
+  local moved=run_fault(function(o) return not (0<=o and o<40) end,true,false,'hmm',options,beat,nil,nil,'source')
+  t.truthy(#moved.switches>0);t.eq(moved.hold,nil)
+end)
+
+t.test('L2 in the tick: the probe starts before the lease and the diagnostic, the answer stops the switch',function()
+  local function outage(seconds) return function(o) return not (0<=o and o<seconds) end end
+  local log=run_fault(outage(40),true,false,'hmm',{hmm_or_failures=2,parallel_recheck='1'},nil,nil,true)
+  t.truthy(#log.switches>0);t.eq(#log.rechecks,1)
+  t.truthy(log.begun<log.switches[1],'begun before the switch')
+  t.truthy(log.switches[1]-log.begun<=SIM.diagnostic_seconds+1e-9,'only the preparation lies between them, no probe wait')
+  local healthy=run_fault(function() return true end,true,false,'hmm',{slider_turbo=true,turbo_beats=5,parallel_recheck='1'},function(o) if o>=5 then return {lost=9,target_ok=true} end end,nil,true)
+  t.eq(#healthy.switches,0,'a healthy answer of the parallel probe stops it');t.truthy(#aborts(healthy)>0)
+  -- the option off, or absent (the default, owner 05.11.2026): the sequential probe runs
+  for _,value in ipairs({'0','absent'}) do
+    local seq=run_fault(outage(40),true,false,'hmm',{hmm_or_failures=2,parallel_recheck=value~='absent' and value or nil},nil,nil,true)
+    t.eq(seq.begun,nil,'no parallel start');t.eq(#seq.rechecks,1,'and the probe is not skipped')
+  end
+end)
 
 t.test('the failure model (hmm / hmm-fast) with the same timing',function()
   -- 15 s never decides; 20 s decides on its last failure but the recheck finds the primary back; 40 s leaves at ~25 s

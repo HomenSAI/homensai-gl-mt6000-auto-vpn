@@ -320,8 +320,10 @@ def _rtp_lock_busy():
     return recovery.rtp_lock_busy()
 
 
-def _workers(deadline=None):
-    """Two sampled quiet reads are evidence only, never worker arbitration."""
+def _workers(deadline=None, ignore_lock=False):
+    """Two sampled quiet reads are evidence only, never worker arbitration.
+
+    ignore_lock: the vendor lock FILE does not count (rollback_recovery.vendor_busy_seen asks what runs besides it)."""
     if deadline is not None and time.monotonic() >= deadline:
         raise _CollectionError('MT3000-COLLECTION-DEADLINE')
     busy = _held_firewall_locks()
@@ -358,7 +360,7 @@ def _workers(deadline=None):
         except (OSError, ValueError, IndexError):
             if path.exists():
                 raise ValueError('process read unverified') from None
-    if list(RUN_ROOT.glob('tunnel-switch*.lock')) or RTP_LOCK.is_symlink() or RTP_LOCK.exists() and _rtp_lock_busy():
+    if list(RUN_ROOT.glob('tunnel-switch*.lock')) or RTP_LOCK.is_symlink() or not ignore_lock and RTP_LOCK.exists() and _rtp_lock_busy():
         busy += 1
     return {'time': time.time(), 'busy': busy, 'verified': True}
 

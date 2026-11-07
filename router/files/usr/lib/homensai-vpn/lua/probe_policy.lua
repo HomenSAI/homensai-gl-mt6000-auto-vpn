@@ -25,14 +25,22 @@ M.HISTORY_NAME='probe-history.json';M.STATE_NAME='probe-boost.json'
 M.WAIT_INTERVAL=10;M.WAIT_MAX=600
 M.WAIT_BLOCKERS={['VENDOR-SETTLING']=true,['PROFILE-IDENTITY-CHANGED']=true,['VENDOR-WORKER-BUSY']=true,['OBSERVATION-STALE']=true}
 M.DENSE_INTERVAL=4;M.DENSE_MAX=60;M.DENSE_GOOD=2
+M.TURBO_DENSE=3    -- the expert opt-in only (M.dense_interval)
 M.SUSPICION_REST=30
 M.FORCED_BOOST_LEVELS={[1]=true,[2]=true}
 M.RESPONSE_METRICS={['icmp-1.1.1.1']='1.1.1.1',['icmp-8.8.8.8']='8.8.8.8',['icmp-9.9.9.9']='9.9.9.9',websites=false}
 M.DEFAULT_RESPONSE='icmp-1.1.1.1'
 local TRANSITIONS={ARMED=true,APPLYING=true,['WAIT-CLIENT']=true,RESTORING=true,COMMITTED=true}
 local WATCHING={OBSERVING=true,COMMITTED=true,['DEGRADED-ON-RESERVE']=true}
-local SUSPICION_REASONS={['rx-stall']=true,['wg-handshake-stale']=true,['link-missing']=true,['heartbeat-lost']=true}
-local CARRIED={'dense','suspicion_rest','streaks'}
+-- 'wg-rekey' (wg_events.lua) and 'wan-ok-tunnel-down' (wan_diag.lua hasten): GL-SENSORS-2026-11-04, dense checks only
+local SUSPICION_REASONS={['rx-stall']=true,['wg-handshake-stale']=true,['link-missing']=true,['heartbeat-lost']=true,
+  ['wg-rekey']=true,['wan-ok-tunnel-down']=true,['cusum-loss']=true}
+-- REST_BYPASS, CUSUM_* (probe_policy.py; CUSUM-TRIGGER-2026-11-04.ru.md): these reasons pass a running suspicion rest,
+-- bounded by what the dense checks found: state cusum_at {profile -> {at=end of the last such episode, clean=such
+-- episodes in a row in which no check failed}}. A failed dense check clears clean; no gap while clean <= CUSUM_FREE,
+-- then CUSUM_GAP*2^(clean-CUSUM_FREE-1) seconds, at most CUSUM_GAP_MAX.
+M.REST_BYPASS={['cusum-loss']=true};M.CUSUM_FREE=2;M.CUSUM_GAP=60;M.CUSUM_GAP_MAX=600
+local CARRIED={'dense','suspicion_rest','streaks','cusum_at'}
 local NULL=canon.null
 M.TRANSITIONS,M.WATCHING=TRANSITIONS,WATCHING
 
@@ -82,11 +90,34 @@ function M.response_metric(settings)
   if type(v)=='string' and M.RESPONSE_METRICS[v]~=nil then return v end
   return M.DEFAULT_RESPONSE
 end
+-- probe_policy.dense_interval: M.DENSE_INTERVAL, or M.TURBO_DENSE with the expert opt-in (channel_model.heartbeat_k)
+function M.dense_interval(settings)
+  return require('channel_model').heartbeat_k(settings)~=nil and M.TURBO_DENSE or M.DENSE_INTERVAL
+end
+-- probe_policy.wake_row: L1, the hint the monitor leaves in RAM after it published a failed sample of an Auto channel
+function M.wake_row(settings,rows,pair,now)
+  local off=get(settings,'auto_event_wake')
+  if off==false or off=='0' or not is_dict(pair) or type(rows)~='table' then return nil end
+  local source,target=get(pair,'source'),get(pair,'target')
+  for _,row in ipairs(rows) do
+    if type(row)=='table' and row~=NULL then
+      local id=row.id
+      if type(id)=='string' and (id==source or id==target) and M.failing(row) then return canon.object({reason='sample',time=canon.float(now),id=id}) end
+    end
+  end
+  return nil
+end
 function M.failing(row)
   local h=get(row,'https_success')
   return get(row,'code')~=nil or get(row,'dns_ok')==false or not (type(h)=='number' and h%1==0) or h<2
 end
 local function bad_code(row) return get(row,'code') or (get(row,'dns_ok')==false and 'DNS-001' or 'VPN-003') end
+
+-- Seconds a REST_BYPASS reason waits after the end of the last such episode.
+function M.cusum_gap(clean)
+  if clean<=M.CUSUM_FREE then return 0 end
+  return math.min(M.CUSUM_GAP*2^(clean-M.CUSUM_FREE-1),M.CUSUM_GAP_MAX)
+end
 
 -- probe_policy.firmware_wait: a tunnel of the Auto pair is PENDING or inside its settle period, or Auto waits
 -- only for the firmware (ARMED, or BLOCKED with WAIT_BLOCKERS only).
@@ -148,7 +179,7 @@ function Booster:dense(now)
 end
 function Booster:interval(settings,now)
   local normal=int(get(settings,'interval'),10,300) or 10
-  if self:dense(now) then return math.min(normal,M.DENSE_INTERVAL) end
+  if self:dense(now) then return math.min(normal,M.dense_interval(settings)) end
   if self:waiting(now) then return math.min(normal,M.WAIT_INTERVAL) end
   return self:active() and math.min(normal,M.BOOST_INTERVAL) or normal
 end
@@ -244,13 +275,14 @@ end
 
 function Booster:episode_row(settings,kind,episode,now,fields)
   local row=self:base(settings,kind)
-  row.profile=n0(get(episode,'profile'));row.role=n0(get(episode,'role'));row.reason=n0(get(episode,'reason'));row.dense_interval=M.DENSE_INTERVAL
+  row.profile=n0(get(episode,'profile'));row.role=n0(get(episode,'role'));row.reason=n0(get(episode,'reason'));row.dense_interval=M.dense_interval(settings)
   for k,v in pairs(fields) do row[k]=v end
   return self:record(row,now)
 end
 
 -- A passive suspicion asks for an immediate full check and dense confirmation (suspicion.py not ported yet).
-function Booster:suspect(settings,suspicions,pair,native_state,now)
+-- models: as in observe(); a REST_BYPASS reason adds nothing once the failure model decided.
+function Booster:suspect(settings,suspicions,pair,native_state,now,models)
   if self:dense(now) or not WATCHING[native_state] or not is_dict(pair) then return false end
   local roles={}
   if get(pair,'source') then roles[pair.source]='source' end
@@ -262,12 +294,21 @@ function Booster:suspect(settings,suspicions,pair,native_state,now)
     if profile and roles[profile] then
       local held=is_dict(get(rest,profile)) and rest[profile] or {}
       local streak=is_dict(get(streaks,profile)) and streaks[profile] or {}
-      if now>=(num(get(held,'until')) or 0) and (num(get(streak,'failures')) or 0)<M.CONFIRM_FAILURES then
+      local bypass=M.REST_BYPASS[item.reason]==true
+      local decided=false
+      if bypass then
+        local view=type(models)=='table' and models[profile] or nil
+        decided=type(view)=='table' and view.failed==true
+        local at,clean=self:forced(profile)
+        bypass=now>=at+M.cusum_gap(clean) or now<at
+      end
+      if not decided and (bypass or now>=(num(get(held,'until')) or 0)) and (num(get(streak,'failures')) or 0)<M.CONFIRM_FAILURES then
         local evidence=canon.object()
-        for _,k in ipairs({'stalled_s','tx_packets','handshake_age_s','losses','cause'}) do local e=get(item,'evidence');if is_dict(e) and e[k]~=nil then evidence[k]=e[k] end end
+        for _,k in ipairs({'stalled_s','tx_packets','handshake_age_s','losses','cause','event'}) do local e=get(item,'evidence');if is_dict(e) and e[k]~=nil then evidence[k]=e[k] end end
         local episode=canon.object({profile=profile,role=roles[profile],reason=item.reason,evidence=evidence,started=canon.float(now),
           ['until']=canon.float(now+M.DENSE_MAX),native_state=native_state,checks=0,failures=0,good=0,reserve_good=0,last_code=NULL})
         self.state.dense=episode
+        if M.REST_BYPASS[item.reason] then self:note_forced(profile,now,nil,roles) end
         self:episode_row(settings,'suspicion-start',episode,now,{evidence=evidence,code=NULL,result='started'})
         pcall(self.io.write_json,self.runtime..'/'..M.STATE_NAME,self.state)
         return true
@@ -275,6 +316,24 @@ function Booster:suspect(settings,suspicions,pair,native_state,now)
     end
   end
   return false
+end
+
+-- The channel's record of REST_BYPASS episodes: at, clean (a damaged one counts as none).
+function Booster:forced(profile)
+  local forced=get(self.state,'cusum_at')
+  local record=is_dict(forced) and get(forced,profile) or nil
+  local at=is_dict(record) and get(record,'at') or nil
+  local clean=is_dict(record) and get(record,'clean') or nil
+  if not finite(at) or type(clean)~='number' or clean%1~=0 or clean<0 then return -math.huge,0 end
+  return num(at),clean
+end
+function Booster:note_forced(profile,at,clean,ids)
+  local forced=is_dict(get(self.state,'cusum_at')) and self.state.cusum_at or {}
+  local kept=canon.object()
+  for key,value in pairs(forced) do if ids==nil or ids[key] then kept[key]=value end end
+  local last_at,last_clean=self:forced(profile)
+  kept[profile]=canon.object({at=canon.float(at or last_at),clean=clean or last_clean})
+  self.state.cusum_at=kept
 end
 
 -- The failure model's suspicion of the channel carrying traffic starts a dense episode (reason 'model').
@@ -323,7 +382,10 @@ function Booster:dense_observe(settings,rows,pair,native_state,now,models)
   for _,key in ipairs({'checks','failures','good','reserve_good'}) do episode[key]=math.floor(num(get(episode,key)) or 0) end
   if row then
     episode.checks=episode.checks+1
-    if M.failing(row) then episode.failures=episode.failures+1;episode.good=0;episode.last_code=bad_code(row)
+    if M.failing(row) then
+      episode.failures=episode.failures+1;episode.good=0;episode.bad=true;episode.last_code=bad_code(row)
+      local _,clean=self:forced(suspect)
+      if clean>0 then self:note_forced(suspect,nil,0) end
     else episode.good=episode.good+1;episode.failures=0 end
   end
   if other then episode.reserve_good=M.failing(other) and 0 or episode.reserve_good+1 end
@@ -349,6 +411,10 @@ function Booster:dense_observe(settings,rows,pair,native_state,now,models)
   local alarms=result=='false-alarm' and math.floor((num(get(held,'false_alarms')) or 0)+1) or 0
   local pause=math.min(M.SUSPICION_REST*2^math.max(0,alarms-1),M.BOOST_HOLD)
   rest[suspect]=canon.object({['until']=canon.float(now+pause),false_alarms=alarms})
+  if M.REST_BYPASS[get(episode,'reason')] then
+    local _,clean=self:forced(suspect)
+    self:note_forced(suspect,now,clean+(get(episode,'bad') and 0 or 1))
+  end
   local rkept=canon.object();for k,v in pairs(rest) do if idset[k] then rkept[k]=v end end
   state.suspicion_rest=rkept
   state.dense=nil
@@ -374,7 +440,7 @@ function Booster:public(settings,now)
     boost_trigger=active and trigger or NULL,effective_interval=self:interval(settings,now),effective_measure_interval=self:measure(settings),
     ping_interval=M.ping_interval(settings),ping_valid_for=M.ping_valid_for(settings),
     effective_ping_interval=math.max(M.ping_interval(settings),self:interval(settings,now)),
-    suspicion=suspicion,dense_interval=M.DENSE_INTERVAL,boost_interval=M.BOOST_INTERVAL,boost_hold=M.BOOST_HOLD,levels=levels})
+    suspicion=suspicion,dense_interval=M.dense_interval(settings),boost_interval=M.BOOST_INTERVAL,boost_hold=M.BOOST_HOLD,levels=levels})
 end
 
 return M

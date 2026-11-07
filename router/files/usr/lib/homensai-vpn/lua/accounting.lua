@@ -535,7 +535,9 @@ function M.stats.options(runner)
 end
 function M.stats.until_time(runner)
   local found=M.stats.options(runner) or {}
-  local value=tonumber(found.stats_until or '0') or 0
+  -- BH2-01: one strict grammar with stats_mode.until: decimal digits with an optional fraction (no hex, inf, nan, exponent)
+  local int,dot,fr=string.match(found.stats_until or '0','^(%d+)(%.?)(%d*)$')
+  local value=int and #int<=12 and #fr<=6 and tonumber(int..dot..fr) or 0
   return value>0 and value or 0
 end
 function M.stats.diagnostic(runner,now)

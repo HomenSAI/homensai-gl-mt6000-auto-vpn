@@ -270,11 +270,13 @@ function M.vendor_rebuild_applies(env,journal)
 end
 
 -- settled(): diagnostic(), waiting a bounded time while it is only not ready yet (nothing is written)
-function M.settled(env)
+-- tolerated: the one blocker that ends the wait at once (T3: the caller holds the LAN blocked and this blocker does not
+-- concern its route)
+function M.settled(env,tolerated)
   local until_=env.run.clock()+M.SETTLE_SECONDS
   while true do
     local blockers,current=env.backend.diagnostic()
-    if (#blockers==0 and canon.is_object(current)) or env.run.clock()>=until_ or env.stop() then return blockers,current end
+    if (#blockers==0 and canon.is_object(current)) or env.run.clock()>=until_ or env.stop() or (tolerated~=nil and #blockers==1 and blockers[1]==tolerated) then return blockers,current end
     env.sleep(M.SETTLE_POLL)
   end
 end
@@ -409,6 +411,8 @@ function M.rebuild(env,journal,reason,target)
       if lock~=nil then
         local ok,pid=pcall(platform.vendor_lock_pid,sys)
         if not ok or pid~=lock then deny('VENDOR-WORKER-BUSY') end
+        -- The rule (owner 05.11.2026, docs/ROADMAP.md): a vendor lock is deleted only when its holder is provably dead and only
+        -- here, in recovery; everywhere else locks are never deleted. Python: rollback_recovery.py.
         sys.remove(M.VENDOR_LOCK)
       end
       journal.restore_rtp_dispatched=true;T().journal_write(env,journal)

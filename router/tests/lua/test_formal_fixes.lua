@@ -213,6 +213,8 @@ local function damping(env)
   local B=env.backend
   -- primary_stable 30 s explicitly (the default is 120 s since the 03.11.2026 tuning, integ/alpha8)
   B.settings.recovery_primary_stable='30'
+  -- wave 3: the damping has its own limit (default 2); 3 keeps this fixture's single doubling
+  B.settings.recovery_flap_limit='3'
   env.stable=40
   B.recovery_ready=function(id,settings)
     local need=tonumber(settings and settings.recovery_primary_stable) or 30
@@ -371,6 +373,39 @@ t.test('K9: the owner Stop releases the guard; it stays released',function()
   restore()
 end)
 
+t.test('T4-A: the owner Stop ends the outside-change hold STOPPED and spends no adoption',function()
+  local restore=quiet_log()
+  local env=router()
+  held_by_gl(env)
+  cut(env)
+  env.up['ovpnclient1']=true
+  t.eq(A.recover(env),'ready')
+  local held=pair.read_state(env)
+  t.eq(held.phase,'HELD')
+  t.eq(pair.end_hold_on_stop(env,held),false,'no Stop: the hold stays')
+  t.eq(pair.read_state(env).phase,'HELD')
+  t.eq(ctl.read_json_safe(env.run,env.runtime..'/telegram-outside-change.json',canon.object({})).items,nil,'no Stop: nothing ended, no RELEASE told')
+  local now=env.run.wall()
+  ctl.write_json(env.run,env.runtime..'/pair-readopt.json',canon.object({events=canon.array({canon.float(now-3),canon.float(now-2),canon.float(now-1)})}))
+  env.run.advance(5);ctl.stop_latch(env,canon.null);pair.stop_locked(env,ctl.revision_locked(env))
+  A.iteration(env,fresh_ctx())
+  local state=pair.read_state(env)
+  restore()
+  t.eq(state.id,held.id)
+  t.eq(state.phase,'STOPPED','owner rule 07.11.2026: Stop ends STOPPED, not HELD with the readopt code')
+  t.eq(state.recovery_error==nil or state.recovery_error==canon.null,true)
+  t.eq(#state.owned,0)
+  t.eq(state.operator_resolution.adopted_by,'owner-stop')
+  t.eq(state.operator_resolution.outside_change.decision,'STOP')
+  t.eq(string.find(state.operator_resolution.archive,'-stop-',1,true)~=nil,true)
+  t.eq(#ctl.read_json_safe(env.run,env.runtime..'/pair-readopt.json',canon.object({})).events,3,'the Stop spends no adoption')
+  t.eq(env.backend.guarded,false)
+  -- owner decision 07.11.2026: the hold the owner's Stop ended is told once (class RELEASE, codes and names only)
+  local ring=ctl.read_json_safe(env.run,env.runtime..'/telegram-outside-change.json',canon.object({}))
+  t.eq(#ring.items,1)
+  t.eq({ring.items[1].decision,ring.items[1].release,ring.items[1].why,ring.items[1].trigger},{'RELEASE','STOP','OWNER-STOP',held.recovery_error})
+end)
+
 t.test('K9 + K4: the Start that ends the outside-change hold keeps its VPN-only guard while the clients start',function()
   local restore=quiet_log()
   local env=router()
@@ -470,6 +505,299 @@ t.test('K11: a failure marks the record HELD only under the control lock',functi
   pair.publish_failure(env,'PAIR-RECOVERY-REQUIRED')
   restore()
   t.eq(pair.read_state(env).phase,'STOPPED','a failure after the hand-over leaves its record alone')
+end)
+
+------------------------------------------------------------------------------------------------------
+-- Independent review 04.11.2026, findings 3, 4 and 5 on the outside-change hold (K9). Python twin: Review0411
+------------------------------------------------------------------------------------------------------
+local function count_saves()
+  local save=pair.save;local log={}
+  pair.save=function(e,state) log[#log+1]=tostring(state.phase);return save(e,state) end
+  return log,function() pair.save=save end
+end
+local function tick(env) return pair.tick(env,env.backend.settings,ctl.revision_locked(env)) end
+
+------------------------------------------------------------------------------------------------------
+-- Trace conformance 04.11.2026, T3: a lost reserve (RESERVE-NOT-CONNECTED). Python twin: tests/test_trace_fixes.py
+------------------------------------------------------------------------------------------------------
+local function lost(env,list) env.backend.diagnostic=function() return list,nil end end
+t.test('T3: a lost reserve goes on to the committed decision, only then',function()
+  local restore=quiet_log()
+  local env=router({flow='committed'})
+  local state=pair.read_state(env)
+  local revision=ctl.revision_locked(env)
+  state.revision=revision
+  local row=pair.intent(env);row.revision=revision
+  env.run.fs.write_atomic(env.runtime..'/pair-auto-control.json',canon.encode(row))
+  local reapply=function(journal) return pair.reapply_missing_policy(env,state,env.backend.settings,revision,journal,{}) end
+  lost(env,{'RESERVE-NOT-CONNECTED'})
+  t.eq(reapply(T.journal_read(env)),false,'COMMITTED on the reserve: the return decision is reached')
+  local held=T.journal_read(env);held.phase='HELD-ON-RESERVE'
+  t.eq(reapply(held),false,'HELD-ON-RESERVE')
+  t.eq(reapply(canon.object({phase='ROLLED-BACK'})),true,'the traffic is on the primary: nothing to return')
+  t.eq(reapply(canon.object({})),true,'no journal')
+  lost(env,{'RESERVE-NOT-CONNECTED','VENDOR-WORKER-BUSY'})
+  t.eq(reapply(T.journal_read(env)),true,'another blocker too')
+  lost(env,{'VENDOR-SETTLING'})
+  t.eq(reapply(T.journal_read(env)),true,'another blocker')
+  lost(env,{'RESERVE-NOT-CONNECTED'})
+  local order=env.backend.order
+  env.backend.order=function() local o,h=order();return o,string.rep('9',64) end
+  t.code('PAIR-EXTERNAL-POLICY-CHANGE',reapply,T.journal_read(env))
+  env.backend.order=order
+  restore()
+end)
+
+t.test('T4: a journal in progress of another policy is still an outside change',function()
+  local restore=quiet_log()
+  local env=router({flow='committed'})
+  local state=pair.read_state(env)
+  local phase=state.phase
+  state.policy_hash=string.rep('f',64);pair.save(env,state)
+  t.code('PAIR-EXTERNAL-POLICY-CHANGE',pair.cleanup,env,pair.read_state(env))
+  t.eq(pair.read_state(env).phase,phase,'nothing written')
+  t.eq(T.journal_read(env).phase,'COMMITTED')
+  restore()
+end)
+
+local function wait_state(env,reason)
+  local state=pair.read_state(env);state.phase='HELD';pair.save(env,state)
+  local value=T.journal_read(env);value.reason=reason or 'SOURCE-NOT-VERIFIED';T.journal_write(env,value)
+  env.up['wgclient1']=false
+end
+local function waits(env)
+  local value=T.journal_read(env)
+  return pair.reserve_waits(env,pair.read_state(env),value,pair.policy.metadata(value))
+end
+t.test('T4: the wait writes nothing only while nothing would change',function()
+  local restore=quiet_log()
+  local env=router()
+  today(env);wait_state(env)
+  t.eq(waits(env),true)
+  wait_state(env,'OPERATOR-MANUAL');t.eq(waits(env),false,'another reason: the journal is written once')
+  wait_state(env);env.up['wgclient1']=true;t.eq(waits(env),false,'the primary is ready: the return')
+  restore()
+end)
+t.test('T4: an open hand-over gets its full pass',function()
+  local restore=quiet_log()
+  local env=router()
+  wait_state(env)
+  env.run.mono_now=40
+  t.eq(waits(env),false,'the boot resume will press Start: boot_handover has to run')
+  env.run.mono_now=2000
+  t.eq(waits(env),true,'the window is over')
+  restore()
+end)
+
+t.test('T2: the reload of the branch without a dispatch is the recovery\'s: a foreign graph in a running pass stays',function()
+  local R=require('rollback')
+  local restore=quiet_log()
+  for _,row in ipairs({{'TRANSACTION-FAILED',0},{'SUPERVISOR-RECOVERY',1}}) do
+    local env=router({flow='committed'})
+    local value=T.journal_read(env)
+    value.phase='APPLYING';value.rtp_dispatched=false;value.kernel_before_fingerprint=string.rep('a',64)
+    local calls,apply=0,env.backend.apply
+    env.backend.apply=function(...) calls=calls+1;return apply(...) end
+    R.rollback(env,value,row[1])
+    t.eq(calls,row[2],row[1]);t.eq(value.phase,'ROLLED-BACK')
+  end
+  restore()
+end)
+
+t.test('T3: settled ends its wait on the tolerated blocker only',function()
+  local recovery=require('recovery')
+  local env=router({flow='committed'})
+  local slept=0
+  env.sleep=function(s) slept=slept+s;env.run.advance(s) end
+  lost(env,{'RESERVE-NOT-CONNECTED'})
+  recovery.settled(env,'RESERVE-NOT-CONNECTED')
+  t.eq(slept,0,'no LAN block for the whole wait')
+  recovery.settled(env)
+  t.truthy(slept>0,'without it the wait is as before')
+  slept=0
+  lost(env,{'RESERVE-NOT-CONNECTED','VENDOR-WORKER-BUSY'})
+  recovery.settled(env,'RESERVE-NOT-CONNECTED')
+  t.truthy(slept>0,'not with another blocker')
+end)
+
+t.test('T3: the reserve is tolerated only for a return to the primary',function()
+  local R=require('rollback')
+  local restore=quiet_log()
+  local env=router({flow='committed'})
+  local value=T.journal_read(env)
+  lost(env,{'RESERVE-NOT-CONNECTED'})
+  local seen={}
+  local helpers=env.deps.rollback_recovery
+  env.deps.rollback_recovery={vendor_rebuild_applies=function() return false end,vendor_settled=function() end,record_step=function() end,
+    settled=function(_,tolerated) seen[#seen+1]=tolerated or 'none';return env.backend.diagnostic() end}
+  local attest=env.backend.attest_policy
+  local args={}
+  env.backend.attest_policy=function(selection) args[#args+1]=selection==nil and 'nil' or 'selection';return attest(selection) end
+  -- a session that started on the reserve: a restore there is the reserve's own route, never proven without it
+  local other=canon.decode(canon.encode(value))
+  other.pair_transition.session_order=other.after
+  T.journal_write(env,other)
+  t.code('ROLLBACK-UNVERIFIED',R.rollback,env,other,'PAIR-STOPPED',other.after)
+  t.eq(seen,{'none'})
+  T.journal_write(env,value)
+  seen={};args={}
+  R.rollback(env,value,'PRIMARY-STABLY-RECOVERED',value.pair_transition.primary_order)
+  t.eq(seen,{'RESERVE-NOT-CONNECTED'})
+  t.eq(args[#args],'nil','attest_policy tolerates exactly this blocker without a selection')
+  t.eq(value.phase,'ROLLED-BACK')
+  env.deps.rollback_recovery=helpers
+  restore()
+end)
+
+t.test('review 3: a stable outside-change hold writes nothing on its passes (no python3 child in this line)',function()
+  local restore=quiet_log()
+  local env=router()
+  held_by_gl(env)
+  cut(env)
+  env.up['ovpnclient1']=true
+  t.eq(A.recover(env),'ready')
+  local log,undo=count_saves()
+  -- every file of the after-stop key on the supervisor's whole pass (backend.after_stop_key)
+  local written={}
+  local fs_write=env.run.fs.write_atomic
+  env.run.fs.write_atomic=function(path,text)
+    for _,name in ipairs({'pair-auto-state.json','native-transaction.json','native-stop.json','pair-auto-control.json'}) do
+      if string.sub(path,-#name)==name then written[#written+1]=name end
+    end
+    return fs_write(path,text)
+  end
+  local ctx=fresh_ctx()
+  for _=1,5 do env.run.advance(2);A.iteration(env,ctx) end
+  env.run.fs.write_atomic=fs_write
+  undo()
+  t.eq(#written,0,'a key file was written: '..table.concat(written,','))
+  t.eq(#log,0,'STOPPING then HELD on every pass before the fix ('..table.concat(log,',')..'): flash writes, and the '..
+    'after-stop key (it holds this file) started python3 restore-autostart each time')
+  local state=pair.read_state(env)
+  t.eq({state.phase,state.recovery_error},{'HELD','PAIR-EXTERNAL-NETWORK-CHANGE'})
+  t.eq(env.backend.guarded,true);t.eq(last_guard(env),'vpn-only','the K9 guard stays')
+  -- the outside change undone (the GL configuration put back): the cleanup finishes as before
+  env.identity=string.rep('aa',32)
+  tick(env)
+  restore()
+  t.eq(pair.read_state(env).phase,'STOPPED')
+end)
+
+t.test('review 4: the owner Stop releases the guard of a handed-over session (a Start refused after its hand-over)',function()
+  local restore=quiet_log()
+  local env=router()
+  held_by_gl(env)
+  cut(env)
+  env.up['ovpnclient1']=true
+  t.eq(A.recover(env),'ready')
+  t.eq(last_guard(env),'vpn-only')
+  -- the Start's hand-over (pair_auto.release_for_start in agent.py), then the Start ended before its request
+  t.eq(pair.release_session(env,pair.read_state(env),'PAIR-EXTERNAL-NETWORK-CHANGE'),true)
+  env.backend.uci={'r2','r1'};env.backend.kernel={'r2','r1'}  -- the owner moved the GL rules too: the journal path keeps its guard
+  local ctx=fresh_ctx()
+  env.run.advance(5);A.iteration(env,ctx)
+  t.eq(env.backend.guarded,true,'until Start or Stop (K9)')
+  env.run.advance(5);ctl.stop_latch(env,canon.null);pair.stop_locked(env,ctl.revision_locked(env))
+  A.iteration(env,ctx)
+  t.eq(env.backend.guarded,false,'kept for good before the fix: no internet on the LAN while the tunnels are down')
+  local calls=#env.backend.guard_calls
+  env.run.advance(60);A.iteration(env,ctx)
+  restore()
+  t.eq(env.backend.guarded,false);t.eq(#env.backend.guard_calls,calls)
+end)
+
+t.test('review 4: only the guard of a handed-over record is released',function()
+  local restore=quiet_log()
+  local env=router()
+  held_by_gl(env)
+  cut(env)
+  env.up['ovpnclient1']=true
+  t.eq(A.recover(env),'ready')
+  t.eq(last_guard(env),'vpn-only')
+  env.run.advance(5);ctl.stop_latch(env,canon.null);pair.stop_locked(env,ctl.revision_locked(env))
+  local base=pair.read_state(env);base.phase='STOPPED';base.owned=canon.array({})
+  local resolution=canon.object({reason='AUTOMATIC-EXTERNAL-CHANGE-READOPT',time=canon.float(1)})
+  local function variant(fields)
+    local value=canon.decode(canon.encode(base))
+    for k,v in pairs(fields) do value[k]=v end
+    return value
+  end
+  for name,fields in pairs({['no hand-over']={},['another resolution']={operator_resolution=canon.object({reason='OTHER',time=canon.float(1)})},
+      ['kept clients']={operator_resolution=resolution,kept=canon.array({'wgclient1'}),kept_flags=canon.object({wgclient1='0'}),kept_at=canon.float(5)},
+      ['a handover']={operator_resolution=resolution,handover=canon.object({tx=string.rep('d',32),order=base.order,policy_hash=base.policy_hash,at=canon.float(5)})}}) do
+    local record=variant(fields)
+    pair.outside_guard_reset();pair.save(env,record)  -- on disk: the check under the lock reads the record
+    t.eq(pair.release_orphan_guard(env,record),false,name)
+    t.eq(env.backend.guarded,true,name)
+  end
+  local saved=variant({operator_resolution=resolution});pair.save(env,saved)
+  local intent=pair.intent
+  pair.intent=function() return canon.object({mode='on'}) end
+  pair.outside_guard_reset()
+  t.eq(pair.release_orphan_guard(env,saved),false,'Auto requested');t.eq(env.backend.guarded,true)
+  pair.intent=intent
+  local journal=T.journal_read
+  T.journal_read=function() return canon.object({phase='HELD-ON-RESERVE'}) end
+  pair.outside_guard_reset()
+  local ok,value=pcall(pair.release_orphan_guard,env,saved)
+  T.journal_read=journal
+  assert(ok,value);t.eq(value,false,'a held journal');t.eq(env.backend.guarded,true)
+  pair.outside_guard_reset()
+  t.eq(pair.release_orphan_guard(env,saved),true);t.eq(env.backend.guarded,false)
+  restore()
+end)
+
+t.test('review 5: a hold with nothing owned keeps its guard until Start or Stop',function()
+  local restore=quiet_log()
+  local env=router()
+  held_by_gl(env)
+  local state=pair.read_state(env);state.owned=canon.array({});pair.save(env,state)
+  cut(env)
+  env.up['ovpnclient1']=true
+  t.eq(A.recover(env),'ready')
+  state=pair.read_state(env)
+  t.eq({state.phase,state.recovery_error},{'HELD','PAIR-EXTERNAL-NETWORK-CHANGE'},'K9: STOPPED and unguarded before the fix')
+  t.eq(env.backend.guarded,true);t.eq(last_guard(env),'vpn-only')
+  env.run.advance(5);tick(env)
+  t.eq(env.backend.guarded,true)
+  env.run.advance(5);ctl.stop_latch(env,canon.null);pair.stop_locked(env,ctl.revision_locked(env))
+  tick(env)
+  restore()
+  t.eq(pair.read_state(env).phase,'STOPPED','the owner Stop ends the hold: the app owns nothing to stop')
+  t.eq(env.backend.guarded,false)
+end)
+
+t.test('review 5: the same for a changed client configuration',function()
+  local restore=quiet_log()
+  local env=router()
+  held_by_gl(env)
+  local state=pair.read_state(env);state.owned=canon.array({});state.recovery_error='PAIR-EXTERNAL-CONFIG-CHANGE';pair.save(env,state)
+  env.identity=string.rep('aa',32);env.net.changed=function() return true end
+  cut(env)
+  env.up['ovpnclient1']=true
+  t.eq(A.recover(env),'ready')
+  t.eq({pair.read_state(env).phase,env.backend.guarded},{'HELD',true})
+  env.net.changed=function() return false end
+  tick(env)
+  restore()
+  t.eq(pair.read_state(env).phase,'STOPPED','the change undone: the cleanup finishes')
+end)
+
+t.test('review 5: the cleanup checks again when the precheck does not decide',function()
+  -- e.g. a journal this very cleanup finishes first (COMMITTED -> ROLLED-BACK): the read-only precheck stays out
+  local restore=quiet_log()
+  local env=router()
+  held_by_gl(env)
+  local state=pair.read_state(env);state.owned=canon.array({});pair.save(env,state)
+  local real=pair.held_unchanged
+  pair.held_unchanged=function() return nil end
+  local calls=#env.backend.guard_calls
+  local ok,err=pcall(pair.cleanup,env,pair.read_state(env))
+  pair.held_unchanged=real
+  restore()
+  t.eq(ok,false);t.eq(type(err)=='table' and err.code,'PAIR-EXTERNAL-NETWORK-CHANGE')
+  t.eq(pair.read_state(env).phase,'STOPPING','never STOPPED (and unguarded) over the outside change')
+  t.eq(env.backend.guarded,true);t.eq(#env.backend.guard_calls,calls)
 end)
 
 ------------------------------------------------------------------------------------------------------

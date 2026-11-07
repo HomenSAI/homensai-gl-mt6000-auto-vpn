@@ -12,7 +12,9 @@
           "events",
           "priority_preview",
           "preparation_preview",
-          "speed_live"
+          "speed_live",
+          "advisor",
+          "probe_targets"
         ]
       }
     },
@@ -48,7 +50,13 @@
           "setup_probe",
           "setup_response",
           "setup_stats",
-          "setup_onboarding"
+          "setup_onboarding",
+          "setup_onboarding_skip",
+          "advisor_apply",
+          "advisor_settings",
+          "server_key_accept",
+          "setup_detector",
+          "telegram_destination"
         ]
       }
     }

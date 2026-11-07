@@ -11,6 +11,15 @@ class Tests(unittest.TestCase):
         r.observe('source',110);r=RouteHistory(r.export());r.observe('target',120);r.observe('target',130)
         self.assertEqual(r.data['segments'],[{'start':100,'end':120,'kind':'source'},{'start':120,'end':130,'kind':'target'}])
 
+    def test_long_gap_stays_unknown_between_short_observed_intervals(self):
+        # review F-55 oracle: source@0, source@10, target@1010, target@1020 -> source 10 s, target 10 s, unknown 1000 s.
+        # The page shows this as route-selection share with coverage 20 s / 24 h (router/tests/test_route_share_ui.js).
+        r=RouteHistory()
+        for kind,stamp in (('source',0),('source',10),('target',1010),('target',1020)):r.observe(kind,stamp)
+        seconds={}
+        for row in r.data['segments']:seconds[row['kind']]=seconds.get(row['kind'],0)+row['end']-row['start']
+        self.assertEqual(seconds,{'source':10,'unknown':1000,'target':10})
+
     def test_gap_and_clock_reversal_never_fabricate_a_healthy_route(self):
         r=RouteHistory();r.observe('source',100);r.observe('source',110);r.observe('source',300)
         self.assertEqual(r.data['segments'][-1],{'start':110,'end':300,'kind':'unknown'})

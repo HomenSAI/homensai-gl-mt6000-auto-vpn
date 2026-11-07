@@ -40,10 +40,26 @@ class CommittedRecoveryTests(unittest.TestCase):
         self.assertEqual(self.decide({},[],960)['reason'],'PRIMARY-STABLY-RECOVERED')
         self.assertEqual(self.decide({'recovery_min_dwell':'180'},[],1000)['action'],'OBSERVE')
         self.assertEqual(self.decide({'recovery_min_dwell':'180'},[],1080)['reason'],'PRIMARY-STABLY-RECOVERED')
-    def test_operator_hold_never_forces_primary_return(self):
+    def test_operator_hold_keeps_a_working_reserve_only(self):
+        """Owner decision 07.11.2026 (F-80): hold_reserve = no return from a WORKING reserve. A reserve the detector calls
+        failed AND a fresh negative probe confirms is rescued to a verified primary; unknown or alive probes hold."""
         self.backend.recovery_ready.return_value=True;self.backend.health.return_value=False
         result=self.decide({'recovery_return_policy':'hold_reserve'},self.samples,1000)
-        self.assertEqual(result['action'],'HOLD');self.backend.recovery_ready.assert_not_called()
+        self.assertEqual((result['action'],result['reason']),('RESTORE-PRIMARY','RESERVE-FAILED-PRIMARY-VERIFIED'))
+        self.backend.health.assert_called_once_with('wireguard:b');self.backend.recovery_ready.assert_called_once()
+        self.backend.reset_mock();self.backend.recovery_ready.return_value=False;self.backend.health.return_value=False
+        result=self.decide({'recovery_return_policy':'hold_reserve'},self.samples,1000)
+        self.assertEqual((result['action'],result['reason'],result['reserve_healthy']),('HOLD','RESERVE-FAILED',False))
+        self.backend.health.assert_called_once_with('wireguard:b')
+        self.backend.reset_mock();self.backend.recovery_ready.return_value=True;self.backend.health.return_value=None
+        result=self.decide({'recovery_return_policy':'hold_reserve'},self.samples,1000)
+        self.assertEqual((result['action'],result['reason']),('HOLD','RESERVE-HEALTH-UNKNOWN'));self.backend.recovery_ready.assert_not_called()
+        self.backend.reset_mock();self.backend.health.return_value=True
+        result=self.decide({'recovery_return_policy':'hold_reserve'},self.samples,1000)
+        self.assertEqual(result['action'],'OBSERVE');self.backend.recovery_ready.assert_not_called()
+        self.backend.reset_mock()
+        self.assertEqual(self.decide({'recovery_return_policy':'hold_reserve'},[],1000)['action'],'OBSERVE','a working reserve is never left')
+        self.backend.recovery_ready.assert_not_called();self.backend.health.assert_not_called()
     def test_explicit_bounded_fault_tests_return_even_during_reserve_hold(self):
         self.backend.recovery_ready.return_value=True
         with patch('fault_control.testing_profile',return_value=True):

@@ -22,9 +22,11 @@ import auto_control  # noqa: E402
 import native_switch as native  # noqa: E402
 import pair_auto as pair  # noqa: E402
 import pair_policy  # noqa: E402
+import telegram_report as report  # noqa: E402
 from recovery_settings import normalized, stable_success, stable_seconds  # noqa: E402
 
 CASES=json.loads((HERE/'vendor_retry_cases.json').read_text(encoding='utf-8'))['cases']
+LOCK=json.loads((HERE/'vendor_lock_cases.json').read_text(encoding='utf-8'))
 PRIMARY='wireguard:peer_2006';RESERVE='openvpn:40354_2029'
 QUIET='VENDOR-WORKER-QUIET-UNVERIFIED'
 RETRY_BASE=5  # pair_auto.RETRY_BASE (checked in Units); a literal here so the unfixed code fails on the timeline itself
@@ -55,7 +57,8 @@ class Base(unittest.TestCase):
 
 class Units(Base):
     def journal(self,**fields):
-        value=dict({'phase':'ROLLED-BACK','failure_code':QUIET,'started':9000.0,'pair_transition':{'destination_role':'target'}},**fields)
+        value=dict({'phase':'ROLLED-BACK','failure_code':QUIET,'started':9000.0,'pair_transition':{'destination_role':'target'},
+                    'rtp_dispatched':False,'forward_policy_touched':False},**fields)
         return patch.object(native,'journal_read',return_value=value)
 
     def test_charge_returns_its_stamp_and_keeps_the_abort_series(self):
@@ -86,7 +89,12 @@ class Units(Base):
                  ('rolled back after a confirmation',{'confirmed':9003.0},QUIET),
                  ('another failure',{'failure_code':'VENDOR-WORKER-BUSY'},QUIET),
                  ('not a pair transition',{'pair_transition':None},QUIET),
-                 ('a newer transaction',{'started':9001.5},QUIET))
+                 ('a newer transaction',{'started':9001.5},QUIET),
+                 # review 04.11.2026 (finding 6): the vendor code came after the switch itself (the verify wait after rtp2,
+                 # wait_quiet after the dispatch): two real kernel switches (there and back) are no abort
+                 ('after the kernel switch',{'rtp_dispatched':True},QUIET),
+                 ('after a policy write',{'forward_policy_touched':True},QUIET),
+                 ('a journal without the dispatch flags',{'rtp_dispatched':None},QUIET))
         for name,fields,code in refused:
             with self.subTest(name):
                 self.ledger({'events':[8000.0,9001.0]})
@@ -111,11 +119,12 @@ class Simulation(Base):
     vendor diagnostic (blockers while `busy`)."""
     START=300000.0
 
-    def run_sim(self,primary_up,end,step=2.5,abort=None,busy=None,code=QUIET,settings=None):
+    def run_sim(self,primary_up,end,step=2.5,abort=None,busy=None,code=QUIET,settings=None,seen=None,roles=None):
         settings=dict({'pair_auto_mode':pair.MODE,'interval':'10','failure_model':'consecutive'},**(settings or {}))
         pair.request(self.revision)
         state=dict(id=pair.intent()['id'],phase='RUNNING',ran=True,owned=[],before_flags={'wgclient1':'0','ovpnclient1':'0'},network_identity='b'*64,
                    protected={},process_bindings=None,order=['a','b'],policy_hash='c'*64,revision=self.revision,started=self.START-1000)
+        if roles:state['policy_roles']=roles
         pair.save(state)
         selection={'source':{'id':PRIMARY},'target':{'id':RESERVE},'vendor_identity':'d'*64,'order':['a','b']}
         sim={'now':self.START,'journal':{'phase':'ROLLED-BACK','started':self.START-2000},'samples':[],'dispatches':[],'aborts':[],
@@ -123,6 +132,7 @@ class Simulation(Base):
         busy=busy or (lambda t:False)
         abort=abort or (lambda sim:False)
         backend=Mock();backend.order.return_value=(state['order'],state['policy_hash'])
+        if seen is not None:backend.vendor_busy_seen.side_effect=seen
         backend.diagnostic.side_effect=lambda:((['VENDOR-WORKER-BUSY'],selection) if busy(sim['now']-self.START) else ([],selection))
         backend.health.return_value=True;backend.recheck=None
         backend.recovery_ready.side_effect=lambda identifier,s:(identifier==PRIMARY and stable_success(
@@ -144,7 +154,8 @@ class Simulation(Base):
                 # the apply step's first diagnostic refused: rolled back before any switch (transaction.lua apply_steps)
                 sim['aborts'].append(at)
                 sim['journal']={'phase':'ROLLED-BACK','reason':'TRANSACTION-FAILED','failure_code':code,'started':sim['now'],
-                                'pair_transition':{'destination_role':'target'},'source':PRIMARY,'target':RESERVE}
+                                'pair_transition':{'destination_role':'target'},'source':PRIMARY,'target':RESERVE,
+                                'rtp_dispatched':False,'forward_policy_touched':False}  # as native_switch.attempt writes them; nothing dispatched
                 raise native.Refused(code)
             sim['switches'].append(at)
             sim['journal']={'phase':'COMMITTED','source':PRIMARY,'target':RESERVE,'started':sim['now'],'confirmed':sim['now']}
@@ -153,6 +164,7 @@ class Simulation(Base):
             sim['returns'].append((sim['now']-self.START,reason));sim['journal']={'phase':'ROLLED-BACK','started':sim['now']};return True
 
         patches=[patch.object(pair.time,'time',side_effect=lambda:sim['now']),
+                 patch.object(pair.time,'monotonic',side_effect=lambda:sim['now']),patch.object(pair,'_log',side_effect=sim.setdefault('log',[]).append),
                  patch.object(native,'journal_read',side_effect=lambda:dict(sim['journal'])),
                  patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=state['network_identity']),
                  patch.object(pair,'configs',return_value={}),patch.object(pair,'configure_lease',return_value=0),
@@ -220,6 +232,140 @@ class Cycle28(Simulation):
         ledger=self.ledger()
         self.assertEqual(ledger['events'],[],'no aborted attempt is counted as a switch')
         self.assertLessEqual(len(ledger['aborted']),pair.ABORT_KEEP)
+
+
+DEAD={'kind':'rtp-lock-dead','mark':'rtp-lock:9:24680','pid':24680,'workers':1}
+ROLES={'source_rule':'a','target_rule':'b','direction':'first','generic_rules':['a','b'],'source_id':PRIMARY,'target_id':RESERVE}
+
+
+class LongVendorBusy(Simulation):
+    """A long VENDOR-WORKER-BUSY: what was seen is visible; the blocker itself stays. Lua: lua/test_vendor_retry.lua."""
+    def setUp(self):
+        super().setUp()
+        pair.BUSY_TRACK[0]=None
+
+    def test_shared_cases(self):
+        self.assertEqual((pair.BUSY_SEEN_SECONDS,pair.BUSY_SCAN_SECONDS),(120,30))
+        for case in LOCK['cases']:
+            with self.subTest(case['name']):
+                track=None;got=[];scans=[];last=None
+                for index,(now,busy,row) in enumerate(case['ticks']):
+                    def observe(scan):
+                        if scan:scans.append(index)
+                        if row=='raise':raise ValueError('read failed')
+                        return row
+                    track,last=pair.busy_seen_step(track,busy,now,observe)
+                    got.append(last['kind'] if last else None)
+                self.assertEqual(got,case['expect']);self.assertEqual(scans,case['scans'])
+                self.assertEqual(last.get('workers') if last else None,case['workers'])
+
+    def test_every_kind_has_its_own_code(self):
+        self.assertEqual(len(set(pair.BUSY_CODES.values())),5)
+        self.assertEqual(pair.BUSY_CODES,{'rtp-lock-dead':'VENDOR-BUSY-RTP-LOCK-DEAD','rtp-lock-live':'VENDOR-BUSY-RTP-LOCK-LIVE',
+                                          'tunnel-switch':'VENDOR-BUSY-TUNNEL-SWITCH','workers':'VENDOR-BUSY-WORKERS','unidentified':'VENDOR-BUSY-UNIDENTIFIED'})
+
+    def check_dead_holder(self,roles):
+        sim=self.run_sim(lambda t:t<0,1800,busy=lambda t:True,seen=lambda scan:DEAD,roles=roles)
+        self.assertEqual((sim['dispatches'],sim['switches'],sim['attempts']),([],[],[]),'the blocker is not bypassed')
+        for at,value in sim['published']:
+            self.assertEqual(value['state'],'BLOCKED');self.assertEqual(value['blockers'],['VENDOR-WORKER-BUSY'])
+            self.assertEqual((value['source'],value['target']),(PRIMARY,RESERVE))
+            if at<120:
+                self.assertIsNone(value.get('reason'),at);self.assertNotIn('vendor_lock_pid',value)
+            else:
+                self.assertEqual(value['reason'],'VENDOR-BUSY-RTP-LOCK-DEAD',at);self.assertEqual(value['vendor_lock_pid'],24680)
+                self.assertGreaterEqual(value['busy_seconds'],120);self.assertEqual(value['vendor_workers'],1,'the child that still runs is shown')
+        self.assertEqual(min(at for at,v in sim['published'] if v.get('reason')),120)
+        self.assertEqual(len(sim['log']),1,'one log line, not one per tick')
+        self.assertIn('VENDOR-BUSY-RTP-LOCK-DEAD: VENDOR-WORKER-BUSY for 120 s, lock pid 24680, vendor workers seen 1; observed only',sim['log'][0])
+
+    def test_dead_primary_gone_holder_policy_roles_every_normal_session(self):
+        self.check_dead_holder(ROLES)
+
+    def test_dead_primary_gone_holder_without_policy_roles(self):
+        self.check_dead_holder(None)
+
+    def test_each_observed_cause_reaches_the_publication(self):
+        for kind,code in pair.BUSY_CODES.items():
+            pair.BUSY_TRACK[0]=None
+            sim=self.run_sim(lambda t:t<0,125,busy=lambda t:True,seen=lambda scan,kind=kind:{'kind':kind,'mark':'k'})
+            self.assertEqual(sim['published'][-1][1]['reason'],code);self.assertEqual(sim['dispatches'],[])
+
+    def test_the_blocker_ends_the_failover_follows_at_once(self):
+        sim=self.run_sim(lambda t:t<0,320,busy=lambda t:t<300,seen=lambda scan:DEAD)
+        self.assertEqual(sim['switches'],[300.0])
+
+    def test_one_free_tick_ends_the_episode_also_on_the_tick_path_with_no_blockers(self):
+        sim=self.run_sim(lambda t:True,240,busy=lambda t:t<100 or t>=105,seen=lambda scan:DEAD)
+        self.assertEqual(min(at for at,v in sim['published'] if v.get('reason')=='VENDOR-BUSY-RTP-LOCK-DEAD'),225,'120 s after the blocker came back')
+
+    def test_a_failing_or_nonsense_observation_is_unidentified_and_changes_nothing(self):
+        def failing(scan):raise ValueError('read failed')
+        for seen in (failing,lambda scan:'nonsense'):
+            pair.BUSY_TRACK[0]=None
+            sim=self.run_sim(lambda t:t<0,125,busy=lambda t:True,seen=seen)
+            self.assertEqual(sim['published'][-1][1]['reason'],'VENDOR-BUSY-UNIDENTIFIED');self.assertEqual(sim['dispatches'],[])
+
+    def test_a_backend_without_the_observation_never_raises(self):
+        value={'state':'BLOCKED'}
+        self.assertIs(pair.busy_fields(object(),['VENDOR-WORKER-BUSY'],value),value)
+
+
+class VendorNotice(Base):
+    """The Telegram notice of a long VENDOR-WORKER-BUSY. Lua: lua/test_vendor_retry.lua, the same shared cases."""
+    def native(self,reason,**fields):
+        return {'native_failover':dict({'state':'BLOCKED','reason':reason,'time':1000.0,'busy_seconds':125,'vendor_lock_pid':24680,'vendor_workers':1},**fields)}
+
+    def test_shared_text_and_key_every_code_has_a_text(self):
+        for case in LOCK['notices']:
+            self.assertEqual(report.vendor_notice_key(case['native'],1000),case['key'])
+            self.assertEqual(report.vendor_notice_text(case['native']),case['text'])
+        self.assertEqual(set(report.NOTICE_TEXT),set(pair.BUSY_CODES.values()))
+        for text in report.NOTICE_TEXT.values():
+            self.assertNotIn('quiet',text.lower());self.assertNotIn('stale',text.lower())
+
+    def test_once_per_cause_and_pid_and_no_schedule_field_moves(self):
+        state={'sent':990.0,'confirmed_reports':4}
+        with patch.object(report,'send_message') as send:
+            out=report.vendor_notice({},self.native('VENDOR-BUSY-RTP-LOCK-DEAD'),state,1001)
+            self.assertEqual(send.call_count,1)
+            self.assertEqual({k:out.get(k) for k in ('sent','attempt','confirmed_reports','period_keys')},{'sent':990.0,'attempt':None,'confirmed_reports':4,'period_keys':None})
+            report.vendor_notice({},self.native('VENDOR-BUSY-RTP-LOCK-DEAD'),state,1002);self.assertEqual(send.call_count,1)
+            report.vendor_notice({},self.native('VENDOR-BUSY-RTP-LOCK-DEAD',vendor_lock_pid=24681),state,1003);self.assertEqual(send.call_count,2)
+            report.vendor_notice({},self.native('VENDOR-BUSY-RTP-LOCK-LIVE',vendor_lock_pid=24681),state,1004);self.assertEqual(send.call_count,3)
+            report.vendor_notice({},{'native_failover':{'state':'OBSERVING','time':1005.0}},state,1005)
+            self.assertFalse((self.runtime/report.NOTICE_FILE).exists())
+            report.vendor_notice({},self.native('VENDOR-BUSY-RTP-LOCK-LIVE',vendor_lock_pid=24681),state,1006);self.assertEqual(send.call_count,4)
+
+    CONFIG={'telegram_enabled':'1','telegram_chat':'-100','telegram_token':'123:synthetic','telegram_schedule':'interval','telegram_interval':'60','telegram_weekly':'0','telegram_monthly':'0'}
+
+    def test_the_notice_goes_through_deliver_the_schedule_stays_a_backoff_holds_it(self):
+        with patch.object(report,'config_snapshot',return_value=self.CONFIG),patch.object(report,'send_message') as send:
+            public,state,sent=report.deliver(self.native('VENDOR-BUSY-RTP-LOCK-DEAD'),{'sent':990.0,'attempt':990.0,'retry_after':5.0},1001.0)
+            self.assertEqual(send.call_count,1,'told at once');self.assertFalse(sent,'no report was sent');self.assertNotIn('code',public)
+            self.assertEqual((state['sent'],state['attempt']),(990.0,990.0),'the report schedule did not move')
+            import telegram_state
+            self.assertTrue(telegram_state.valid(state),'the sender state keeps its schema')
+            (self.runtime/report.NOTICE_FILE).unlink()
+            report.deliver(self.native('VENDOR-BUSY-RTP-LOCK-DEAD'),{'sent':990.0,'attempt':1000.0,'retry_after':300.0},1001.0)
+            self.assertEqual(send.call_count,1,'the Telegram backoff holds for a notice too')
+
+    def test_only_for_a_fresh_blocked_with_one_of_the_codes(self):
+        with patch.object(report,'send_message') as send:
+            report.vendor_notice({},self.native('VENDOR-BUSY-WORKERS'),{},1000+report.NOTICE_MAX_AGE+1)
+            report.vendor_notice({},self.native('PAIR-WAITING-PROBES'),{},1001)
+            report.vendor_notice({},self.native('VENDOR-BUSY-WORKERS',state='ARMED'),{},1001)
+            report.vendor_notice({},{},{},1001)
+            send.assert_not_called()
+
+    def test_a_failed_send_keeps_the_backoff_and_comes_again(self):
+        with patch.object(report,'send_message',side_effect=report.rejection(429,600)):
+            out=report.vendor_notice({},self.native('VENDOR-BUSY-WORKERS'),{},1001)
+        self.assertEqual((out['last_code'],out['retry_after'],out['attempt'],out['known_failures']),('TELEGRAM-RATE-LIMIT',600,1001,1))
+        self.assertFalse((self.runtime/report.NOTICE_FILE).exists())
+        with patch.object(report,'send_message') as send:
+            report.vendor_notice({},self.native('VENDOR-BUSY-WORKERS'),out,1010);report.vendor_notice({},self.native('VENDOR-BUSY-WORKERS'),out,1020)
+            self.assertEqual(send.call_count,1)
 
 
 class FlapStillDamped(Simulation):

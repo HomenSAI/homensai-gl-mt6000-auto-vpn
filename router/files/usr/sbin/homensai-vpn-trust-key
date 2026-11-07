@@ -1,0 +1,55 @@
+#!/bin/sh
+# HomenSAI Auto VPN release keys on THIS router (installed as /usr/sbin/homensai-vpn-trust-key). Needs root (SSH/console):
+# the router administrator is the final root of trust for updates. Only for the rare case that the owner had to replace
+# the release keys ("everything lost", docs/architecture/SIGNING-2026-11-03.ru.md). VPN and Auto are never touched.
+#   homensai-vpn-trust-key show                      list trusted and revoked release keys with full fingerprints
+#   homensai-vpn-trust-key add /tmp/<key id>.pub     print key id + full fingerprint, ask you to type the key id, trust it
+#   homensai-vpn-trust-key revoke <key id> [<seq>]   distrust a key for release chain entries from <seq> on (default 0)
+# Compare the key id AND the full fingerprint with the owner's release page before typing anything. Keys added here live
+# in /etc/homensai-vpn/keys.local and survive package upgrades; a factory reset removes them with the package.
+KEYS=${HOMENSAI_KEYS:-/etc/homensai-vpn/keys}
+LOCAL=${HOMENSAI_LOCAL_KEYS:-/etc/homensai-vpn/keys.local}
+stop() { echo "STOP: $1: $2" >&2; exit "${3:-1}"; }
+is_key_id() { case "$1" in ''|*[!0-9a-f]*) return 1;; esac; [ ${#1} -eq 16 ]; }
+full_fingerprint() { sed -n 2p "$1" | tr -d '\r\n' | sha256sum | cut -d' ' -f1; }
+revoked() { cat "$KEYS/revoked" "$LOCAL/revoked" 2>/dev/null | sed 's/#.*//' | tr ', ' '\n\n' | grep -q "^$1:"; }
+
+case "$1" in
+show)
+  for path in "$KEYS"/* "$LOCAL"/*; do
+    [ -f "$path" ] && is_key_id "${path##*/}" || continue
+    state=trusted; revoked "${path##*/}" && state="revoked from seq $(cat "$KEYS/revoked" "$LOCAL/revoked" 2>/dev/null | sed 's/#.*//' | tr ', ' '\n\n' | sed -n "s/^${path##*/}://p" | head -1)"
+    echo "${path##*/}  $(full_fingerprint "$path")  $state  ${path%/*}"
+  done
+  ;;
+add)
+  [ "$(id -u)" = 0 ] || stop TRUST-NOT-ROOT "run as root on the router"
+  FILE="$2"
+  [ -f "$FILE" ] || stop TRUST-USAGE "homensai-vpn-trust-key add /tmp/<key id>.pub"
+  [ "$(wc -l < "$FILE" | tr -d ' ')" = 2 ] && sed -n 1p "$FILE" | grep -q '^untrusted comment: ' &&
+    sed -n 2p "$FILE" | tr -d '\r' | grep -q '^[A-Za-z0-9+/]\{56\}$' || stop TRUST-KEY-FORMAT "not a usign public key file"
+  ID=$(usign -F -p "$FILE" 2>/dev/null)
+  is_key_id "$ID" || stop TRUST-KEY-FORMAT "usign cannot read the key"
+  revoked "$ID" && stop TRUST-KEY-REVOKED "key $ID is revoked on this router and cannot be trusted again"
+  if [ -f "$KEYS/$ID" ] || [ -f "$LOCAL/$ID" ]; then echo "key $ID is already trusted"; exit 0; fi
+  echo "key id:           $ID"
+  echo "full fingerprint: $(full_fingerprint "$FILE")"
+  echo "Compare BOTH lines with the owner's release page (GitHub). If anything differs, press Enter to cancel."
+  printf 'Type the key id to trust this key for package updates: '
+  read -r ANSWER
+  [ "$ANSWER" = "$ID" ] || stop TRUST-CANCELLED "nothing was changed" 3
+  mkdir -p "$LOCAL" && cp "$FILE" "$LOCAL/$ID" && chmod 644 "$LOCAL/$ID" || stop TRUST-WRITE "cannot write $LOCAL"
+  echo "TRUSTED: $ID ($LOCAL/$ID); 02-install.sh now accepts releases signed by it"
+  ;;
+revoke)
+  [ "$(id -u)" = 0 ] || stop TRUST-NOT-ROOT "run as root on the router"
+  is_key_id "$2" || stop TRUST-USAGE "homensai-vpn-trust-key revoke <16-hex key id> [<first seq>]"
+  SEQ=${3:-0}
+  case "$SEQ" in ''|*[!0-9]*) stop TRUST-USAGE "seq must be a number";; esac
+  mkdir -p "$LOCAL" && echo "$2:$SEQ" >> "$LOCAL/revoked" || stop TRUST-WRITE "cannot write $LOCAL"
+  echo "REVOKED: $2 from chain seq $SEQ"
+  ;;
+*)
+  sed -n '2,9s/^# \{0,1\}//p' "$0"; exit 2
+  ;;
+esac

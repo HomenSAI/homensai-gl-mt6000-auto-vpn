@@ -116,7 +116,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
   // Return to the primary is offered on the Auto card whenever traffic is on the reserve, including a committed reserve.
   assert(src.includes("STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE','COMMITTED'].indexOf(ns.state)>=0"));
   // Auto power remains two-state; channel boxes delegate confirmation/transition freshness to the shared route model.
-  assert(context.autoWorking({key:'ok'})&&context.autoWorking({key:'reserve'})&&context.autoWorking({key:'switching',running:true}));assert(!context.autoWorking({key:'switching'}),'a pending start or a pause is not working Auto');
+  assert(context.autoWorking({key:'ok'})&&context.autoWorking({key:'reserve'}));assert(!context.autoWorking({key:'switching'}),'a pending start or a pause is not working Auto');
   for(const key of ['off','problem','unknown',undefined])assert(!context.autoWorking({key}),String(key));
   assert(src.includes("hv-auto-lit-on")&&src.includes("hv-auto-lit-off"),'the round button is green when Auto works, red when it does not');
   assert(src.includes("manualChannelTone(p,key,path")&&src.includes("'Press to turn Auto off'"));
@@ -130,7 +130,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
   assert.equal(light({state:'OBSERVING',certified:false}).key,'off');
   for(const state of ['ARMED','APPLYING','WAIT-CLIENT','RESTORING'])assert.equal(light({state}).lamp,'yellow',state);
   assert.equal(light({state:'STOPPED'},{requested:'on',requested_at:now}).lamp,'yellow');
-  assert.equal(light({state:'COMMITTED'}).lamp,'orange');
+  assert.equal(light({state:'COMMITTED'}).lamp,'green');
   for(const state of ['DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE','TRIAL-REQUIRED'])assert.equal(light({state}).lamp,'red',state);
   assert.equal(light({state:'BLOCKED',blockers:['HARDWARE-ACCELERATOR-UNVERIFIED']},{requested:'on'}).lamp,'red');
   assert.equal(light({state:'BLOCKED',blockers:['HARDWARE-ACCELERATOR-UNVERIFIED']},{requested:'off'}).lamp,null);
@@ -142,7 +142,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
   for(const state of ['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'])assert.equal(light({state}).lamp,null,state);
   // Stale or missing status is never green; the light says there is no data.
   assert.equal(context.autoLightModel({time:now-500,native_failover:{time:now-1,state:'OBSERVING',certified:true}},{},now).key,'unknown');
-  assert.equal(context.autoLightModel({time:now-1,native_failover:{time:now-200,state:'OBSERVING',certified:true}},{},now).lamp,null);
+  assert.equal(context.autoLightModel({time:now-1,native_failover:{time:now-200,state:'OBSERVING',certified:true}},{},now).lamp,'yellow');
   assert.equal(context.autoLightModel({time:now-1,rpc_error:'RPC-UNAVAILABLE',native_failover:{time:now-1,state:'OBSERVING',certified:true}},{},now).key,'unknown');
   // Exhaustive: one lamp at most, text always present, green only for a fresh certified watch.
   const states=['DISABLED','STOPPED','EXPIRED','ROLLED-BACK','OBSERVING','TRIAL-REQUIRED','ARMED','APPLYING','WAIT-CLIENT','COMMITTED','RESTORING','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE','BLOCKED','UNKNOWN-STATE',undefined];
@@ -152,7 +152,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
     assert(['off','unknown','ok','switching','reserve','problem'].includes(l.key));
     assert(l.lamp===null||['green','yellow','orange','red'].includes(l.lamp));
     assert(typeof l.title==='string'&&l.title.length>3&&typeof l.hint==='string'&&l.hint.length>10);
-    if(l.lamp==='green')assert(state==='OBSERVING'&&certified===true&&age<=30+(context.UI_DISPLAY_GRACE||0)&&!rpc);
+    if(l.lamp==='green')assert((state==='COMMITTED'||state==='OBSERVING'&&certified===true)&&age<=30+(context.UI_DISPLAY_GRACE||0)&&!rpc);
   }
   assert(combos>=800);
   // The button carries no status colour class any more.

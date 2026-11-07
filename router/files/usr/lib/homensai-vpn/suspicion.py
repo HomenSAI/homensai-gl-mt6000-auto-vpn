@@ -65,6 +65,7 @@ class SuspicionWatcher:
         self.counters=counters;self.handshake=handshake
         self.channels={};self.track={};self.next_poll=0.0
         self.wg_at=None;self.wg_device_at={}
+        self.stall_seconds=STALL_SECONDS  # the monitor sets stall.STALL_SECONDS (3 s) with option stall_sensor on
 
     def configure(self,items):
         current={}
@@ -113,7 +114,7 @@ class SuspicionWatcher:
             seen['last']=sample
             stalled=now-seen['rx_at'];sent=sample['tx_packets']-seen['rx_base']['tx_packets']
             sent_bytes=sample['tx_bytes']-seen['rx_base']['tx_bytes']
-            if stalled>=STALL_SECONDS and sent>=MIN_TX_PACKETS and sent_bytes>=MIN_TX_BYTES:
+            if stalled>=self.stall_seconds and sent>=MIN_TX_PACKETS and sent_bytes>=MIN_TX_BYTES:
                 found.append(dict(base,reason='rx-stall',evidence={'stalled_s':round(stalled,1),'tx_packets':sent}))
                 continue
             if (channel['protocol']=='wireguard' and any(now-t>=HANDSHAKE_SETTLE for t in seen['tx_times'])

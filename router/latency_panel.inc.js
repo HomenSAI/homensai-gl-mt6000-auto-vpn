@@ -88,7 +88,10 @@ function latencyHistoryRows(status,inventory,now){
     if(typeof h.rows_json!=='string'||h.rows_json.length>850000)return [];
     try{rows=JSON.parse(h.rows_json);}catch(error){return [];}
   }
-  if(!Array.isArray(rows)||rows.length>10081||h.rows_count!==undefined&&(!Number.isInteger(h.rows_count)||h.rows_count!==rows.length))return [];
+  // The decoded rows must match the count this reply carries (served_rows_count); rows_count is what the router retains
+  // and may be larger than one transported week (review F-54). Older replies without served_rows_count use rows_count.
+  var served=h.served_rows_count!==undefined?h.served_rows_count:h.rows_count;
+  if(!Array.isArray(rows)||rows.length>10081||served!==undefined&&(!Number.isInteger(served)||served!==rows.length))return [];
   return rows.filter(function(r){return Array.isArray(r)&&r.length===6&&Number.isFinite(r[0])&&r[0]>=now-LATENCY_HISTORY_SECONDS&&r[0]<=now+5&&[1,2].every(function(i){return Number.isInteger(r[i+2])&&r[i+2]>=0&&r[i+2]<=120&&(r[i+2]===0?r[i]===null:Number.isInteger(r[i])&&r[i]>=0&&r[i]<=60000*r[i+2]);})&&['source','target','unknown','off','switching','blocked','down'].indexOf(r[5])>=0;}).map(function(r){var decoded=r.slice();[1,2].forEach(function(i){decoded[i]=r[i+2]?r[i]/(10*r[i+2]):null;});return decoded;}).sort(function(a,b){return a[0]-b[0];});
 }
 // Points are joined while the gap is within 2.5 measurement periods (the period follows the probe level, 30-300 s);

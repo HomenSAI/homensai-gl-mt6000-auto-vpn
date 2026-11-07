@@ -128,6 +128,12 @@ local function guarded(fn)
   return M.FALLBACK
 end
 
+-- Plan item 54 (F-16): MAINTENANCE-IN-PROGRESS while the package hooks hold their marker (maintenance.lua), else nil
+function M.maintenance(deps)
+  local ok,code=pcall(function() return require('maintenance').blocker(deps.read,deps.persist,deps.now()) end)
+  return ok and code or nil
+end
+
 local function start_refused(code,extra)
   local reply=canon.object({accepted=false,blockers=canon.array({code})})
   for k,v in pairs(extra or {}) do reply[k]=v end
@@ -159,6 +165,26 @@ function M.owner_resume_wanted(deps)
   return ok and wanted==true
 end
 
+-- auto_control.integrity_blocker (BH-04, bug hunt 07.11.2026): the init's self-check decided mode no-auto (no
+-- supervisor) or stopped (no service): a Start would only queue an intent nobody consumes that starts Auto later.
+-- No report / another mode / an unreadable report: nil (the init gate decides).
+M.INTEGRITY_NO_AUTO={['no-auto']=true,stopped=true}
+function M.integrity_blocker(deps)
+  local record=read_json_safe(deps,deps.runtime..'/integrity.json',NULL)
+  if canon.is_object(record) and type(record.mode)=='string' and M.INTEGRITY_NO_AUTO[record.mode] then
+    return 'INTEGRITY-AUTO-BLOCKED'
+  end
+  return nil
+end
+
+-- auto_control.service_auto_blocker (owner decision 07.11.2026 15:10): the init started the monitor but, with option
+-- enabled other than 1, no Auto supervisor (run/service-auto.json code SERVICE-AUTO-OFF): Start is refused, not queued.
+function M.service_auto_blocker(deps)
+  local record=read_json_safe(deps,deps.runtime..'/service-auto.json',NULL)
+  if canon.is_object(record) and record.code=='SERVICE-AUTO-OFF' then return 'SERVICE-AUTO-OFF' end
+  return nil
+end
+
 function M.start(deps,arguments)
   if arguments.control_revision==nil or not only(arguments,{control_revision=true,request_source=true}) then
     return start_refused('CONTROL-REVISION-STALE')
@@ -171,7 +197,12 @@ function M.start(deps,arguments)
     -- auto_control.start: the first locked check
     local first=locked(deps,function()
       if revision~=M.revision_locked(deps) then return start_refused('CONTROL-REVISION-STALE') end
+      -- plan item 54: a package operation runs: nothing starts meanwhile (auto_control.start)
+      local maintenance=M.maintenance(deps)
+      if maintenance then return start_refused(maintenance) end
       if deps.exists(runtime..'/speed-pause.json') then fallback() end  -- speed_pause.public(): agent.py decides
+      local blocker=M.integrity_blocker(deps) or M.service_auto_blocker(deps)
+      if blocker then return start_refused(blocker) end
       return nil
     end)
     if first then return first end
@@ -203,6 +234,9 @@ function M.start(deps,arguments)
     if settings.pair_auto_mode~=M.MODE then fallback() end  -- the legacy certified-trial Start stays in Python
     -- pair_auto.request
     return locked(deps,function()
+      -- F-16: the guard writes its marker under this same lock before it assesses (pair_auto.request)
+      local maintenance=M.maintenance(deps)
+      if maintenance then return start_refused(maintenance) end
       if deps.exists(runtime..'/speed-pause.json') then fallback() end
       if revision~=M.revision_locked(deps) then return start_refused('CONTROL-REVISION-STALE') end
       local rok,state,old=pcall(function() return deps.read_state(),deps.intent() end)
@@ -256,13 +290,19 @@ function M.stop(deps,arguments)
         local now=deps.now()
         local rok,rerr=pcall(M.revision_locked,deps,true)
         local revision_error=(not rok) and (rerr or 'revision') or nil
+        local volatile_error=nil
         if deps.exists(runtime..'/pair-auto-control.json') then
-          local marker_row=read_json(deps,runtime..'/auto-control-revision.json',canon.object())
-          if not canon.is_object(marker_row) then error('marker',0) end
-          local marker=marker_row.revision
-          if marker==nil then marker='unverified' end
-          write_json(deps,runtime..'/pair-auto-control.json',canon.object({mode='off',revision=marker,time=canon.float(now),
-            request_source=label(arguments.request_source)}))
+          -- review F-26 (06.11.2026): a failed RAM write never skips the durable latch below (auto_control.stop):
+          -- the rotated revision already fences the pair; the reply says pair_intent_unverified
+          local vok,verr=pcall(function()
+            local marker_row=read_json(deps,runtime..'/auto-control-revision.json',canon.object())
+            if not canon.is_object(marker_row) then error('marker',0) end
+            local marker=marker_row.revision
+            if marker==nil then marker='unverified' end
+            write_json(deps,runtime..'/pair-auto-control.json',canon.object({mode='off',revision=marker,time=canon.float(now),
+              request_source=label(arguments.request_source)}))
+          end)
+          if not vok then volatile_error=verr or 'pair-intent' end
         end
         pcall(deps.terminalize)
         local request=read_json_safe(deps,runtime..'/auto-control.json',canon.object())
@@ -272,10 +312,16 @@ function M.stop(deps,arguments)
         local old=read_json_safe(deps,persist..'/native-stop.json',canon.object())
         if not canon.is_object(old) then old=canon.object() end
         local extra=unverified and {settings_unverified=true} or {}
+        if volatile_error~=nil then extra.pair_intent_unverified=true end
         local previous=old.requested
         local requested=request.time
         if requested==nil then requested=0 end
         requested=finite(requested) and canon.number(requested) or math.huge
+        -- T1 (trace conformance 04.11.2026): pair mode never writes the legacy auto-control.json (time 0), so a Stop after
+        -- Start, Stop, Start answered already_requested with the older latch: the Start's marker stayed newer and Auto came
+        -- back after the next power cut. The owner's Start is the later of the request and the resume marker.
+        local started=require('boot_resume').marker_time(deps.read,persist)
+        requested=math.max(requested,started)
         local needs_global=unverified or not truthy(trial) or changed
         if revision_error==nil and not truthy(old.control_revision_failed) and next(old)~=nil
            and finite(previous) and canon.number(previous)>0
@@ -286,10 +332,14 @@ function M.stop(deps,arguments)
           return reply
         end
         local floor=finite(previous) and previous or 0
+        -- The router has no RTC: after a boot the wall clock can stand behind a marker written before the power cut. The
+        -- Stop is still the newer one (boot_resume.wanted: stopped>=at).
+        if finite(started) and started>canon.number(floor) then floor=canon.float(started) end
         local at=(canon.number(floor)>now) and floor or canon.float(now)
         local record=canon.object({requested=at,trial=trial==nil and NULL or trial,request_source=label(arguments.request_source)})
         if revision_error~=nil then record.control_revision_failed=true end
-        if needs_global or revision_error~=nil then record.all_trials=true end
+        -- a refreshed latch never narrows a global one (a give-up, a Stop with unverified settings)
+        if needs_global or revision_error~=nil or old.all_trials==true then record.all_trials=true end
         write_json(deps,persist..'/native-stop.json',record)
         if revision_error~=nil then error(revision_error,0) end
         local reply=canon.object({queued=true})
@@ -401,6 +451,7 @@ end
 function M.fault_start(deps,arguments)
   local ok,reply=pcall(function()
     return locked(deps,function()
+      if M.maintenance(deps) then fallback() end  -- plan item 54: agent.py answers MAINTENANCE-IN-PROGRESS first
       local marker=read_json(deps,deps.runtime..'/auto-control-revision.json',canon.object())
       if not canon.is_object(marker) then fallback() end
       local revision=count(marker)==1 and marker.revision or nil

@@ -1,0 +1,29 @@
+#!/bin/sh
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
+# WireGuard kernel events as a fast sensor of HomenS.AI Auto VPN (GL-SENSORS-2026-11-04.ru.md, item 2).
+# GL's patched WireGuard sends hotplug class 'wireguard' with ACTION=KEYPAIR-CREATED|REKEY-TIMEOUT|REKEY-GIVEUP and
+# ifname=<device>; hotplug-call sources every file of this directory in its own subshell, so GL's ifup.sh/ifdown.sh
+# keep working unchanged. This listener changes nothing: while the monitor has written FLAG (option wg_events on) it
+# appends one line '<uptime> <ACTION> <ifname>' to a RAM file (no process except an optional `ubus send`), keeping
+# at most about LIMIT bytes (the older half is dropped). Never a failure proof by itself (wg_events.lua).
+HOMENSAI_WG_RUN=${HOMENSAI_WG_RUN:-/var/run/homensai-vpn}
+HOMENSAI_WG_UPTIME=${HOMENSAI_WG_UPTIME:-/proc/uptime}
+homensai_wg_event() {
+    local flag="$HOMENSAI_WG_RUN/wg-events.on" file="$HOMENSAI_WG_RUN/wg-events.log" up rest mode= size
+    [ -f "$flag" ] || return 0
+    case "$ACTION" in KEYPAIR-CREATED|REKEY-TIMEOUT|REKEY-GIVEUP) ;; *) return 0 ;; esac
+    case "$ifname" in ''|*[!A-Za-z0-9_.-]*) return 0 ;; esac
+    [ "${#ifname}" -le 15 ] || return 0
+    read -r up rest < "$HOMENSAI_WG_UPTIME" 2>/dev/null || return 0
+    case "$up" in ''|*[!0-9.]*) return 0 ;; esac
+    if [ -f "$file" ]; then
+        size=$(wc -c < "$file" 2>/dev/null)
+        size=$(( ${size:-0} + 0 ))
+        [ "$size" -le 8192 ] || { tail -n 60 "$file" > "$file.new" 2>/dev/null && mv -f "$file.new" "$file"; }
+    fi
+    echo "$up $ACTION $ifname" >> "$file"
+    read -r mode < "$flag" 2>/dev/null
+    [ "$mode" = ubus ] && ubus send homensai.wg "{\"action\":\"$ACTION\",\"ifname\":\"$ifname\",\"uptime\":\"$up\"}" >/dev/null 2>&1
+    return 0
+}
+homensai_wg_event

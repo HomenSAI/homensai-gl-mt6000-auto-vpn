@@ -40,7 +40,25 @@ APPLICATION = {path.stem for path in LIB.glob('*.py')}
 # 03.11.2026: setup_recovery gained the optional rescue_stable field (docs/architecture/RESCUE-STABLE-2026-11-03.ru.md)
 # 03.11.2026: setup_recovery gained the optional owner failure_model (channel_model, docs/architecture/HMM-DETECTOR-2026-11-03.ru.md)
 # integration alpha8: setup_response gained the optional server_pick_model (the expert setting of the approved page)
-LIST_SHA256 = 'e0f75fcc96913e9cfa2ff18fb02ed24b9e48cf33470cfbe7eb9d45fc28cff6d8'
+# 04.11.2026 (2.1.0-alpha9 work): new methods advisor (read), advisor_apply and advisor_settings (write) of the network
+# advisor (docs/architecture/NETWORK-ADVISOR-2026-11-04.ru.md); answered by agent.py, not by the status server
+# integration 2.1.0-alpha9 (04.11.2026): new write method server_key_accept {profile, observed} - the page's "Accept the
+# new key" (server_pin.rpc_accept, answered by agent.py whichever monitor runs; ACL write)
+# 04.11.2026 (owner, wizard exit): new write method setup_onboarding_skip {} (setup_config.skip_onboarding, agent.py, ACL write)
+# 04.11.2026 (per-target probe log): new read method probe_targets {after, limit} (probe_target_log.py; answered by the Lua monitor
+# or by agent.py from the same RAM ring, ACL read; not a status-server method)
+# 04.11.2026 (fast end): advisor_settings gained the optional fast, turbo and turbo_ack
+# review 04.11.2026 (finding 7): setup_recovery gained the optional flap_* fields of recovery_settings.payload
+# 04.11.2026 (expert settings of the page): new write method setup_detector {retry_backoff, probe_spread, reserve_probe_interval,
+# parallel_recheck, auto_event_wake, wan_sensor, wan_recover_grace, wg_events, stall_sensor, stall_veto, heartbeat_quorum,
+# server_key_pin, probe_target_log} (setup_config.detector_payload, agent.py, ACL write); setup_recovery declares the flap_* fields
+# that recovery_settings.payload already accepted (the page now sends them)
+# review 06.11.2026 (F-14): new write method telegram_destination {} - the full stored Telegram destination for the settings
+# page (agent.py, ACL write); the read-ACL inventory shows its mask only (test_pair_ownership_guards)
+# 07.11.2026 (F-35, commit 5c4650ef; BH-07 6333d883 kept the signature): pair_manual gained the optional client_request_id
+# (8-64 of [A-Za-z0-9_-], the idempotent manual click, pair_manual.request / lua manual_request.request). The only
+# difference of the list since 8d76c90b; no new method, pair_manual stays write-ACL only, acl.d file unchanged.
+LIST_SHA256 = '177abe06d7f564b1d0b23105ff2c0a961b4656921df51486724844db95e1588e'
 
 
 def plugin_text():

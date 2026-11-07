@@ -1,4 +1,4 @@
-import importlib.util
+import hashlib,importlib.util,os,tempfile
 from pathlib import Path
 import unittest
 p=Path(__file__).resolve().parents[1]/'scripts/publish-reviewed.py'
@@ -32,3 +32,42 @@ class PublicationGuards(unittest.TestCase):
             rows=self.matrix();rows[1][key]=value
             with self.assertRaises(ValueError):m.checked_receipt(rows,'a'*40)
         with self.assertRaises(ValueError):m.checked_receipt(self.matrix()[:1],'a'*40)
+    def test_push_sends_the_verified_commit_not_a_movable_branch(self):
+        # F-02: the old code pushed refs/heads/feature/github-publication-*; moving that branch changed what was published.
+        public='a1'*20
+        argv=m.push_arguments(public)
+        self.assertEqual(argv[-1],public+':refs/heads/main')
+        self.assertFalse(any('github-publication' in item for item in argv))
+        for bad in ['feature/github-publication-'+public[:12],public[:12],'HEAD',None]:
+            with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'PUBLICATION-LEDGER-SHA'):m.push_arguments(bad)
+        source=Path(m.__file__).read_text(encoding='utf-8')
+        self.assertNotIn("'refs/heads/feature/github-publication-'+public[:12]+':refs/heads/main'",source)
+        self.assertIn('def push(self):run(*push_arguments(public))',source)
+    def test_resume_validates_full_shas_parent_and_tree(self):
+        public,parent,tree='a'*40,'b'*40,'c'*40
+        def fake(answers):
+            return lambda *args:answers[args[-1]]
+        good={public+'^{commit}':public,public:public+' '+parent,public+'^{tree}':tree}
+        self.assertEqual(m.checked_public_commit(public,parent,tree,fake(good)),public)
+        for key,value in [(public+'^{commit}','d'*40),(public,public+' '+'d'*40),(public,public+' '+parent+' '+'d'*40),(public+'^{tree}','d'*40)]:
+            with self.subTest(key=key),self.assertRaisesRegex(ValueError,'PUBLICATION-RESUME-TREE'):
+                m.checked_public_commit(public,parent,tree,fake(dict(good,**{key:value})))
+        for bad in [('feature/x',parent),(public[:12],parent),(public,'main')]:
+            with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'PUBLICATION-LEDGER-SHA'):
+                m.checked_public_commit(bad[0],bad[1],tree,fake(good))
+    def test_artifact_and_notes_are_snapshotted_after_validation(self):
+        # F-03: replacing the original file after its hash was checked must not change the uploaded bytes.
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);source=root/'pkg_1_all.ipk';source.write_bytes(b'reviewed bytes')
+            wanted=hashlib.sha256(b'reviewed bytes').hexdigest()
+            copy,digest=m.snapshot_file(source,root/'snap',wanted)
+            self.assertEqual(digest,wanted);self.assertEqual(copy.name,source.name);self.assertNotEqual(copy,source)
+            source.write_bytes(b'swapped after the check')
+            self.assertEqual(copy.read_bytes(),b'reviewed bytes')
+            with self.assertRaisesRegex(ValueError,'RELEASE-ARTIFACT-HASH'):m.snapshot_file(source,root/'snap2',wanted)
+            with self.assertRaises(FileExistsError):m.snapshot_file(root/'snap'/source.name,root/'snap',None)
+            os.chmod(copy,0o600)
+        text=Path(m.__file__).read_text(encoding='utf-8')
+        body=text[text.index('def publish(a,signing_directory):'):]
+        self.assertLess(body.index("a.artifact,_=snapshot_file("),body.index('scan_publication(a.source'))
+        self.assertLess(body.index("a.notes,_=snapshot_file("),body.index('scan_publication(a.source'))

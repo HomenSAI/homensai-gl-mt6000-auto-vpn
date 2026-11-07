@@ -1,0 +1,53 @@
+/* HomenS.AI Auto VPN: owner-approved F1 «Золотая сетка» (04.11.2026), copied from private/ui-fibonacci-2026-11-03/_src/f1.css without the mockup-only parts (the "MOCK" banner and the «Как применён Фибоначчи» overlay). Scoped to .hvx by router/build_sidebar_ui.py. */
+/* ===== F1 «Золотая сетка»: layout on 38.2 / 61.8, golden status rectangle ===== */
+.wrap{max-width:calc(1220px + 2 * var(--gut))}
+h1{font-size:34px;line-height:1.25}
+h2{font-size:21px;line-height:1.25}
+h3{font-size:16px}
+.pg-h{font-size:34px;margin:5px 0 5px}
+.gold{display:grid;grid-template-columns:38.2fr 61.8fr;gap:var(--gap);align-items:start}
+.gcol{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
+.gcol>.card+.card{margin-top:0}
+.gr{container-type:inline-size}
+.hero{aspect-ratio:1.618034/1;display:flex;flex-direction:column;justify-content:space-between;gap:var(--f21);padding:var(--f21)}
+.hero-top{display:flex;gap:var(--f21);align-items:flex-start}
+.hero-t{min-width:0}
+.hero-t p{margin:5px 0 0}
+.hero-act{display:flex;flex-direction:column;gap:var(--f13);align-items:flex-start}
+.lamp.xl{box-shadow:0 0 0 8px color-mix(in srgb,currentColor 0%,transparent);margin-top:5px}
+.lamp.xl.g{box-shadow:0 0 0 8px color-mix(in srgb,var(--lamp-g) 20%,transparent)}
+.lamp.xl.y{box-shadow:0 0 0 8px color-mix(in srgb,var(--lamp-y) 22%,transparent)}
+.lamp.xl.r{box-shadow:0 0 0 8px color-mix(in srgb,var(--lamp-r) 20%,transparent)}
+.chpair{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr}
+.chpair:has(.ch[data-ch="primary"].active){grid-template-columns:1.618fr 1fr}
+.chpair:has(.ch[data-ch="reserve"].active){grid-template-columns:1fr 1.618fr}
+.chpair .ch{min-width:0}
+.ch .top{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:var(--f8);align-items:center}
+.ch .top>span:last-child{grid-column:1/-1;justify-self:start;margin:var(--f8) 0 0}
+.ch .row{gap:var(--f8)}
+.stcard .tiles{grid-template-columns:1fr 1fr}
+.stcard .tile:first-child{grid-column:1/-1}
+.stcard .tile:first-child b{font-size:34px;line-height:42px}
+.tests{display:grid;grid-template-columns:38.2fr 61.8fr;gap:var(--gap);margin-top:var(--gap);align-items:start}
+.tests .card{margin-top:0}
+.tbox{min-height:34px;margin:0 0 var(--f8);font-size:13px;line-height:21px}
+.wiz{display:grid;grid-template-columns:38.2fr 61.8fr;gap:var(--gap);align-items:start;max-width:987px}
+.wiz .steps{flex-direction:column;gap:var(--f13)}
+.wiz .steps li{border-top:0;border-left:5px solid var(--line);padding:var(--f5) 0 var(--f5) var(--f13);font-size:16px}
+.wiz .steps li.done{border-color:var(--ok)}.wiz .steps li.cur{border-color:var(--acc)}
+@media (max-width:900px){
+  .gold,.tests,.wiz{display:flex;flex-direction:column;align-items:stretch}
+  .gcol{display:contents}
+  .gold .hero{order:1}.gold .chpair{order:2}.gold .evcard{order:3}.gold .stcard{order:4}
+  .hero{aspect-ratio:auto;padding:var(--pad);gap:var(--f13)}
+  .hero-top{gap:var(--f13)}
+  .ch .top{display:flex}
+  .ch .top>span:last-child{margin:0 0 0 auto;grid-column:auto}
+  .chpair,.chpair:has(.ch[data-ch="primary"].active),.chpair:has(.ch[data-ch="reserve"].active){grid-template-columns:1fr}
+  .tests{gap:var(--gap)}
+  .wiz .steps{flex-direction:row;gap:var(--f8)}
+  .wiz .steps li{border-left:0;border-top:5px solid var(--line);padding:var(--f8) 0 0}
+  .wiz .steps li.done{border-color:var(--ok)}.wiz .steps li.cur{border-color:var(--acc)}
+}
+
+@container (max-width:520px){.chpair{grid-template-columns:1fr!important}}

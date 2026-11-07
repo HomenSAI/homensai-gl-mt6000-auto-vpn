@@ -59,6 +59,15 @@ class LatencyHistoryTests(unittest.TestCase):
         h.data['rows']=[[stamp,599999.9,599999.8,120,120,'unknown',key] for stamp in range(now-WEEK,now+1,60)]
         return LatencyHistory(h.data)
 
+    def test_served_count_is_separate_from_retained_count(self):
+        # review F-54, same rule as the website history: rows_count is retained, served_rows_count is carried
+        h=self.week_fixture();key=h.data['current']
+        for count in (10081,10082,43201):
+            h.data['rows']=[[900000+i*60,10.0,20.0,1,1,'source',key] for i in range(count)]
+            p=h.public()
+            self.assertEqual((p['rows_count'],p['retained_rows_count'],p['served_rows_count']),(count,count,10081))
+            self.assertEqual(len(json.loads(p['rows_json'])),p['served_rows_count'])
+
     def test_seven_days_boundary_save_load_and_public_reply_budget(self):
         h=self.week_fixture();self.assertEqual(len(h.data['rows']),10081)
         h.observe(snapshot(900060),{'history_days':7},900060)

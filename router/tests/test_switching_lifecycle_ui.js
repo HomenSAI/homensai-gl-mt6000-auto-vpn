@@ -78,7 +78,7 @@ async function main(){
       if(card.attrs['data-selected']==='true')assert(!/можно переключиться|you can switch/.test(card.text()),'the channel in use never offers a switch to itself');
     }
     const light=c.autoLightModel(held,inventory,1000);assert(c.autoRuns(light),'a manual choice keeps Auto running');
-    const sidebar=new N('div');c.fillSideStatus(sidebar,held,inventory);assert(sidebar.text().includes(language==='ru'?'Auto вкл.':'Auto ON'),'a manual hold is a running Auto: the lamp stays on');
+    const sidebar=new N('div');c.fillSideStatus(sidebar,held,inventory);assert(sidebar.text().includes(c.autoStateText(light)),'a manual hold is a running Auto: the lamp stays on');
   }
   console.log('PASS: a manual choice keeps Auto running and shows no Resume Auto command EN/RU');
   // Every status-call consumer shares dispatch provenance. Clock values are never used to order replies.

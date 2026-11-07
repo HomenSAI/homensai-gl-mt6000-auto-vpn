@@ -427,6 +427,36 @@ class WorkerAndFileTests(unittest.TestCase):
             (root/'rtp2.lock').symlink_to(root/'missing')
             self.assertGreater(platform._workers()['busy'], 0)
 
+    def test_vendor_busy_seen_is_an_observation_and_changes_nothing(self):
+        import rollback_recovery as recovery
+        with self.environment() as (root, proc, _, _):
+            lock = root/'rtp2.lock'; lock.write_text('999999\n')  # dead pid, EXIT trap never ran
+            with patch.object(recovery, 'VENDOR_LOCK', str(lock)):
+                row = recovery.vendor_busy_seen()
+                self.assertEqual((row['kind'], row['pid']), ('rtp-lock-dead', 999999))
+                self.assertEqual(row['mark'], 'rtp-lock:%d:999999' % lock.stat().st_ino)
+                self.assertNotIn('workers', row, 'no process scan on a plain tick')
+                self.assertTrue(recovery.rtp_lock_busy(), 'the blocker stays for this very lock')
+                self.assertGreater(platform._workers()['busy'], 0, 'nothing changed the plain worker view')
+                self.assertTrue(lock.exists(), 'the lock is left alone')
+                self.assertEqual(recovery.vendor_busy_seen(True)['workers'], 0)
+                self.process(proc, 'rtp2.sh', 'do_wait')
+                row = recovery.vendor_busy_seen(True)
+                self.assertEqual((row['kind'], row['workers']), ('rtp-lock-dead', 1), 'a dead holder can leave work running')
+                lock.write_text(str(os.getpid())+'\n')
+                self.assertEqual(recovery.vendor_busy_seen()['kind'], 'rtp-lock-dead', 'the number went to another process')
+                lock.write_text('garbage\n')
+                self.assertEqual(recovery.vendor_busy_seen()['kind'], 'unidentified')
+                lock.write_text('999999\n')
+                with patch('pathlib.Path.read_bytes', side_effect=[b'999999\n', PermissionError()]), patch('pathlib.Path.exists', return_value=True):
+                    self.assertEqual(recovery.vendor_busy_seen()['kind'], 'unidentified', 'a failed read proves no death')
+                lock.unlink()
+                row = recovery.vendor_busy_seen(True)
+                self.assertEqual((row['kind'], row['mark']), ('workers', 'no-file'))
+            with patch.object(recovery, 'VENDOR_LOCK', str(root/'missing.lock')), patch.object(platform, '_workers', return_value={'busy': 0, 'verified': True}):
+                row = recovery.vendor_busy_seen(True)
+                self.assertEqual((row['kind'], row['mark'], row['workers']), ('unidentified', 'no-file', 0), 'no file and no worker is still not quiet')
+
     def test_only_the_proven_stale_rtp_lock_is_quiet_during_a_vendor_rebuild_proof(self):
         import rollback_recovery as recovery
         with self.environment() as (root, _, _, _):

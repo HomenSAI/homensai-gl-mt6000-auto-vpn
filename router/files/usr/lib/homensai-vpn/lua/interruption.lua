@@ -38,7 +38,11 @@ M.TEXT={
   ['RESTART-INTERRUPTED-RESERVE-HOLD']='power lost while the reserve channel was held',
   ['RESTART-INTERRUPTED-OPERATION']='power lost during normal operation with Auto on',
   ['RESTART-INTERRUPTED-AUTO-OFF']='power lost while Auto was off',
+  -- GL-SENSORS-2026-11-04 item 5 (boot_cause.lua): a reboot by the GL timer and a kernel crash are no power cut
+  ['RESTART-PLANNED-REBOOT']='planned reboot by the router timer (gl_timer), not an interruption',
+  ['RESTART-KERNEL-CRASH']='the router kernel crashed (a new record in the GL crash log): not a power cut',
 }
+M.REASONS={reboot=true,['planned-reboot']=true}
 
 local function decode(text)
   if type(text)~='string' then return nil end
@@ -55,6 +59,14 @@ function M.previous(text)
   local state=row and row.state
   if state=='stopped' or state=='starting' or state=='running' then return state end
   return 'invalid'
+end
+
+-- previous_reason(text): the shutdown reason stored with 'stopped' (system shutdown only), else nil
+function M.previous_reason(text)
+  local row=decode(text)
+  if not row or row.state~='stopped' then return nil end
+  if type(row.reason)=='string' and M.REASONS[row.reason] then return row.reason end
+  return nil
 end
 
 -- auto_on(read, runtime, persist): the Auto intent of the run that ended
@@ -80,8 +92,12 @@ function M.classify(f)
     if f.previous=='stopped' or f.stopped_since then return 'RESTART-CLEAN' end
     return 'RESTART-PROCESS'
   end
-  if f.previous=='stopped' then return 'RESTART-CLEAN' end
+  if f.previous=='stopped' then
+    if f.reason=='planned-reboot' then return 'RESTART-PLANNED-REBOOT' end
+    return 'RESTART-CLEAN'
+  end
   if f.previous==nil then return 'RESTART-FIRST-START' end
+  if f.crash then return 'RESTART-KERNEL-CRASH' end
   if M.SWITCH[f.phase] then return 'RESTART-INTERRUPTED-SWITCH' end
   if f.previous=='starting' then return 'RESTART-INTERRUPTED-BOOT' end
   if M.HOLD[f.phase] then return 'RESTART-INTERRUPTED-RESERVE-HOLD' end
@@ -128,12 +144,18 @@ end
 -- runtime, persist
 function M.start(ctx,phase)
   local persist_path=ctx.persist..'/'..M.MARKER
-  local previous=M.previous(ctx.read(persist_path))
-  local facts={previous=previous,phase=type(phase)=='string' and phase or nil}
+  local previous_text=ctx.read(persist_path)
+  local previous=M.previous(previous_text)
+  local facts={previous=previous,phase=type(phase)=='string' and phase or nil,reason=M.previous_reason(previous_text),crash=false}
   local aok,on=pcall(M.auto_on,ctx.read,ctx.runtime,ctx.persist)
   facts.auto_on=aok and on==true
   local code,fresh,stopped_since,recorded,up=ram_marker(ctx,ctx.runtime..'/'..M.SUPERVISOR,function(fresh,since)
     facts.fresh=fresh;facts.stopped_since=since
+    -- the first start of a boot only: the crash verdict of the boot that ended (boot_cause.evaluate)
+    if fresh and ctx.crash then
+      local ok,verdict=pcall(ctx.crash)
+      facts.crash=ok and verdict=='crash'
+    end
     return M.classify(facts)
   end)
   facts.uptime=up
@@ -193,6 +215,16 @@ function M.context(runtime,persist,options)
   ctx.now=options.now or os.time
   function ctx.uptime() local text=ctx.read('/proc/uptime');return text and tonumber(string.match(text,'^(%S+)')) or nil end
   ctx.log=options.log or durable.log
+  function ctx.crash()
+    local ok,nfs=pcall(require,'nixio.fs')
+    return require('boot_cause').evaluate(persist,{write=ctx.write_persist,list_dir=function(path)
+      local names={}
+      if not (ok and type(nfs)=='table' and nfs.dir) then return names end
+      local dok,iterator=pcall(nfs.dir,path)
+      if dok and iterator then for name in iterator do names[#names+1]=name end end
+      return names
+    end})
+  end
   return ctx
 end
 

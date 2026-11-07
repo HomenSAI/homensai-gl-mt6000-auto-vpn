@@ -16,18 +16,33 @@ for(const language of ['en','ru']){
   now=1025;s=fixture(1000);s.server_time=1001;l=light(s);assert.equal(c.autoSignal(l),'green','a fresh answer stays green between page updates');assert(c.autoRuns(l));
   // The router itself served an old proof: a real route check, yellow while Auto runs.
   now=1030;s=fixture(1000);s.time=s.server_time=s.native_failover.time=s.profiles[0].time=s.profiles[1].time=1028;
-  l=light(s);assert.equal(c.autoSignal(l),'green','a route re-check keeps green while Auto runs');assert(c.autoRuns(l)&&!c.autoWorking(l),'green signal is not a proven claim, but Auto still runs');
+  l=light(s);assert.equal(c.autoSignal(l),'yellow','a route re-check is yellow while Auto stays enabled');assert(c.autoRuns(l)&&!c.autoWorking(l),'a check never claims confirmed green, but Auto still runs');
   // Transient controller blockers during a running session are a check, not an alarm.
-  now=2000;s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['OBSERVATION-STALE'];l=light(s);assert.equal(c.autoSignal(l),'green','a transient controller state keeps green');assert(c.autoRuns(l));
+  now=2000;s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['OBSERVATION-STALE'];l=light(s);assert.equal(c.autoSignal(l),'yellow','a transient controller state is yellow');assert(c.autoRuns(l));
   // A critical controller alarm is red.
   s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['ROLLBACK-GIVEN-UP'];l=light(s);assert.equal(c.autoSignal(l),'red');assert(!c.autoRuns(l));
+  // Every vendor wait keeps Auto enabled and yellow, and a long one names its observed cause. The main module holds the code only (its
+  // size budget): the words live in the optional module (error_rows_extra), and there no row presents GL as idle.
+  s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['VENDOR-WORKER-BUSY'];l=light(s);assert.notEqual(c.autoSignal(l),'red');assert(c.autoRuns(l));assert(!/^VENDOR-BUSY-/.test(String(l.code)));
+  const busyRows=fs.readFileSync('router/error_rows_extra.inc.js','utf8');
+  for(const code of ['VENDOR-BUSY-RTP-LOCK-DEAD','VENDOR-BUSY-RTP-LOCK-LIVE','VENDOR-BUSY-TUNNEL-SWITCH','VENDOR-BUSY-WORKERS','VENDOR-BUSY-UNIDENTIFIED']){
+    s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['VENDOR-WORKER-BUSY'];s.native_failover.reason=code;s.native_failover.busy_seconds=125;l=light(s);
+    assert.equal(c.autoSignal(l),'yellow',code);assert.equal(l.code,code);assert(c.autoRuns(l),code);assert(l.hint.includes(code),code+' is named');
+    assert(!/Try again|Повторите/.test(l.hint),code);
+    const row=busyRows.split('\n').filter(line=>line.includes("['"+code+"','switch'"));assert.equal(row.length,1,code+' has its row');assert(!/idle\.'|простаивает\.'/.test(row[0])||/does not prove|не доказывает/.test(row[0]),code);
+  }
+  assert(/not a proof/.test(busyRows.split('\n').filter(line=>line.includes("['VENDOR-BUSY-RTP-LOCK-DEAD','switch'"))[0]),'a dead holder is not presented as finished work');
+  assert(/does not prove/.test(busyRows.split('\n').filter(line=>line.includes("['VENDOR-BUSY-UNIDENTIFIED','switch'"))[0]),'a missing file is not presented as a quiet router');
+  // Another reason on a BLOCKED pair keeps today's meaning: the code comes with busy_seconds only.
+  s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['ROLLBACK-GIVEN-UP'];s.native_failover.reason='KERNEL-POLICY-UNVERIFIED';l=light(s);assert.equal(l.code,'ROLLBACK-GIVEN-UP','a reason never replaces the blocker');
+  s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['VENDOR-WORKER-BUSY'];s.native_failover.reason='PAIR-WAITING-PROBES';l=light(s);assert.notEqual(c.autoSignal(l),'red');
   // Data late while the owner's Auto runs: yellow "refreshing", never "Auto off".
   now=2200;s=fixture(2000);l=light(s);assert.equal(c.autoSignal(l),'yellow','late data is yellow while Auto runs (owner 01.11.2026: never better than monitoring)');assert(c.autoRuns(l));
   // A routine scheduled check is due: still green (the countdown shows it), not yellow.
   now=2012;s=fixture(2000);s.server_time=2012;s.channel_path.checked_at=s.channel_path.time=2010;s.probe_policy={effective_interval:10};l=light(s);assert.equal(c.autoSignal(l),'green');
   // The router itself reports the route unverified (not just aged): never held, yellow while Auto runs.
   now=2000;s=fixture(2000);s.channel_path.checked_at=null;s.channel_path.time=null;s.channel_path.kernel_policy_verified=false;
-  l=light(s);assert.equal(c.autoSignal(l),'green','an unverified route while Auto runs is green; the text names the check');
+  l=light(s);assert.equal(c.autoSignal(l),'yellow','an unverified route is yellow; the text names the check');
   now=2000;
   // A switch in progress is yellow, never red.
   s=fixture(2000);s.native_failover.state='APPLYING';s.channel_path.transitioning=true;l=light(s);assert.equal(c.autoSignal(l),'yellow');
@@ -47,7 +62,7 @@ for(const language of ['en','ru']){
   s.response_metric='websites';assert.notEqual(c.channelPingModel(s.profiles[0],s,now).kind,'ping');
   // Sidebar Auto lamp = button colour: green while Auto runs (also during a yellow check), red on failure, grey when off.
   {const host=new N('div');c.document={querySelector:()=>null};c.identityModel=()=>({});c.manualConfirmedPath=()=>({});c.manualChannelTone=()=>({color:'grey',text:''});c.dataCause=()=>({text:''});
-   for(const [mut,knob] of [[s2=>{},'hv-lamp-on'],[s2=>{s2.native_failover.state='APPLYING';s2.channel_path.transitioning=true;},'hv-lamp-on'],[s2=>{s2.profiles[0].code='VPN-003';s2.profiles[0].https_success=0;},'hv-lamp-off'],[s2=>{s2.auto_control={requested:'off',pair_phase:'STOPPED',requested_at:900};s2.native_failover.state='STOPPED';},'hv-lamp-dark']]){
+   for(const [mut,knob] of [[s2=>{},'hv-lamp-on'],[s2=>{s2.native_failover.state='APPLYING';s2.channel_path.transitioning=true;},'hv-lamp-switching'],[s2=>{s2.profiles[0].code='VPN-003';s2.profiles[0].https_success=0;},'hv-lamp-off'],[s2=>{s2.auto_control={requested:'off',pair_phase:'STOPPED',requested_at:900};s2.native_failover.state='STOPPED';},'hv-lamp-dark']]){
      now=2000;const st=fixture(2000);mut(st);const h=new N('div');c.fillSideStatus(h,st,inventory);const k=h.all().find(n=>/hv-auto-pill-knob/.test(n.attrs.class||''));assert(k.attrs.class.includes(knob),'sidebar lamp '+knob);}}
   // The housing has three lamps and lights exactly the signal.
   for(const [state,signal] of [['OBSERVING','green'],['APPLYING','yellow']]){now=2000;
@@ -56,4 +71,4 @@ for(const language of ['en','ru']){
     assert.equal(lamps.length,3);assert.deepStrictEqual(lamps.filter(n=>/hv-lamp-lit/.test(n.attrs.class)).map(n=>n.attrs.class.match(/hv-lamp-(red|yellow|green)/)[1]),[signal]);
   }
 }
-console.log('PASS: three-signal Auto light: green while Auto runs, yellow only for a real switch (and the check pulse), red only critical, dark when off (EN/RU)');
+console.log('PASS: three-signal Auto light: green works, yellow waits/checks, red only critical, dark when off (EN/RU)');

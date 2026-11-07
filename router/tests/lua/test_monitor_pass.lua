@@ -83,6 +83,22 @@ t.test('second pass: counters accumulate, verdict changes become events, unchang
   t.eq(status.events[5].code,'OK');t.eq(#status.events,6)
 end)
 
+t.test('L1: a failed sample of an Auto channel leaves the wake row, a healthy pass and option 0 none',function()
+  local NAME='/run/hv/pair-wake.json'
+  local R,m=fresh()
+  m:pass()
+  t.eq(R.files[NAME],nil,'healthy: no row')
+  R.advance(10);R.https_fail['1.1.1.1']='timeout';R.https_fail['8.8.8.8']='timeout'
+  m:pass()
+  local row=canon.decode(R.files[NAME])
+  t.eq(row.reason,'sample');t.eq(canon.number(row.time),R.wall());t.eq(row.id,'wireguard:peer_7')
+  R.files[NAME]=nil
+  local S,n=fresh({inventory=t.inventory({settings=(function() local s=t.inventory().settings;s.auto_event_wake=false;return s end)()})})
+  S.https_fail['1.1.1.1']='timeout';S.https_fail['8.8.8.8']='timeout'
+  n:pass()
+  t.eq(S.files[NAME],nil,'the option turns it off')
+end)
+
 t.test('server pick (2.1.0): one child round at a time, every 10 min or on a new failure; the RAM file is projected; events once',function()
   local R,m=fresh()
   local spawned={}

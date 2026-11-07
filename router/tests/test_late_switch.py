@@ -152,9 +152,11 @@ class Simulation(Base):
     def run_blackout(self,seconds,recheck=True):
         return self.run_fault(lambda offset:not (0<=offset<seconds),recheck)
 
-    def run_fault(self,healthy_at,recheck=True,mtu=False,model='consecutive'):
+    def run_fault(self,healthy_at,recheck=True,mtu=False,model='consecutive',extra=None,beat=None,reserve_ok=None,hold=None):
         # model: option failure_model; the measured-router cases above are the previous rule (3 in a row)
-        settings={'pair_auto_mode':pair.MODE,'interval':'10','failure_model':model}
+        # extra: more options (the parallel recheck stays at its default, off, unless a test asks: the simulated clock has one thread);
+        # beat(offset) -> the monitor's heartbeat row fields or None (tests/test_fast_switch.py); reserve_ok(offset) -> False: a failing reserve
+        settings=dict({'pair_auto_mode':pair.MODE,'interval':'10','failure_model':model},**(extra or {}))
         (self.persist/'pair-auto-budget.json').unlink(missing_ok=True)  # every run is a fresh outage: no cooldown from the last one
         pair.LATE_ABORTS.clear()
         start=self.START;changed=start-1000
@@ -163,8 +165,9 @@ class Simulation(Base):
         pair.request(self.revision)
         state=dict(id=pair.intent()['id'],phase='RUNNING',owned=[],before_flags={'wgclient1':'0','ovpnclient1':'0'},network_identity='b'*64,
                    protected={},process_bindings=None,order=['a','b'],policy_hash='c'*64,revision=self.revision)
+        if hold:state['manual_hold']=hold
         pair.save(state)
-        sim={'now':start-30,'journal':{},'switches':[],'published':[],'rechecks':[]}
+        sim={'now':start-30,'journal':{},'switches':[],'published':[],'rechecks':[],'evidence':[],'leases':0}
         up=lambda t:healthy_at(t-start)
         starts=[start+x for x in SIM['normal_passes']]
         x=SIM['dense_first']
@@ -177,7 +180,8 @@ class Simulation(Base):
                     small=ok or mtu  # a large-packet black hole still answers the small DNS/HTTPS checks
                     rows.append({'id':source['id'],'time':s,'code':None if ok else 'VPN-MTU' if mtu else 'VPN-003','dns_ok':small,'https_success':3 if small else 0,
                                  'interface':source['interface'],'vendor_tunnel_id':source['vendor_tunnel_id'],'vendor_generation':source['vendor_generation']})
-                    rows.append({'id':target['id'],'time':s,'code':None,'dns_ok':True,'https_success':3,
+                    good=reserve_ok is None or reserve_ok(s-start)
+                    rows.append({'id':target['id'],'time':s,'code':None if good else 'VPN-003','dns_ok':good,'https_success':3 if good else 0,
                                  'interface':target['interface'],'vendor_tunnel_id':target['vendor_tunnel_id'],'vendor_generation':target['vendor_generation']})
             return rows
         backend=Mock(spec=['diagnostic','order','use_process_bindings','recovery_ready','health','recheck'])
@@ -195,12 +199,12 @@ class Simulation(Base):
         if not recheck:del backend.recheck
         def attempt(*args,**kwargs):
             kwargs['on_dispatch']()
-            sim['switches'].append(sim['now']-start)
+            sim['switches'].append(sim['now']-start);sim['evidence'].append(kwargs.get('probe_evidence'))
             sim['journal']={'phase':'COMMITTED','source':source['id'],'target':target['id'],'started':sim['now'],'confirmed':sim['now']}
         patches=[patch.object(pair.time,'time',side_effect=lambda:sim['now']),
                  patch.object(native,'journal_read',side_effect=lambda:dict(sim['journal'])),
                  patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=state['network_identity']),
-                 patch.object(pair,'configs',return_value={}),patch.object(pair,'configure_lease',return_value=0),
+                 patch.object(pair,'configs',return_value={}),patch.object(pair,'configure_lease',side_effect=lambda value:sim.__setitem__('leases',sim['leases']+1) or 0),
                  patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),
                  patch.object(pair_policy,'current_role',side_effect=lambda j:'target' if j.get('phase')=='COMMITTED' else 'source'),
                  patch.object(pair_policy,'metadata',return_value=None),patch.object(pair_policy,'state_order_matches',return_value=True),
@@ -215,10 +219,13 @@ class Simulation(Base):
             while tick<start+SIM['end'] and not sim['switches']:
                 sim['now']=max(sim['now'],tick)
                 agent.atomic_json(self.runtime/'status.json',{'samples':published(sim['now'])})
+                row=beat(sim['now']-start) if beat else None
+                if row:agent.atomic_json(self.runtime/'pair-wake.json',dict(row,reason='heartbeat',time=sim['now'],id=source['id'],target=target['id']))
                 pair.tick(backend,settings,self.revision)
                 tick=max(tick+SIM['tick_every'],sim['now'])
         finally:
             for p in reversed(patches):p.stop()
+        sim['hold']=pair.read_state().get('manual_hold')
         return sim
 
     def test_blackouts_against_the_unfixed_decision(self):

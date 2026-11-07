@@ -10,7 +10,11 @@ function node(tag,attrs,children){const n={tag,attrs:attrs||{},children:[],liste
 const version=JSON.parse(fs.readFileSync('VERSION.json','utf8')).application,number=version.ui_module.replace('dashboard','');
 const main=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+version.ui_module+'.js','utf8');
 const name='pick'+number+'.js',text=fs.readFileSync('router/files/www/luci-static/resources/homensai-vpn/'+name,'utf8');
-assert(version.ui_lazy_modules.includes('homensai-vpn/'+name),'VERSION.json lists the module of this release');
+// VERSION.json declares a lazy module only when the shipped page loads it (audit 06.11.2026, F-95). The approved page does not
+// carry the server-pick loader yet, so pick<N>.js is generated for the legacy reference but neither declared nor packaged.
+{const shipped=require('./legacy_reference').readShipped('router/files/www/luci-static/resources/view/homensai-vpn/'+version.ui_module+'.js','utf8');
+ assert.strictEqual(version.ui_lazy_modules.includes('homensai-vpn/'+name),shipped.includes("LAZY_PICK_NAME='homensai-vpn.pick"+number+"'"),
+   'VERSION.json lists the pick module exactly when the shipped page loads it');}
 assert(main.includes("var LAZY_PICK_NAME='homensai-vpn.pick"+number+"';"),'the main module loads the module of its own release');
 assert(main.includes("put('channels',serverPickBox(status,inventory));"),'the Channels page carries the loader');
 assert(!main.includes('function serverPickPanel('),'the panel itself is not in the main module');

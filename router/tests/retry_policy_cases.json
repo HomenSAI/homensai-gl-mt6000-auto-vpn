@@ -1,0 +1,142 @@
+{
+ "_comment": "Shared by test_wave3_product.py and lua/test_wave3_product.lua: retry_policy.py == retry_policy.lua.",
+ "base": [
+  {
+   "n": 0,
+   "base": 2
+  },
+  {
+   "n": 1,
+   "base": 2
+  },
+  {
+   "n": 2,
+   "base": 2
+  },
+  {
+   "n": 3,
+   "base": 4
+  },
+  {
+   "n": 4,
+   "base": 6
+  },
+  {
+   "n": 5,
+   "base": 10
+  },
+  {
+   "n": 6,
+   "base": 15
+  },
+  {
+   "n": 7,
+   "base": 15
+  },
+  {
+   "n": 30,
+   "base": 15
+  }
+ ],
+ "pause": [
+  {
+   "n": 1,
+   "u": 0.5,
+   "settings": {},
+   "pause": 1.0
+  },
+  {
+   "n": 1,
+   "u": 0.0,
+   "settings": {},
+   "pause": 0.5
+  },
+  {
+   "n": 3,
+   "u": 0.99,
+   "settings": {},
+   "pause": 3.96
+  },
+  {
+   "n": 6,
+   "u": 0.5,
+   "settings": {},
+   "pause": 7.5
+  },
+  {
+   "n": 6,
+   "u": 0.999,
+   "settings": {},
+   "pause": 14.985
+  },
+  {
+   "n": 30,
+   "u": 0.5,
+   "settings": {
+    "retry_backoff": "fibonacci"
+   },
+   "pause": 7.5
+  },
+  {
+   "n": 1,
+   "u": 0.5,
+   "settings": {
+    "retry_backoff": "fixed"
+   },
+   "pause": 5
+  },
+  {
+   "n": 9,
+   "u": 0.0,
+   "settings": {
+    "retry_backoff": "fixed"
+   },
+   "pause": 5
+  },
+  {
+   "n": 1,
+   "u": 0.5,
+   "settings": {
+    "retry_backoff": "other"
+   },
+   "pause": 1.0
+  }
+ ],
+ "count": [
+  {
+   "name": "first",
+   "failures": 0,
+   "last": null,
+   "now": 100,
+   "count": 1
+  },
+  {
+   "name": "series",
+   "failures": 3,
+   "last": 90,
+   "now": 100,
+   "count": 4
+  },
+  {
+   "name": "59 s later",
+   "failures": 3,
+   "last": 41,
+   "now": 100,
+   "count": 4
+  },
+  {
+   "name": "60 s later: a new series",
+   "failures": 3,
+   "last": 40,
+   "now": 100,
+   "count": 1
+  },
+  {
+   "name": "clock back",
+   "failures": 3,
+   "last": 101,
+   "now": 100,
+   "count": 1
+  }
+ ]
+}

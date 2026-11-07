@@ -187,7 +187,7 @@ class VendorRebuildRecovery(unittest.TestCase):
             return (['VENDOR-SETTLING'],None) if count[0]<=calls else real()
         self.case.enter(patch.object(self.backend,'diagnostic',side_effect=diagnostic))
         now=[0.0];settled=recovery.settled
-        self.case.enter(patch.object(recovery,'settled',side_effect=lambda backend:settled(backend,clock=lambda:now[0],
+        self.case.enter(patch.object(recovery,'settled',side_effect=lambda backend,**tolerance:settled(backend,clock=lambda:now[0],
             sleep=lambda seconds:now.__setitem__(0,now[0]+seconds))))
         self.case.enter(patch.object(recovery,'SETTLE_SECONDS',90))
         return count

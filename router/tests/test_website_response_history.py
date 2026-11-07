@@ -105,6 +105,20 @@ class WebsiteHistoryTests(unittest.TestCase):
         h.observe(snapshot(NOW+3*DAY),dict(SETTINGS,history_days='1'),NOW+3*DAY)
         self.assertTrue(all(r[0]>=NOW+2*DAY for r in h.data['rows']));h.validate()
 
+    def test_served_count_names_the_transported_rows_beyond_one_week(self):
+        # review F-54: 10,082 retained rows were packed as 10,081 while rows_count said 10,082, so the page refused all
+        h=WebsiteResponseHistory();self.observe(h,snapshot())
+        template=h.data['rows'][-1]
+        for count in (1441,1442,10081,10082,43201):
+            h.data['rows']=[[NOW+i*60]+copy.deepcopy(template[1:]) for i in range(count)]
+            p=h.public(NOW+count*60)
+            carried=json.loads(p['rows_json']) if 'rows_json' in p else p['rows']
+            coverage=json.loads(p['coverage_rows_json']) if 'coverage_rows_json' in p else p['coverage_rows']
+            self.assertEqual((p['rows_count'],p['retained_rows_count']),(count,count))
+            self.assertEqual(p['served_rows_count'],min(count,10081))
+            self.assertEqual(len(carried),p['served_rows_count']);self.assertEqual(len(coverage),p['served_rows_count'])
+            self.assertEqual(carried[-1][0],NOW+(count-1)*60,'the newest rows are the ones carried')
+
     def test_unknown_pair_after_retention_does_not_leave_invalid_current_key(self):
         h=WebsiteResponseHistory();self.observe(h,snapshot())
         h.observe({'profiles':[]},{'history_days':'1'},NOW+3*DAY);h.validate();self.assertEqual(h.public(NOW+3*DAY)['pair'],[])

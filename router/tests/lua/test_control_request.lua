@@ -164,6 +164,39 @@ t.test('start: refusals in Python order, nothing written',function()
   t.eq(M.start(d,start_args()).accepted,true,'checks Start does not repair do not stop it (as auto_prepare)')
 end)
 
+t.test('BH-04: Start refused while the self-check forbids Auto (no-auto / stopped), nothing queued',function()
+  for _,mode in ipairs({'no-auto','stopped'}) do
+    local d=world({files={['/run/integrity.json']=canon.encode(obj({code='INTEGRITY-TOOL-MISSING',mode=mode,restored=0}))}})
+    t.eq(M.start(d,start_args()),{accepted=false,blockers={'INTEGRITY-AUTO-BLOCKED'}},mode)
+    t.eq(d.files['/run/pair-auto-control.json'],nil,mode..' wrote no intent')
+    t.eq(d.files['/etc/auto-resume.json'],nil,mode..' no resume marker')
+    t.eq(blockers(M.start(d,start_args({request_source='programmatic'}))),'INTEGRITY-AUTO-BLOCKED',mode..' programmatic')
+  end
+  -- a stale revision is still reported first (Python order)
+  local d=world({files={['/run/integrity.json']=canon.encode(obj({mode='no-auto'}))}})
+  t.eq(blockers(M.start(d,start_args({control_revision=string.rep('b',32)}))),'CONTROL-REVISION-STALE')
+  -- other modes, no report, a damaged report: the init gate decides, Start proceeds
+  for _,text in ipairs({canon.encode(obj({mode='normal'})),canon.encode(obj({mode='no-c'})),canon.encode(obj({mode='python'})),'{bad',canon.encode(arr({1}))}) do
+    t.eq(M.start(world({files={['/run/integrity.json']=text}}),start_args()).accepted,true,text)
+  end
+end)
+
+t.test('SERVICE-AUTO-OFF: Start refused while the init runs no Auto supervisor (enabled != 1), nothing queued',function()
+  local d=world({files={['/run/service-auto.json']=canon.encode(obj({code='SERVICE-AUTO-OFF',time=1}))}})
+  t.eq(M.start(d,start_args()),{accepted=false,blockers={'SERVICE-AUTO-OFF'}},'manual')
+  t.eq(blockers(M.start(d,start_args({request_source='programmatic'}))),'SERVICE-AUTO-OFF','programmatic')
+  t.eq(d.files['/run/pair-auto-control.json'],nil,'wrote no intent')
+  t.eq(d.files['/etc/auto-resume.json'],nil,'no resume marker')
+  -- the integrity code first (Python order), a stale revision before both
+  d=world({files={['/run/service-auto.json']=canon.encode(obj({code='SERVICE-AUTO-OFF'})),['/run/integrity.json']=canon.encode(obj({mode='no-auto'}))}})
+  t.eq(blockers(M.start(d,start_args())),'INTEGRITY-AUTO-BLOCKED')
+  t.eq(blockers(M.start(d,start_args({control_revision=string.rep('b',32)}))),'CONTROL-REVISION-STALE')
+  -- another code, a damaged record: the init gate decides, Start proceeds
+  for _,text in ipairs({canon.encode(obj({code='OTHER'})),'{bad',canon.encode(arr({1}))}) do
+    t.eq(M.start(world({files={['/run/service-auto.json']=text}}),start_args()).accepted,true,text)
+  end
+end)
+
 t.test('start: what Lua cannot decide without waiting goes to agent.py, nothing written',function()
   local cases={
     {locked=true},
@@ -271,6 +304,48 @@ t.test('stop: settings unverified or no trial -> global latch; a later start req
   t.eq(decode(d,'/etc/native-stop.json').requested.value,NOW+100,'max(time.time(), previous)')
 end)
 
+-- T1 (trace conformance 04.11.2026): the latch against auto-resume.json with the pair mode's empty auto-control.json.
+-- Python twin: tests/test_trace_fixes.py StopLatch.
+local function wanted(d) return require('boot_resume').wanted(d.read,d.persist) end
+local function marker(at) return require('boot_resume').marker(at) end
+t.test('T1: a Stop after a later Start refreshes the latch',function()
+  local d=world({files={['/etc/native-stop.json']=canon.encode(obj({requested=canon.float(NOW-100),trial=TRIAL})),
+    ['/etc/auto-resume.json']=marker(NOW-50)}})
+  t.eq(wanted(d),true,'the Start is newer')
+  t.eq(M.stop(d,obj({request_source='manual'})),{queued=true},'already_requested: auto-control.json has time 0 in pair mode')
+  t.eq(select(2,wanted(d)),'AUTO-RESUME-STOPPED')
+  t.eq(M.stop(d,obj({request_source='manual'})),{queued=true,already_requested=true},'a repeated Stop writes nothing')
+end)
+t.test('T1: a global latch is refreshed too and stays global',function()
+  local d=world({files={['/etc/native-stop.json']=canon.encode(obj({requested=canon.float(NOW-100),trial=string.rep('a',32),all_trials=true})),
+    ['/etc/auto-resume.json']=marker(NOW-50)}})
+  t.eq(M.stop(d,obj()),{queued=true})
+  t.eq(select(2,wanted(d)),'AUTO-RESUME-STOPPED')
+  t.eq(decode(d,'/etc/native-stop.json').all_trials,true,'a refreshed latch never narrows a global one')
+end)
+t.test('T1: a wall clock behind the marker still ends the resume (no RTC)',function()
+  local d=world({files={['/etc/auto-resume.json']=marker(NOW+3600)}})
+  t.eq(M.stop(d,obj()),{queued=true})
+  local latch=decode(d,'/etc/native-stop.json')
+  t.eq(latch.requested.value,NOW+3600);t.truthy(canon.is_float(latch.requested))
+  t.eq(select(2,wanted(d)),'AUTO-RESUME-STOPPED')
+end)
+t.test('T1: a damaged marker never prevents the Stop',function()
+  local d=world({files={['/etc/native-stop.json']=canon.encode(obj({requested=canon.float(NOW-100),trial=TRIAL})),['/etc/auto-resume.json']='{broken'}})
+  t.eq(M.stop(d,obj()),{queued=true},'an unreadable marker: the latch is written')
+  t.eq(decode(d,'/etc/native-stop.json').requested.value,NOW,'and it keeps a real time')
+end)
+t.test('T1: the give-up latch (auto_control.stop_latch) with the clock behind the marker wins too',function()
+  local ctl=require('auto_control')
+  local files={['/etc/auto-resume.json']=marker(NOW+3600),['/run/auto-control-revision.json']=canon.encode(obj({revision=REV}))}
+  local env={persist='/etc',runtime='/run',
+    run={lock=function(fn) return fn() end,wall=function() return NOW end,
+         fs={read=function(p) return files[p] end,write_atomic=function(p,text) files[p]=text end}}}
+  local ok,err=pcall(ctl.stop_latch,env,TRIAL)
+  t.truthy(ok,tostring(err))
+  t.eq(select(2,require('boot_resume').wanted(env.run.fs.read,'/etc')),'AUTO-RESUME-STOPPED')
+end)
+
 t.test('stop: fields, held lock, failure test and storage failures',function()
   t.eq(M.stop(world(),obj({request_source='manual',x=1})),{error='RPC-UNEXPECTED-ARGS'})
   local d=world({locked=true})
@@ -349,6 +424,23 @@ t.test('fault_start: the locked refusals in Lua, every start goes to agent.py',f
   t.truthy(M.fault_start(world({locked=true}),obj())==M.FALLBACK)
   files=intent_files();files['/run/fault-intent.json']='{"data":{},"sha256":"x"}'
   t.eq(M.fault_start(world({files=files}),obj()),{accepted=false,code='FAULT-STATE-CORRUPT'})
+end)
+
+-- plan item 54 (audit F-16): a package install/upgrade/removal holds /etc/maintenance.json (maintenance.lua)
+t.test('start: refused during a package operation, nothing written; a stale marker never blocks',function()
+  local active=canon.encode(obj({action='upgrade',time=canon.float(NOW-5)}))
+  local d=world({files={['/etc/maintenance.json']=active}})
+  t.eq(blockers(M.start(d,start_args())),'MAINTENANCE-IN-PROGRESS')
+  t.eq(d.files['/run/pair-auto-control.json'],nil)
+  local stale=world({files={['/etc/maintenance.json']=canon.encode(obj({action='upgrade',time=canon.float(NOW-2000)}))}})
+  t.eq(M.start(stale,start_args()).accepted,true,'a stale marker (power cut mid-upgrade) blocks nothing')
+  -- F-16: the guard marks under the same lock between the first check and the write: the second lock refuses
+  local raced=world();local real=raced.try_lock;local n=0
+  raced.try_lock=function(fn) n=n+1;if n==2 then raced.files['/etc/maintenance.json']=active end;return real(fn) end
+  t.eq(blockers(M.start(raced,start_args())),'MAINTENANCE-IN-PROGRESS')
+  t.eq(raced.files['/run/pair-auto-control.json'],nil)
+  -- the failure test goes to agent.py, which refuses it first (agent.maintenance_refusal)
+  t.eq(M.fault_start(world({files={['/etc/maintenance.json']=active}}),obj()),M.FALLBACK)
 end)
 
 t.run()

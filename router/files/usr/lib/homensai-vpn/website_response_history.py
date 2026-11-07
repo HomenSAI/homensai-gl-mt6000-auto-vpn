@@ -180,6 +180,11 @@ class WebsiteResponseHistory:
             'scope':self.SCOPE}
         result['profile_statistics']={identifier:result['statistics'][role]for identifier,role in zip(result['pair'],('source','target'))}
         if len(rows)>1441:result['rows_json']=json.dumps(packed[-PUBLIC_ROWS:],separators=(',',':'),allow_nan=False);result['coverage_rows_json']=json.dumps(coverage[-PUBLIC_ROWS:],separators=(',',':'))
+        # rows_count is what is retained on flash; served_rows_count is what this reply carries (rows_json when present,
+        # else rows). The page validates the decoded rows against the served count (review F-54: 10,082 retained rows
+        # were packed as 10,081 and then refused as a mismatch, leaving the chart empty).
+        result['retained_rows_count']=len(rows)
+        result['served_rows_count']=min(len(rows),PUBLIC_ROWS) if len(rows)>1441 else len(rows)
         return result
 
     @staticmethod

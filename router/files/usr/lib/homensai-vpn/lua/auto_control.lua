@@ -44,8 +44,9 @@ local resident={}
 -- The only top-level fields of the monitor's status.json that the supervisor reads (failure_diagnosis,
 -- committed_recovery_decision, the pair/manual sample streaks; the same keys as the Python supervisor). The rest
 -- (accounting, histories, events, speed tests: ~85 % of the file) is skipped without being built.
+-- wan_diagnosis: the WAN-DOWN / WAN-RECOVERING hold of diagnosis.diagnose (GL-SENSORS-2026-11-04, wan_diag.lua).
 M.STATUS_KEYS={time=true,error=true,profiles=true,samples=true,vendor_observation=true,uplink_observation=true,
-  observation_valid_for=true}
+  observation_valid_for=true,wan_diagnosis=true}
 function M.decode_resident(path,text,key)
   local row=resident[path]
   if row and row.text==text then
@@ -74,6 +75,11 @@ function M.read_json(run,path,default)
     local row=resident[path]
     if key and row and row.key==key then return row.value end
   end
+  -- F-38 (Python read_json: `if path.is_symlink(): raise ValueError`): a symlink or a non-file in the place of a
+  -- state file is a refusal, never 'no file'; run.fs.read itself errors on an unreadable existing file.
+  if run.fs.unsafe and run.fs.unsafe(path,4*1024*1024) then
+    error(setmetatable({code=M.UNREADABLE,value_error=true,detail=string.match(path,'[^/]+$')},M.Refused),0)
+  end
   local text=run.fs.read(path)
   if text==nil then return default end
   if #text>4*1024*1024 then error('oversize state',0) end
@@ -86,6 +92,7 @@ end
 -- is a known state, never a plain Lua error that would end the daemon and repeat at every restart: a coded
 -- refusal (Python: ValueError -> NATIVE-SYSTEM-001 in the loop) after one quarantine copy of a flash file.
 M.DAMAGED='STATE-FILE-DAMAGED'
+M.UNREADABLE='STATE-FILE-UNREADABLE'  -- a symlink, a directory or an oversize file where a state file should be
 function M.damaged(run,path,text)
   local durable=require('durable')
   if not durable.in_ram(path) then pcall(durable.quarantine,path,text,M.DAMAGED,run.fs) end
@@ -200,6 +207,9 @@ function M.stop_latch(env,trial)
     local previous=canon.is_object(old) and num(old.requested) or 0
     local now=env.run.wall()
     if previous and finite(previous) then now=math.max(now,previous) end
+    -- T1: no RTC on the router: the latch is newer than the owner's marker also with a wall clock behind it
+    local started=require('boot_resume').marker_time(function(p) return env.run.fs.read(p) end,env.persist)
+    if finite(started) then now=math.max(now,started) end
     local record=canon.object({requested=canon.float(now),trial=trial==nil and NULL or trial,all_trials=true})
     if not rok then record.control_revision_failed=true end
     M.write_json(env.run,env.persist..'/native-stop.json',record)

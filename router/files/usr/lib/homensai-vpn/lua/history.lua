@@ -630,7 +630,9 @@ function History:_record(value,now)
   if type(now)~='number' or not finite(now) or now<0 then fail('HISTORY-CLOCK') end
   local run=self.env.run
   local data,from_main,repaired=self:writer_state()
-  if not isnone(data.last_time) and now<num(data.last_time) then now=num(data.last_time) end
+  -- wall clock stepped back: keep the order, mark the event; its duration is unknown, never zero (review F-56)
+  local stepped=not isnone(data.last_time) and now<num(data.last_time)
+  if stepped then now=num(data.last_time) end
   local state=getd(value,'state','UNKNOWN')
   if not is_code(state) then fail('HISTORY-STATE') end
   local codes={}
@@ -692,10 +694,12 @@ function History:_record(value,now)
     local evidence=canon.object({})
     local any=false
     for _,name in ipairs({'source_streak_met','reserve_streak_met'}) do if is_bool(raw[name]) then evidence[name]=raw[name];any=true end end
-    for _,spec in ipairs({{'required_failures',3},{'required_successes',2}}) do
+    for _,spec in ipairs({{'required_failures',2},{'required_successes',2}}) do
       local v=raw[spec[1]]
       if is_int(v) and spec[2]<=v and v<=10 then evidence[spec[1]]=v;any=true end
     end
+    local rule=raw.failure_rule
+    if rule=='model' or rule=='streak' or rule=='heartbeat' or rule=='unstable' then evidence.failure_rule=rule;any=true end
     if any then item.probe_evidence=evidence end
   end
   local phases=value.phase_evidence
@@ -735,6 +739,7 @@ function History:_record(value,now)
   if data.sequence>=2^53-1 then fail('HISTORY-SEQUENCE-LIMIT') end
   data.active_attempt=active;data.retry_episode=episode
   item.time=canon.float(now);item.sequence=data.sequence+1
+  if stepped then item.clock_stepped_back=true end
   data.sequence=data.sequence+1;data.last_key=key;data.last_time=canon.float(now)
   local index=data.index
   local excess=#index+1-self.limit

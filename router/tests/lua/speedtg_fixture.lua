@@ -129,7 +129,7 @@ local function run(case)
       return canon.array({list,state,public})
     elseif op=='limited_text' then return telegram.limited_text(a[1],canon.number(a[2]))
     elseif op=='valid' then return telegram.valid(a[1])
-    elseif op=='parse_items' then local s=telegram.parse_items(a[1]);local out=canon.array();for _,k in ipairs(telegram.ITEMS) do if s[k] then out[#out+1]=k end end;return out
+    elseif op=='parse_items' then local s=telegram.parse_items(a[1]);local out=canon.array();for _,k in ipairs(telegram.ITEMS) do if s[k] then out[#out+1]=k end end;if s.brief then out[#out+1]='brief' end;return out
     elseif op=='deliver' then
       local public,state,sent=telegram.deliver(d,a[1],a[2],canon.number(a[3]))
       return canon.array({public,state,sent,d.sent})

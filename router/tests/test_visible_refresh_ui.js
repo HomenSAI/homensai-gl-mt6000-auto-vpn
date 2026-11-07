@@ -43,7 +43,8 @@ c.currentDesign=()=> 'c';
 c.renderAutoControl=function(status){calls.renderAutoControl=(calls.renderAutoControl||0)+1;lastStatus.renderAutoControl=status;return new Node('section',{'class':'hv-auto-control'},[new Node('button',{'class':'hv-auto-power'}),new Node('strong',{'class':'hv-auto-action'})]);};
 c.renderSimpleHome=function(status,inventory,model,control){calls.renderSimpleHome=(calls.renderSimpleHome||0)+1;const power=control.querySelector('.hv-auto-power'),action=control.querySelector('.hv-auto-action');return new Node('section',{},[new Node('div',{'class':'hv-simple-power'},power),new Node('div',{'class':'hv-simple-power-unit'},action)]);};
 vm.createContext(c);
-const begin=source.indexOf('    var panel=E('),end=source.indexOf('\n    draw(data[1]);',begin);
+// The generated module has no line indentation: anchor on the statements, not on their indentation.
+const begin=source.search(/^[ \t]*var panel=E\(/m),end=begin+source.slice(begin).search(/\n[ \t]*draw\(data\[1\]\);/);
 assert(begin>0&&end>begin);
 vm.runInContext(source.slice(begin,end).replace('visibleRenderers[key]();','recordPage(key);visibleRenderers[key]();'),c);
 const draw=serial=>c.draw({serial,profiles:[]});

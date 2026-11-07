@@ -51,6 +51,8 @@
 local here=(arg and arg[0] and string.match(arg[0],'^(.*)/[^/]*$'))
 if here then package.path=here..'/?.lua;'..package.path end
 
+local guard_loop=require('loop_guard')  -- before the coroutine-safe pcall replaces the global one
+
 local M={}
 M.FALLBACK_CRASHES=3
 M.FALLBACK_WINDOW=600
@@ -452,26 +454,16 @@ function M.install_file_popen(directory)
 end
 
 ------------------------------------------------------------------------------------------------------
--- isolation of callbacks
+-- isolation of callbacks (loop_guard.lua: shared with the separate monitor process)
 ------------------------------------------------------------------------------------------------------
-function M.guard(where,fn,report)
-  return function(...)
-    local ok,err=native_pcall(fn,...)
-    if not ok then report(where,err) end
-  end
-end
--- guarded_uloop(real, report, held_fds): uloop whose timer/process/fd callbacks run under pcall
--- (package.loaded.uloop). A child the loop starts (curl ...) while the task holds a flock gets the task's
--- descriptors of it closed (held_fds(), the lock registry): `/bin/sh -c 'exec "$0" "$@" N>&-' path args...`,
--- the same pid and argv; a flock lives as long as any descriptor of it.
+M.guard=guard_loop.guard
+M.guard_object=guard_loop.guard_object
+-- guarded_uloop(real, report, held_fds): the guarded uloop (package.loaded.uloop). A child the loop starts (curl ...)
+-- while the task holds a flock gets the task's descriptors of it closed (held_fds(), the lock registry):
+-- `/bin/sh -c 'exec "$0" "$@" N>&-' path args...`, the same pid and argv; a flock lives as long as any descriptor of it.
 M.wrapped_children=0
 function M.guarded_uloop(real,report,held_fds)
-  local proxy=setmetatable({},{__index=real})
-  proxy.timer=function(fn,ms)
-    if ms~=nil then return real.timer(M.guard('timer',fn,report),ms) end
-    return real.timer(M.guard('timer',fn,report))
-  end
-  proxy.process=function(path,args,env,fn)
+  return guard_loop.uloop(real,report,function(uloop,path,args,env,exit)
     local fds=(held_fds and not M.in_task) and held_fds() or nil
     if fds and #fds>0 then
       local closes={}
@@ -479,12 +471,10 @@ function M.guarded_uloop(real,report,held_fds)
       local wrapped={'-c','exec "$0" "$@" '..table.concat(closes,' '),path}
       for _,a in ipairs(args or {}) do wrapped[#wrapped+1]=a end
       M.wrapped_children=M.wrapped_children+1
-      return real.process('/bin/sh',wrapped,env,M.guard('process',fn,report))
+      return uloop.process('/bin/sh',wrapped,env,exit)
     end
-    return real.process(path,args,env,M.guard('process',fn,report))
-  end
-  proxy.fd_add=function(fd,fn,flags) return real.fd_add(fd,M.guard('fd',fn,report),flags) end
-  return proxy
+    return uloop.process(path,args,env,exit)
+  end)
 end
 -- task_uloop(real, report): the uloop for the task's own commands (cooperative_exec). The driver starts them
 -- outside the coroutine (in_task false), so the guarded proxy would close the task's lock descriptors in its own
@@ -492,25 +482,6 @@ end
 -- HV-CORE-FALLBACK). Same guarded exit callback, never wrapped.
 function M.task_uloop(real,report)
   return {process=function(path,args,env,fn) return real.process(path,args,env,M.guard('process',fn,report)) end}
-end
--- guard_object(object, conn, report, observe, clock): a failing ubus method answers {"fallback":true}
--- (rpcd -> agent.py); observe(name, seconds) hears how long each method held the loop
-function M.guard_object(object,conn,report,observe,clock)
-  for _,methods in pairs(object) do
-    for name,spec in pairs(methods) do
-      local fn=spec[1]
-      if type(fn)=='function' then
-        spec[1]=function(req,msg)
-          local started=observe and clock and clock()
-          local ok,result=native_pcall(fn,req,msg)
-          if started then native_pcall(observe,name,clock()-started) end
-          if ok then return result end
-          report('ubus '..tostring(name),result)
-          native_pcall(conn.reply,conn,req,{fallback=true})
-        end
-      end
-    end
-  end
 end
 
 ------------------------------------------------------------------------------------------------------
@@ -986,9 +957,10 @@ function M.daemon()
     -- the task's commands: children of this loop (the guarded uloop reports a failing exit callback)
     M.cooperative_exec({directory=runtime,unique=function() return canon.unique() end,clock=run.clock,
       spawn=M.router_spawn(M.task_uloop(real,report),M.router_child_env(mio))})
+    local monitor_dead=nil
     handle=require('monitor').start(mio,nil,{object=function(object,conn)
       M.guard_object(object,conn,report,function(name,seconds) if core then core:rpc(name,seconds) end end,run.clock)
-    end})
+    end,loop_dead=function(text) monitor_dead=text;real.cancel() end})
     local status_path=runtime..'/status.json'
     handle.monitor.on_status=function(status,text)
       if handle.monitor.runtime..'/status.json'~=status_path then return end
@@ -1025,6 +997,7 @@ function M.daemon()
       kick_monitor=function() handle.kick() end})
     core:start()
     real.run()
+    if monitor_dead then error(monitor_dead,0) end  -- a crash of hv-core: counted, procd restarts it
     if fallback then
       -- the Auto run has ended (it crashed); the monitor saves its accounting, then both halves run separately
       pcall(function() handle.monitor:checkpoint() end)

@@ -152,3 +152,19 @@ def closure(src, roots, stop_marker='return view.extend({', exclude=()):
     missing = [r for r in roots if r not in declares]
     if missing:raise ValueError('UI-EXTRACT-ROOT-MISSING: ' + ', '.join(missing))
     return '\n'.join(src[stmts[i][0]:stmts[i][1]] for i in sorted(wanted)), {n for i in wanted for n in stmts[i][2]}
+
+
+def squeeze_indent(src):
+    """Drop the leading indentation of every line that starts between tokens (code, not inside a string, template or regex).
+
+    Newlines stay, so automatic semicolon insertion and line numbers are unchanged; only generated artifacts use this.
+    """
+    toks = list(tokens(src)); out = []; last = 0
+    for index, (kind, text, pos) in enumerate(toks + [('end', '', len(src))]):
+        gap = src[last:pos]
+        if '\n' in gap:
+            head, rest = gap.split('\n', 1)  # the text after the previous token on its own line stays as it is
+            rest = re.sub(r'(?m)^[ \t]+(?=\S)', '', rest)
+            gap = head + '\n' + re.sub(r'(?m)^[ \t]+$', '', rest)
+        out.append(gap); out.append(text); last = pos + len(text)
+    return ''.join(out)

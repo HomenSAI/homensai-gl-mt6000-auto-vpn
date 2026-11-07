@@ -265,6 +265,36 @@ t.test('monitor: the quiet-window gate acknowledges only between passes and with
   t.eq(canon.decode(R.files['/run/hv/speed-cancel.json']).tx,TX)
 end)
 
+t.test('monitor: the Telegram child gets the bounded five-minute checks, so the brief shows reliability (R3-03)',function()
+  local R=t.fake_runner({inventory=speed_inventory()})
+  local jobs={}
+  local m=monitor.new(R,{speed_overrides=proc,telegram_run=function(job) jobs[#jobs+1]=job end})
+  local now=R.wall()
+  m.samples=arr()
+  for i=1,3000 do m.samples[#m.samples+1]=obj({id='wireguard:peer_7',time=canon.float(now-7200+i),code=NULL,dns_ok=true,https_success=2,rtt_ms=10}) end
+  for i=1,10 do
+    m.samples[#m.samples+1]=obj({id='wireguard:peer_7',time=canon.float(now-200+i*10),code=(i==1) and 'HTTPS-001' or NULL,dns_ok=true,https_success=2,
+      rtt_ms=10,interface='wgclient1',vendor_tunnel_id='secret-ish'})
+  end
+  local status=obj({time=canon.float(now),profiles=arr({obj({id='wireguard:peer_7',role='source'})}),events=arr(),
+    native_failover=obj(),native_history=obj({events=arr()})})
+  m:telegram_start(status,true)
+  t.eq(#jobs,1)
+  local input=canon.decode(R.files[jobs[1].input])
+  local samples=input.status.samples
+  t.truthy(#samples>=10 and #samples<=monitor.TELEGRAM_SAMPLE_LIMIT,'bounded: '..#samples)
+  for _,row in ipairs(samples) do
+    t.truthy(canon.number(row.time)>=now-monitor.TELEGRAM_SAMPLE_SECONDS,'only the recent window')
+    t.eq(row.interface,nil,'only the fields the formatter reads');t.eq(row.vendor_tunnel_id,nil)
+  end
+  t.eq(canon.number(samples[#samples].time),canon.number(m.samples[#m.samples].time),'the newest check is kept, in order')
+  local brief=telegram.format_brief(input.status,now-300,now,now)
+  t.truthy(string.find(brief,'основной: 90%',1,true),brief)
+  -- the cap holds even when every check is recent
+  local many=arr();for i=1,5000 do many[i]=obj({id='a',time=now-1,code=NULL}) end
+  t.eq(#monitor.telegram_samples(many,now),monitor.TELEGRAM_SAMPLE_LIMIT)
+end)
+
 t.test('monitor: Telegram round in a child, state saved by the child, result applied next pass',function()
   local R=t.fake_runner({inventory=speed_inventory()})
   local sent={}

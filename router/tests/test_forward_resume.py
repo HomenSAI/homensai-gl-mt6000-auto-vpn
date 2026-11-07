@@ -239,6 +239,14 @@ class EndToEnd(Crash):
         self.assertEqual(journal['boot_adopted']['from_reason'],fr.REASON)
         self.assertEqual(self.ifup,[],'the kept clients adopted, no second ifup');self.assertTrue(self.lan_on_reserve())
 
+    def test_a_key_changed_since_does_not_undo_a_switch_already_done(self):
+        from test_key_gate import enforce
+        enforce(self,self.dir,self.b.selection['target']['id'])
+        self.serve()
+        journal=native.journal_read()
+        self.assertEqual((journal['phase'],journal['forward_resumed']['kernel']),('COMMITTED','reserve'))
+        self.assertEqual(self.rollbacks,[],'the traffic is there: only a move is refused')
+
     def test_the_finished_switch_ends_the_primary_flows_once_and_a_failing_reset_never_undoes_it(self):
         resets=[]
         def flow_reset(old_id,new_id):
@@ -277,6 +285,19 @@ class BeforeReorder(Crash):
         self.assertEqual((journal['phase'],journal['reason'],journal['forward_resumed']['kernel']),('COMMITTED',fr.REASON,'untouched'))
         self.assertTrue(journal['rtp_dispatched']);self.assertTrue(journal['forward_policy_touched'])
         self.assertEqual(self.rollbacks,[]);self.assertTrue(self.lan_on_reserve())
+
+
+    def test_a_key_changed_since_is_no_new_move(self):
+        # review 04.11.2026 (findings 1, 2): nothing moved yet, finishing would be a move onto the channel with the unaccepted key
+        import server_pin
+        from test_key_gate import enforce
+        enforce(self,self.dir,self.b.selection['target']['id'])
+        self.assertEqual(native.key_unaccepted(self.b.selection['target']['id']),'SERVER-KEY-UNACCEPTED')
+        self.serve()
+        journal=native.journal_read()
+        self.assertEqual(self.rollbacks,['SUPERVISOR-RECOVERY']);self.assertEqual(journal['phase'],'ROLLED-BACK')
+        self.assertNotIn('forward_resumed',journal);self.assertTrue(self.refused_for('SERVER-KEY-UNACCEPTED'),self.lines)
+        self.assertEqual(self.b.current,self.before);self.assertTrue(server_pin.STATE)
 
 
 class AfterReorder(Crash):
@@ -323,6 +344,28 @@ class Unsafe(Crash):
 
     def test_owner_stop_while_dead(self):
         native.stop_latch(None);self.rolled_back('OWNER-STOP')
+
+    def own_protected(self):
+        state=pair.read_state();state['protected']={'wireguard':'w1'};pair.save(state);self.live={'wireguard':'w1'}
+
+    def test_a_foreign_configuration_edit_is_refused_before_any_write(self):
+        # review F-28 (06.11.2026): the kernel is on the reserve, but the protected wireguard configuration is not the session's
+        self.own_protected();self.live['wireguard']='edited-outside'
+        self.rolled_back('PAIR-EXTERNAL-CONFIG-CHANGE')
+
+    def test_a_foreign_configuration_edit_during_the_confirmation_cannot_commit(self):
+        self.own_protected()
+        self.probe_hook=lambda:self.live.__setitem__('wireguard','edited-outside')
+        journal=self.rolled_back('PAIR-EXTERNAL-CONFIG-CHANGE',resumed_before=True)
+        self.assertIn('forward_resumed',journal);self.assertNotEqual(journal['phase'],'COMMITTED')
+
+    def test_forward_resume_probe_crosses_deadline_cannot_commit(self):
+        # review F-29 (06.11.2026): the loop checked the deadline before the probe; the probe itself crossed it
+        expired=[False];real=native.transaction_expired
+        self.stack.enter_context(patch.object(native,'transaction_expired',side_effect=lambda journal:expired[0] or real(journal)))
+        self.probe_hook=lambda:expired.__setitem__(0,True)
+        journal=self.rolled_back('TRANSACTION-EXPIRED',resumed_before=True)
+        self.assertNotEqual(journal['phase'],'COMMITTED')
 
     def test_no_owner_marker(self):
         (self.dir/boot_resume.MARKER).unlink();self.rolled_back('OWNER-STOP')

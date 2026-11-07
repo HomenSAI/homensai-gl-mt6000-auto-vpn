@@ -69,6 +69,25 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(archive.extractfile('./fonts/example.woff2').read(),font)
                 self.assertEqual(archive.extractfile('./example.txt').read(),b'line\n')
 
+    def test_only_listed_text_files_are_normalised_unknown_types_keep_their_bytes(self):
+        # F-98 (audit 06.11.2026): CRLF used to be rewritten in every file outside a short binary list (.bin, .gz, .mo ...).
+        binary=b'\x00\x01\r\n\xfe\r\nend'
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            for name,payload in (('usr/share/x/blob.bin',binary),('usr/share/x/table.gz',binary),('usr/share/x/locale.mo',binary),
+                                 ('usr/share/x/no_suffix_data',binary),('usr/lib/homensai-vpn/a.py',b'x=1\r\n'),
+                                 ('usr/sbin/tool',b'#!/bin/sh\r\n'),('etc/config/homensai_vpn',b"config main 'main'\r\n"),
+                                 ('usr/lib/homensai-vpn/lua/a.lua',b'return 1\r\n'),('www/x/style/a.css',b'a{}\r\n')):
+                target=root/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(payload)
+            selected={name:payload for name,payload,mode in builder.selected_source_files(root)}
+        for name in ('usr/share/x/blob.bin','usr/share/x/table.gz','usr/share/x/locale.mo','usr/share/x/no_suffix_data'):
+            self.assertEqual(selected[name],binary,name)
+        self.assertEqual(selected['usr/lib/homensai-vpn/a.py'],b'x=1\n')
+        self.assertEqual(selected['usr/sbin/tool'],b'#!/bin/sh\n')
+        self.assertEqual(selected['etc/config/homensai_vpn'],b"config main 'main'\n")
+        self.assertEqual(selected['usr/lib/homensai-vpn/lua/a.lua'],b'return 1\n')
+        self.assertEqual(selected['www/x/style/a.css'],b'a{}\r\n','the brand style tree is never rewritten')
+
     def test_retired_generated_dashboards_do_not_enter_package(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);assets=root/'files/www/luci-static/resources/view/homensai-vpn';assets.mkdir(parents=True)
@@ -117,7 +136,7 @@ class PackageTests(unittest.TestCase):
                 self.assertTrue(all(not n.startswith('/') and '..' not in Path(n).parts for n in names))
                 self.assertFalse(any('__pycache__' in n for n in names))
                 self.assertEqual(tar.getmember('./usr/libexec/rpcd/homensai-vpn').mode,0o755)
-                self.assertEqual(tar.getmember('./etc/config/homensai_vpn').mode,0o644)
+                self.assertEqual(tar.getmember('./etc/config/homensai_vpn').mode,0o600,'holds the Telegram token: root-only')
                 self.assertIn("option enabled '1'",tar.extractfile('./etc/config/homensai_vpn').read().decode())
                 style=ROOT/'files/www/luci-static/resources/view/homensai-vpn/style'
                 for resource in style.rglob('*'):

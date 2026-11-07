@@ -120,7 +120,7 @@ class OneDurableJournalWrite(unittest.TestCase):
 class Nap(unittest.TestCase):
     def test_a_queued_click_ends_the_pause_at_once(self):
         import tempfile,time
-        with tempfile.TemporaryDirectory() as folder,patch.object(n,'RUNTIME',Path(folder)),patch.object(n,'STOP',False):
+        with tempfile.TemporaryDirectory() as folder,patch.object(n,'RUNTIME',Path(folder)),patch.object(n,'STOP',False),patch.object(n,'QUEUED_SEEN',[None]):
             agent.atomic_json(Path(folder)/'pair-manual-control.json',{'state':'QUEUED'})
             started=time.monotonic();n.nap(5);self.assertLess(time.monotonic()-started,1)
             agent.atomic_json(Path(folder)/'pair-manual-control.json',{'state':'COMPLETED'})

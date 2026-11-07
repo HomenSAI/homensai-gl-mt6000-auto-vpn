@@ -1,0 +1,22 @@
+{
+  "note": "Owner decision 07.11.2026 (review F-32 / A9 finding 2): classification of a change made outside the app while a session is RUNNING. protected = the session's saved digests; observed = the current digests (null = unreadable). Run by test_outside_change_policy.py and lua/test_outside_change.lua.",
+  "protected": {"wireguard": "w1", "ovpnclient": "o1", "firewall": "f1", "route_policy": "r1", "wireless": "l1", "dhcp": "d1", "gl-dns-v2": "g1"},
+  "cases": [
+    {"name": "wireless only -> ADOPT", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {"wireless": "l2"}, "decision": "ADOPT", "packages": ["wireless"]},
+    {"name": "dhcp only -> ADOPT", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {"dhcp": "d2"}, "decision": "ADOPT", "packages": ["dhcp"]},
+    {"name": "gl-dns-v2 only -> ADOPT", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {"gl-dns-v2": "g2"}, "decision": "ADOPT", "packages": ["gl-dns-v2"]},
+    {"name": "wireless + dhcp + dns -> ADOPT", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {"wireless": "l2", "dhcp": "d2", "gl-dns-v2": "g2"}, "decision": "ADOPT", "packages": ["dhcp", "gl-dns-v2", "wireless"]},
+    {"name": "network interface/address class alone -> ADOPT", "trigger": "PAIR-EXTERNAL-NETWORK-CHANGE", "observed": {}, "decision": "ADOPT", "packages": ["network"]},
+    {"name": "network class with a dhcp change -> ADOPT", "trigger": "PAIR-EXTERNAL-NETWORK-CHANGE", "observed": {"dhcp": "d2"}, "decision": "ADOPT", "packages": ["network", "dhcp"]},
+    {"name": "wireguard (keys, endpoints) -> HOLD", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {"wireguard": "w2"}, "decision": "HOLD", "packages": ["wireguard"]},
+    {"name": "ovpnclient -> HOLD", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {"ovpnclient": "o2"}, "decision": "HOLD", "packages": ["ovpnclient"]},
+    {"name": "wireless and wireguard together -> HOLD", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {"wireless": "l2", "wireguard": "w2"}, "decision": "HOLD", "packages": ["wireguard", "wireless"]},
+    {"name": "network class with a wireguard change -> HOLD", "trigger": "PAIR-EXTERNAL-NETWORK-CHANGE", "observed": {"wireguard": "w2"}, "decision": "HOLD", "packages": ["network", "wireguard"]},
+    {"name": "firewall (a foreign rule) -> HOLD", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {"firewall": "f2"}, "decision": "HOLD", "packages": ["firewall"]},
+    {"name": "route_policy rules of the pair -> HOLD", "trigger": "PAIR-EXTERNAL-POLICY-CHANGE", "observed": {}, "decision": "HOLD", "packages": ["route_policy"]},
+    {"name": "SOURCE-ORDER-MISMATCH -> HOLD", "trigger": "SOURCE-ORDER-MISMATCH", "observed": {}, "decision": "HOLD", "packages": ["route_policy"]},
+    {"name": "unknown/other package in the protected set -> HOLD", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "protected_extra": {"system": "s1"}, "observed": {"system": "s2"}, "decision": "HOLD", "packages": ["system"]},
+    {"name": "unreadable digests -> HOLD", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": null, "decision": "HOLD", "packages": []},
+    {"name": "trigger says changed, nothing found changed -> HOLD (not proven)", "trigger": "PAIR-EXTERNAL-CONFIG-CHANGE", "observed": {}, "decision": "HOLD", "packages": []}
+  ]
+}

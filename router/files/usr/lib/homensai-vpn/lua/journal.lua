@@ -53,6 +53,19 @@ local function finite_number(v)
   return x~=nil and x==x and x~=math.huge and x~=-math.huge,x
 end
 local function has(value,key) return value[key]~=nil end  -- `key in value` (JSON null is canon.null, not nil)
+
+-- failure_diagnosis.profile_identity(proof)==proof: a valid identity and exactly its five keys (identity.lua is the twin;
+-- required lazily, as pair and recovery below, because those modules load transaction/journal themselves)
+local function complete_identity(proof)
+  local ok,identity=pcall(function() return require('identity').profile_identity(proof) end)
+  if not ok or identity==nil then return false end
+  local keys=0
+  for key,item in pairs(proof) do
+    keys=keys+1
+    if identity[key]==nil or identity[key]~=item then return false end
+  end
+  return keys==5
+end
 local function list_set(list)
   local set,count={},0
   for _,item in ipairs(list) do if not set[item] then set[item]=true;count=count+1 end end
@@ -109,13 +122,14 @@ function M.validate(value,opts)
   if not hex(value.hash,64) then refuse('JOURNAL-INTEGRITY-FAILED') end
   if has(value,'vendor_identity') and not hex(value.vendor_identity,64) then refuse('JOURNAL-INTEGRITY-FAILED') end
   if has(value,'control_revision') and not hex(value.control_revision,32) then refuse('JOURNAL-INTEGRITY-FAILED') end
-  if has(value,'vendor_profiles') then  -- shape only; profile_identity() itself stays in Python
+  if has(value,'vendor_profiles') then  -- failure_diagnosis.profile_identity(proof)==proof (F-39, 07.11.2026)
     local proofs=value.vendor_profiles
     if not json.is_object(proofs) then refuse('JOURNAL-INTEGRITY-FAILED') end
     local count=0
     for role,proof in pairs(proofs) do
       count=count+1
-      if (role~='source' and role~='target') or not json.is_object(proof) or proof.id~=value[role] then refuse('JOURNAL-INTEGRITY-FAILED') end
+      if (role~='source' and role~='target') or not json.is_object(proof) or proof.id~=value[role]
+         or not complete_identity(proof) then refuse('JOURNAL-INTEGRITY-FAILED') end
     end
     if count~=2 then refuse('JOURNAL-INTEGRITY-FAILED') end
   end
@@ -132,8 +146,10 @@ function M.validate(value,opts)
   if has(value,'rollback_package') and not full(value.rollback_package,'[0-9A-Za-z.+~%-]',1,64) then refuse('JOURNAL-INTEGRITY-FAILED') end
   if has(value,'trial') and type(value.trial)~='boolean' then refuse('JOURNAL-INTEGRITY-FAILED') end
   if has(value,'manual_request_id') and not hex(value.manual_request_id,32) then refuse('JOURNAL-INTEGRITY-FAILED') end
-  if has(value,'pair_transition') and value.pair_transition~=json.null and not json.is_object(value.pair_transition) then
-    refuse('JOURNAL-INTEGRITY-FAILED')  -- pair_policy.metadata() stays in Python
+  if has(value,'pair_transition') and value.pair_transition~=json.null then  -- pair_policy.metadata (F-39)
+    if not json.is_object(value.pair_transition) or not pcall(require('pair').policy.metadata,value) then
+      refuse('JOURNAL-INTEGRITY-FAILED')
+    end
   end
   if has(value,'kernel_before_fingerprint') and not hex(value.kernel_before_fingerprint,64) then refuse('JOURNAL-INTEGRITY-FAILED') end
   if has(value,'restore_kernel_fingerprint') and (not hex(value.restore_kernel_fingerprint,64)
@@ -147,6 +163,9 @@ function M.validate(value,opts)
     if not json.is_array(order) or #order~=#before then refuse('JOURNAL-INTEGRITY-FAILED') end
     for _,x in ipairs(order) do if not is_str(x) then refuse('JOURNAL-INTEGRITY-FAILED') end end
     if not same_set((list_set(order)),bset) then refuse('JOURNAL-INTEGRITY-FAILED') end
+  end
+  if has(value,'restore_order_step') or has(value,'restore_proof_source') or has(value,'restore_order_origin') then
+    if not pcall(require('recovery').validate_step,value) then refuse('JOURNAL-INTEGRITY-FAILED') end  -- rollback_recovery (F-39)
   end
   if has(value,'activation_reapply') then
     local same=#before==#after

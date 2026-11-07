@@ -107,6 +107,7 @@ M.healthy=healthy
 --   journal()                   native_switch.journal_read()
 --   queued()                    pair_manual.read() (raises on an invalid row)
 --   ledger()                    pair-auto-budget.json ({events=[]} when missing)
+--   effective(ledger,now)       optional: pair.effective_events (BH3-03 monotonic ages); without it the raw events
 --   kernel(state,journal,live)  the kernel proof (pair_manual.attested) -> table
 --   fast()                      native_switch.fast_switch_enabled()
 function M.pair_controls(d)
@@ -151,9 +152,14 @@ function M.pair_controls(d)
     end
     if not healthy(status,source,now,valid_for) then primary[#primary+1]='SOURCE-NOT-HEALTHY' end
     if not healthy(status,target,now,valid_for) then reserve[#reserve+1]='PAIR-MANUAL-TARGET-UNHEALTHY' end
+    if d.key_unaccepted then  -- a button is refused only towards the channel with the unaccepted key
+      local pinned=d.key_unaccepted(source);if pinned then primary[#primary+1]=pinned end
+      pinned=d.key_unaccepted(target);if pinned then reserve[#reserve+1]=pinned end
+    end
     local ledger=d.ledger()
     if not is_dict(ledger) then error('AttributeError',0) end
-    local events=ledger.events
+    -- BH3-03: ages on the monotonic clock of this boot (pair_manual.controls: pair_auto.effective_events)
+    local events=d.effective and d.effective(ledger,now) or ledger.events
     local permitted,policy
     if truthy(events) then
       policy=pair.recovery_normalized(settings)

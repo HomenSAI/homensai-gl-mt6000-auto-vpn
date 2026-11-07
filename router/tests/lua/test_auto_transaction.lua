@@ -205,6 +205,17 @@ t.test('deadline(), monotonic_lease(), transaction_expired(), progress_read()',f
   t.eq(T.deadline('2026-10-30T14:00:00Z'),1793368800);t.eq(T.deadline('2026-10-30T16:00:00.5+02:00'),1793368800.5)
   t.code('DEADLINE-TIMEZONE-REQUIRED',T.deadline,'2026-10-30T14:00:00')
   t.code('BOUNDED-DEADLINE-REQUIRED',T.deadline,'soon');t.code('BOUNDED-DEADLINE-REQUIRED',T.deadline,true)
+  -- F-42: one grammar with native_switch.deadline (test_native_switch.test_one_deadline_grammar_with_lua)
+  for _,text in ipairs({'2026-10-30T14:00:00+0000','2026-10-30T14:00:00+00','2026-10-30T16:00:00+0200','2026-10-30T12:00:00-02'}) do
+    t.eq(T.deadline(text),1793368800,text)
+  end
+  t.eq(T.deadline('2024-02-29T00:00:00Z'),1709164800,'a leap day exists')
+  for _,text in ipairs({'2026-02-30T14:00:00+00:00','2026-02-29T14:00:00Z','2026-04-31T00:00:00Z','2026-13-01T00:00:00Z','2026-10-30T24:00:00Z',
+                        '2026-10-30T14:00:00+24:00','2026-10-30T14:00:00+23:60','0x10','0x1p4','1e400','inf','nan'}) do
+    t.code('BOUNDED-DEADLINE-REQUIRED',T.deadline,text)
+  end
+  t.eq(T.deadline(' 1e3 '),1000)
+  t.eq(T.deadline('2026-10-30T15:00:00+00:60'),1793368800,'60 minutes are one hour, as datetime.timezone has it')
   local settings=t.settings()
   local end_,err=T.monotonic_lease(env,settings,env.run.wall()+3600)
   t.eq(err,nil);t.eq(end_,env.run.clock()+3600)
@@ -253,7 +264,13 @@ t.test('committed_recovery_decision and finish_committed',function()
   env.backend.health_of['wireguard:peer_1']=false
   t.eq(T.finish_committed(env,j,'TRIAL-ENDED'),false);t.eq(t.journal(env).phase,'HELD-ON-RESERVE');t.eq(t.journal(env).reason,'SOURCE-NOT-VERIFIED')
   env.backend.health_of={}
-  t.eq(T.finish_committed(env,t.journal(env),'PRIMARY-STABLY-RECOVERED'),true);t.eq(t.journal(env).phase,'ROLLED-BACK');t.eq(env.backend.uci,{'r1','r2'})
+  -- the pair journal under hold_reserve (owner decision 07.11.2026, F-80): a planned return is held, the rescue decided
+  -- by committed_recovery_decision (RESCUE_REASON, a reserve proven failed) returns
+  env.backend.settings.recovery_return_policy='hold_reserve'
+  t.eq(T.finish_committed(env,t.journal(env),'PRIMARY-STABLY-RECOVERED'),false);t.eq(t.journal(env).phase,'HELD-ON-RESERVE');t.eq(t.journal(env).reason,'SOURCE-NOT-VERIFIED')
+  env.backend.health_of['openvpn:1_1']=false
+  t.eq(T.finish_committed(env,t.journal(env),require('pair').RESCUE_REASON),true);t.eq(t.journal(env).phase,'ROLLED-BACK');t.eq(env.backend.uci,{'r1','r2'})
+  env.backend.health_of={};env.backend.settings.recovery_return_policy=nil
 end)
 
 t.test('publish(): history refusal blocks the status with HISTORY-001; sources and scope defaults',function()

@@ -130,6 +130,15 @@ t.test('pair_controls: not active, active quiet, kernel of the supervisor, rate 
   t.eq(r.reserve.blockers,{'PAIR-RATE-LIMIT'},'outside a general pair session the limit applies')
   ledger=obj({events=arr({canon.float(NOW-10)})})
   t.eq(C.pair_controls(d).reserve.blockers,{'PAIR-MANUAL-COOLDOWN'})
+  -- review 04.11.2026: a button is refused only towards the channel with the unaccepted key
+  ledger=obj({events=arr()})
+  d.key_unaccepted=function(identifier) if identifier==TGT then return 'SERVER-KEY-UNACCEPTED' end;return nil end
+  r=C.pair_controls(d)
+  t.eq(r.reserve,{allowed=false,blockers={'SERVER-KEY-UNACCEPTED'}});t.eq(r.primary.blockers,{'RETURN-NOT-APPLICABLE'})
+  d.key_unaccepted=function(identifier) if identifier==SRC then return 'SERVER-KEY-UNACCEPTED' end;return nil end
+  r=C.pair_controls(d)
+  t.eq(r.reserve,{allowed=true,blockers={}});t.eq(r.primary.blockers,{'RETURN-NOT-APPLICABLE','SERVER-KEY-UNACCEPTED'})
+  d.key_unaccepted=nil
   ledger=obj({events='bad'})
   r=C.pair_controls(d)
   t.eq(r.available,false);t.eq(r.blockers,{'PAIR-MANUAL-STATE-UNVERIFIED'})

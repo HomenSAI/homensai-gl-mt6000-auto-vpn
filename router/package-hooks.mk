@@ -5,7 +5,8 @@ set -eu
 [ -n "$${IPKG_INSTROOT:-}" ] && exit 0
 if [ -f /etc/config/homensai_vpn ] || [ -d /etc/homensai-vpn ]; then
 [ -x /usr/bin/python3 ] || { echo LIFECYCLE-PYTHON-REQUIRED >&2; exit 1; }
-/usr/bin/python3 - prepare <<'HOMENSAI_LIFECYCLE_GUARD'
+refused=0
+/usr/bin/python3 - prepare <<'HOMENSAI_LIFECYCLE_GUARD' || refused=$$?
 """Own-package lifecycle guard. No routes, VPN keys or firewall writes.
 
 The package embeds this stdlib-only checker before unpacking new files. The only
@@ -30,6 +31,7 @@ STOPPED={'STOPPED','DISABLED','EXPIRED','ROLLED-BACK'}
 # the journal, the guard or the pair ownership record.
 INTERRUPTED={'ARMED','APPLYING','WAIT-CLIENT','RESTORING'}
 APPLY_CHILD=b'native_switch.py' + bytes([0]) + b'apply' + bytes([0])
+LUA_SUPERVISORS=(b'/usr/lib/homensai-vpn/lua/auto.lua' + bytes([0]), b'/usr/lib/homensai-vpn/lua/hv_core.lua' + bytes([0]))
 
 
 def finite(value):
@@ -114,17 +116,320 @@ def read_dict(path):
     return row
 
 
-def apply_worker_alive(root):
-    """Any native apply child (including the journal's recorded pid) is alive. Unknown counts as alive."""
+HV_STANDBY=b'/usr/lib/homensai-vpn/lua/hv_core.lua' + bytes([0]) + b'standby' + bytes([0])
+HV_FALLBACK='hv-core-fallback.json'
+WRITER_UNRESOLVED='writer-unresolved'
+GIVE_UP_ALARM='ROLLBACK-GIVEN-UP'
+GIVE_UP_FRESH=60  # rollback.give_up republishes its alarm every 10 s
+
+
+def exists_or_unknown(path):
+    try:return os.path.lexists(str(path))
+    except (OSError,ValueError):return True
+
+
+def quiescent_give_up(root,transaction,now=None):
+    """Fenced quiescence (audit 07.11.2026, N3 item 4): the Lua supervisor waits idle in rollback.give_up after
+    ROLLBACK-GIVEN-UP until the service stops or the journal is removed; it writes nothing more to this journal.
+    Proven only by the evidence it already leaves: the unfinished journal has used up its rollback attempts (any
+    supervisor of this package goes straight back to give_up), a fresh BLOCKED/ROLLBACK-GIVEN-UP status bound to this
+    journal, and no unresolved writer marker. Missing or unreadable evidence: not quiescent."""
+    if not isinstance(transaction,dict) or transaction.get('phase') not in INTERRUPTED:return False
+    failures=transaction.get('rollback_failures')
+    if type(failures) is not int or failures<ROLLBACK_FAILURE_LIMIT:return False
+    runtime=root/'var/run/homensai-vpn'
+    if exists_or_unknown(runtime/WRITER_UNRESOLVED):return False
+    try:status=read_dict(runtime/'native-status.json')
+    except (OSError,ValueError,UnicodeDecodeError):return False
+    stamp=status.get('time');now=time.time() if now is None else now
+    return (status.get('state')=='BLOCKED' and status.get('alarm')==GIVE_UP_ALARM
+            and isinstance(transaction.get('source'),str) and status.get('source')==transaction['source']
+            and isinstance(transaction.get('target'),str) and status.get('target')==transaction['target']
+            and finite(stamp) and finite(now) and -5<=now-stamp<=GIVE_UP_FRESH)
+
+
+def apply_worker_alive(root,transaction=None,now=None):
+    """Any process that may be applying a journal is alive: a Python apply child (including the journal's recorded pid)
+    or a Lua Auto supervisor, which applies inside its own process (lua/transaction.lua). The hv_core standby applies
+    nothing itself; it counts only once hv-core-fallback.json exists (it may then exec into the Lua supervisor). A Lua
+    supervisor proven idle in the give-up wait (quiescent_give_up) does not count. Unknown counts as alive."""
     try:entries=list((root/'proc').iterdir())
     except OSError:return True
+    quiescent=None
     for entry in entries:
         if not entry.name.isdigit():continue
         try:command=(entry/'cmdline').read_bytes()
         except (FileNotFoundError,ProcessLookupError):continue  # exited meanwhile
         except OSError:return True
         if APPLY_CHILD in command:return True
+        if not any(script in command for script in LUA_SUPERVISORS):continue
+        if HV_STANDBY in command and LUA_SUPERVISORS[0] not in command:
+            if exists_or_unknown(root/'var/run/homensai-vpn'/HV_FALLBACK):return True
+            continue
+        if quiescent is None:quiescent=quiescent_give_up(root,transaction,now)
+        if not quiescent:return True
     return False
+
+
+# Dependency-free copies of the controllers' record readers (native_switch.validate_journal, pair_auto.read_state):
+# a record a controller would refuse to read can never be recovered by it, so the guard refuses it too.
+JOURNAL_PHASES=('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','ROLLED-BACK','RELEASE-PENDING')
+PROOF_SCOPES=('external-lan','router-hosted-ipv4','router-probed-ipv4')
+PAIR_PHASES=('STARTING','RUNNING','STOPPING','HELD','STOPPED','FAILED')
+LEGACY_INTERFACES={'wgclient1':'wgclient','ovpnclient1':'ovpnclient'}
+ROLLBACK_FAILURE_LIMIT=2
+
+
+def canonical_sha(value):
+    return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+
+
+def hexadecimal(value,length):
+    return isinstance(value,str) and re.fullmatch('[a-f0-9]{%d}'%length,value) is not None
+
+
+def number(value):
+    return type(value) in (int,float) and math.isfinite(value) and value>=0
+
+
+# Dependency-free copies of the delegated validators the readers call (audit 07.11.2026, N3 item 3):
+# failure_diagnosis.profile_identity with vendor_observation.tunnel_identity, pair_policy.validate/role/desired_order/
+# metadata and rollback_recovery.order_steps/restore_origin/validate_step. They raise ValueError like the originals;
+# test_lifecycle_record_parity runs the same records through the real readers and through these copies.
+VENDOR_SAFE=re.compile(r'^[A-Za-z0-9_.:-]{1,96}$$')
+VENDOR_TUNNEL=re.compile(r'^(openvpn|wireguard):[A-Za-z0-9_.-]{1,64}$$')
+PAIR_TRANSITION_KEYS={'source_rule','target_rule','direction','generic_rules','source_id','target_id',
+                      'destination_role','before_policy_role','session_order','primary_order'}
+
+
+def profile_identity(profile):
+    if not isinstance(profile,dict):return None
+    protocol=profile.get('protocol');logical=profile.get('interface');claimed=profile.get('vendor_tunnel_id');identifier=profile.get('id')
+    if (protocol not in ('openvpn','wireguard') or not isinstance(logical,str)
+            or not isinstance(claimed,str) or not VENDOR_TUNNEL.fullmatch(claimed) or claimed!=protocol+':'+logical
+            or not isinstance(identifier,str) or not VENDOR_SAFE.fullmatch(identifier) or not identifier.startswith(protocol+':')
+            or identifier==protocol+':' or 'section' in profile and identifier!=protocol+':'+str(profile['section'])):return None
+    generation=profile.get('vendor_generation')
+    if not isinstance(generation,str) or not re.fullmatch(r'^[a-f0-9]{32}$$',generation):return None
+    return {key:profile.get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')}
+
+
+def policy_validate(value,order):
+    if (not isinstance(value,dict) or not isinstance(order,list) or not 2<=len(order)<=400
+            or any(not isinstance(key,str) or not key for key in order) or len(order)!=len(set(order))
+            or value.get('direction') not in ('first','last')
+            or not all(isinstance(value.get(key),str) and value[key] for key in ('source_rule','target_rule','source_id','target_id'))
+            or value['source_rule']==value['target_rule'] or value['source_id']==value['target_id']
+            or not isinstance(value.get('generic_rules'),list) or not 2<=len(value['generic_rules'])<=16
+            or any(not isinstance(key,str) or key not in order for key in value['generic_rules'])
+            or len(value['generic_rules'])!=len(set(value['generic_rules']))
+            or any(value[role+'_rule'] not in value['generic_rules'] for role in ('source','target'))):
+        raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return value
+
+
+def policy_role(value,order):
+    policy_validate(value,order)
+    generic=sorted(value['generic_rules'],key=order.index)
+    chosen=generic[0] if value['direction']=='first' else generic[-1]
+    for key in ('source','target'):
+        if value[key+'_rule']==chosen:return key
+    raise ValueError('PAIR-POLICY-UNVERIFIED')
+
+
+def desired_order(value,order,destination):
+    if destination not in ('source','target'):raise ValueError('PAIR-POLICY-UNVERIFIED')
+    result=list(order)
+    if policy_role(value,order)!=destination:
+        a=result.index(value['source_rule']);b=result.index(value['target_rule'])
+        result[a],result[b]=result[b],result[a]
+    if policy_role(value,result)!=destination:raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return result
+
+
+def pair_transition(journal):
+    value=journal.get('pair_transition')
+    if value is None:return None
+    if not isinstance(value,dict) or set(value)!=PAIR_TRANSITION_KEYS:raise ValueError('PAIR-POLICY-UNVERIFIED')
+    identity=policy_validate(value,journal.get('before'));before=journal['before']
+    if (identity['source_id']!=journal.get('source') or identity['target_id']!=journal.get('target')
+            or value.get('destination_role') not in ('source','target')
+            or value.get('before_policy_role')!=policy_role(identity,before)
+            or journal.get('after')!=desired_order(identity,before,value['destination_role'])
+            or any(not isinstance(value.get(key),list) or len(value[key])!=len(before)
+                   or set(value[key])!=set(before) for key in ('session_order','primary_order'))
+            or value['primary_order']!=desired_order(identity,before,'source')
+            or value['session_order'] not in (desired_order(identity,before,'source'),desired_order(identity,before,'target'))):
+        raise ValueError('PAIR-POLICY-UNVERIFIED')
+    for key in ('restored_order','restore_target_order'):
+        restored=journal.get(key)
+        if restored is not None and restored not in (before,value['primary_order'],value['session_order']):
+            raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return value
+
+
+def order_steps(before,target):
+    if (not isinstance(before,list) or not isinstance(target,list) or not 2<=len(before)<=400
+            or len(before)!=len(target) or any(not isinstance(x,str) for x in before+target)
+            or len(set(before))!=len(before) or set(before)!=set(target)):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    current=list(before);steps=[]
+    for index,identifier in enumerate(target):
+        if current[index]==identifier:continue
+        previous=list(current);current.remove(identifier);current.insert(index,identifier)
+        steps.append({'version':1,'kind':'reorder','before':previous,'after':list(current),'section':identifier,'index':index})
+    return steps
+
+
+def restore_origin(journal):
+    if 'restore_proof_source' not in journal and 'restore_order_origin' not in journal:return journal.get('restore_before_order')
+    source=journal.get('restore_proof_source');origins=[journal.get('after')]
+    if source=='vendor-rebuild':
+        detail=journal.get('failure_detail')
+        if not isinstance(detail,dict) or detail.get('worker_stage')!='rtp-dispatch':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+        origins.append(journal.get('before'))
+    elif source!='forward':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    if (journal.get('restore_order_origin') not in origins
+            or journal.get('restore_before_order')!=journal.get('before') or journal.get('restore_target_order')!=journal.get('before')
+            or journal.get('before')==journal.get('after') or journal.get('kernel_before_verified') is not True
+            or journal.get('restore_before_verified') is not True or journal.get('rtp_dispatched') is not True
+            or journal.get('forward_policy_touched') is not True or journal.get('confirmed') is not None
+            or journal.get('kernel_confirmed') is not None or 'restore_order_step' not in journal
+            or journal.get('restore_kernel_fingerprint')!=journal.get('kernel_before_fingerprint')):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    return journal['restore_order_origin']
+
+
+def validate_step(journal):
+    before=restore_origin(journal);target=journal.get('restore_target_order')
+    if 'restore_order_step' not in journal:return None
+    step=journal['restore_order_step']
+    if (not isinstance(step,dict) or type(step.get('version')) is not int or step['version']!=1
+            or journal.get('phase') not in ('RESTORING','ROLLED-BACK','RELEASE-PENDING')
+            or journal.get('restore_before_verified') is not True
+            or not hexadecimal(journal.get('restore_kernel_fingerprint'),64)
+            or journal.get('restore_before_order') not in (journal.get('before'),journal.get('after'),journal.get('restored_order'))):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    moves=order_steps(before,target)
+    if step=={'version':1,'kind':'commit','before':target,'after':target}:return step
+    if type(step.get('index')) is int and any(step==expected for expected in moves):return step
+    raise ValueError('JOURNAL-INTEGRITY-FAILED')
+
+
+DELEGATED_ERRORS=(ValueError,TypeError,KeyError,IndexError,AttributeError)
+
+
+def valid_journal(value):
+    """True when native_switch.validate_journal's rules hold, including its delegated nested validators."""
+    try:return journal_rules(value)
+    except DELEGATED_ERRORS:return False
+
+
+def journal_rules(value):
+    if not isinstance(value,dict):return False
+    before=value.get('before',[]);after=value.get('after',[])
+    if (not isinstance(before,list) or not isinstance(after,list) or not 2<=len(before)<=400 or len(before)!=len(after)
+            or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
+            or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)):return False
+    if value.get('phase') not in JOURNAL_PHASES:return False
+    scope=value.get('proof_scope','external-lan')
+    if type(scope) is not str or scope not in PROOF_SCOPES:return False
+    bindings=value.get('process_bindings')
+    if bindings is not None and (not isinstance(bindings,dict) or len(bindings)!=2
+            or any(type(k) is not str or not re.fullmatch(r'(?:wgclient|ovpnclient)[0-9]{1,4}',k)
+                   or type(v) is not int or not 0<v<=0xffffffff for k,v in bindings.items())
+            or len(set(bindings.values()))!=2):return False
+    if not hexadecimal(value.get('hash'),64):return False
+    for key,length in (('vendor_identity',64),('control_revision',32),('manual_request_id',32),('kernel_before_fingerprint',64),
+                       ('restore_kernel_fingerprint',64)):
+        if key in value and not hexadecimal(value[key],length):return False
+    if 'vendor_profiles' in value:
+        profiles=value['vendor_profiles']
+        if (not isinstance(profiles,dict) or set(profiles)!={'source','target'}
+                or any(not isinstance(profiles[role],dict) or profile_identity(profiles[role])!=profiles[role]
+                       or profiles[role].get('id')!=value.get(role) for role in ('source','target'))):
+            return False
+    for key in ('started','deadline','lease_monotonic_until','confirmed','kernel_confirmed','finished'):
+        if key in value and not number(value[key]):return False
+    if value.get('monotonic_deadline') is not None and not number(value['monotonic_deadline']):return False
+    if 'pid' in value and value['pid'] is not None and (type(value['pid']) is not int or value['pid']<=1):return False
+    if 'rollback_failures' in value and (type(value['rollback_failures']) is not int
+                                         or not 0<=value['rollback_failures']<=ROLLBACK_FAILURE_LIMIT):return False
+    if 'rollback_package' in value and (not isinstance(value['rollback_package'],str)
+                                        or not re.fullmatch(r'[0-9A-Za-z.+~-]{1,64}',value['rollback_package'])):return False
+    for key in ('trial','forward_policy_touched','rtp_dispatched','kernel_before_verified','restore_before_verified'):
+        if key in value and type(value[key]) is not bool:return False
+    if 'pair_transition' in value:pair_transition(value)
+    if 'restore_kernel_fingerprint' in value and (value.get('pair_transition') is None or 'restore_before_order' not in value
+                                                  or 'restore_target_order' not in value):return False
+    if 'restore_before_order' in value:
+        order=value['restore_before_order']
+        if not isinstance(order,list) or len(order)!=len(before) or any(not isinstance(x,str) for x in order) or set(order)!=set(before):
+            return False
+    if any(key in value for key in ('restore_order_step','restore_proof_source','restore_order_origin')):validate_step(value)
+    if 'activation_reapply' in value and (value['activation_reapply'] is not True or value.get('pair_transition') is None
+                                          or value.get('manual_request_id') is not None or before!=after):return False
+    if value['phase'] not in ('ROLLED-BACK','RELEASE-PENDING'):
+        for name in ('tx','source','target','trial_nonce'):
+            if not isinstance(value.get(name),str) or not re.fullmatch(r'[A-Za-z0-9_:.\-]{1,96}',value[name]):return False
+        if value['source']==value['target'] or 'started' not in value or 'deadline' not in value:return False
+        if value['deadline']<value['started']:return False
+    return True
+
+
+def valid_pair_state(envelope):
+    """True when pair_auto.read_state's checksum, ownership and delegated optional-field rules hold."""
+    try:return pair_rules(envelope)
+    except DELEGATED_ERRORS:return False
+
+
+def pair_rules(envelope):
+    data=envelope.get('data')
+    if not isinstance(data,dict) or envelope.get('sha256')!=canonical_sha(data):return False
+    interfaces=data.get('interfaces',LEGACY_INTERFACES)
+    if (not isinstance(interfaces,dict) or len(interfaces)!=2
+            or any(not isinstance(name,str) or not re.fullmatch(r'(wgclient|ovpnclient)[1-9][0-9]{0,3}',name)
+                   or re.fullmatch(r'(wgclient|ovpnclient)[1-9][0-9]{0,3}',name).group(1)!=proto for name,proto in interfaces.items())):
+        return False
+    owned=data.get('owned');flags=data.get('before_flags')
+    if not (data.get('phase') in PAIR_PHASES and hexadecimal(data.get('id'),32)
+            and isinstance(owned,list) and all(isinstance(x,str) and x in interfaces for x in owned) and len(owned)==len(set(owned))
+            and isinstance(flags,dict) and set(flags)==set(interfaces) and all(v in ('0','1') for v in flags.values())
+            and hexadecimal(data.get('network_identity'),64)):return False
+    if 'protected_static' in data and (not isinstance(data['protected_static'],dict) or set(data['protected_static'])!={'firewall'}
+            or not hexadecimal(data['protected_static']['firewall'],64)):return False
+    if any(key in data for key in ('kept','kept_flags','kept_at','kept_tx')):
+        kept,kept_flags,at,tx=data.get('kept'),data.get('kept_flags'),data.get('kept_at'),data.get('kept_tx')
+        if (data['phase']!='STOPPED' or not isinstance(kept,list) or not kept or len(kept)!=len(set(map(str,kept)))
+                or ('kept_tx' in data and not hexadecimal(tx,32))
+                or any(not isinstance(x,str) or x not in interfaces for x in kept) or not isinstance(kept_flags,dict)
+                or set(kept_flags)!=set(kept) or any(v not in ('0','1') for v in kept_flags.values()) or not number(at)):return False
+    if 'handover' in data:
+        h=data['handover']
+        if (data['phase']!='STOPPED' or not isinstance(h,dict) or set(h)!={'tx','order','policy_hash','at'}
+                or not hexadecimal(h['tx'],32) or h['policy_hash']!=data.get('policy_hash')
+                or not isinstance(h['order'],list) or h['order']!=data.get('order') or not number(h['at'])):return False
+    if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):return False
+    if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):return False
+    if 'policy_roles' in data:policy_validate(data['policy_roles'],data.get('order'))
+    if 'selected_policy' in data:
+        selected=data['selected_policy']
+        if (not isinstance(selected,dict) or set(selected)!={'role','order','hash','since'}
+                or selected.get('hash')!=data.get('policy_hash') or selected.get('role') not in ('source','target')
+                or type(selected.get('since')) not in (int,float) or not math.isfinite(selected['since']) or selected['since']<=0
+                or policy_role(data.get('policy_roles'),selected.get('order'))!=selected['role']):return False
+    if 'manual_selection' in data:
+        selected=data['manual_selection']
+        if (not isinstance(selected,dict) or set(selected)!={'request_id','role','order','hash','vendor_identity','profiles'}
+                or not hexadecimal(selected.get('request_id'),32)
+                or selected.get('role') not in ('source','target') or selected['role']!=data.get('manual_hold')
+                or not isinstance(selected.get('order'),list) or selected['hash']!=data.get('policy_hash')
+                or len(selected['order'])!=len(data.get('order',[])) or set(selected['order'])!=set(data['order'])
+                or not hexadecimal(selected.get('vendor_identity'),64)
+                or not isinstance(selected.get('profiles'),dict) or set(selected['profiles'])!={'source','target'}
+                or any(not isinstance(selected['profiles'][key],dict) or profile_identity(selected['profiles'][key])!=selected['profiles'][key]
+                       for key in ('source','target'))):return False
+    return True
 
 
 def snapshot(root=Path('/'),upgrade=False):
@@ -140,15 +445,11 @@ def snapshot(root=Path('/'),upgrade=False):
         transaction=envelope.get('data')
         if type(envelope.get('schema')) is not int or envelope['schema']!=1 or not isinstance(transaction,dict):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
-        checksum=hashlib.sha256(json.dumps(transaction,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
-        before=transaction.get('before');after=transaction.get('after')
-        if (envelope.get('sha256')!=checksum or not isinstance(before,list) or not 2<=len(before)<=400
-                or not isinstance(after,list) or len(before)!=len(after)
-                or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
-                or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
-                or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
+        if envelope.get('sha256')!=canonical_sha(transaction) or not valid_journal(transaction):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
-    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root))
+    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root,transaction))
+    # The pair ownership record must be one the controller can read (checksum and ownership fields), whatever its phase.
+    if owned and not valid_pair_state(owned):raise ValueError('LIFECYCLE-PAIR-UNVERIFIED')
     phase=owned.get('data',{}).get('phase') if owned else None
     # The pair session is left as it is (HELD etc.); the new supervisor fences and recovers it.
     if owned and phase not in ('STOPPED','FAILED') and not (interrupted and phase in ('RUNNING','HELD','STOPPING')):
@@ -168,6 +469,151 @@ def snapshot(root=Path('/'),upgrade=False):
             if reply.returncode==0:settings[key]=reply.stdout.decode('utf8').strip()
     if upgrade:return settings,status,transaction,intent,stopped,interrupted
     return settings,status,transaction,intent,stopped
+
+
+# Plan item 54 (audit F-16/F-17): the package maintenance marker. Every guard run writes PERSIST/maintenance.json under
+# the control lock BEFORE it assesses the state: a Start that took the lock earlier left its intent for the assessment
+# (refused: Stop Auto first), a Start after it sees the marker and is refused (MAINTENANCE-IN-PROGRESS, maintenance.py /
+# lua/maintenance.lua). Any refusal removes it at once; postinst removes it before the service starts again. The readers
+# count it only within this boot (boot_id) and LIMIT s of uptime after its last write, so a power cut mid-upgrade never
+# blocks for ever. Dependency-free (embedded in the hooks): the same fields maintenance.classify reads.
+ROOT=Path('/')
+MAINTENANCE_MARKER='maintenance.json'
+MAINTENANCE_ACTIONS={'check':'remove','check-stopped':'remove','upgrade':'upgrade','upgrade-stopped':'upgrade','prepare':'install'}
+BOOT_ID=re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+# F-17: the supervisor's last word on its shutdown recovery (native_switch.serve end / lua auto.shutdown). The first guard
+# of prerm removes an older one; after the stop a present record must say ok=true.
+# IR-05 (integration review 07.11.2026): an ABSENT record also passed, so a supervisor killed by procd after its
+# term_timeout (it writes nothing) let the second guard accept an unfinished recovery. Now the first guard writes the
+# expected record {ok:false} when an Auto supervisor process is alive (or /proc cannot be read); only the supervisor's
+# own ok:true at the end of its shutdown recovery replaces it. Without a live supervisor nothing is expected (the older
+# record is removed as before): a monitor-only service (mode no-auto, monitor_only) never blocks a package operation.
+SHUTDOWN_RECORD='supervisor-shutdown.json'
+SHUTDOWN_EXPECTED='LIFECYCLE-RECOVERY-UNFINISHED'
+# the processes that end with the shutdown record: python native_switch.py daemon, lua auto.lua daemon, lua hv_core.lua
+# daemon (hv-core carries the Lua Auto supervisor; never started with no-auto). Not: monitors, the standby, rpcd calls.
+SUPERVISOR_SCRIPTS=(b'/usr/lib/homensai-vpn/native_switch.py',b'/usr/lib/homensai-vpn/lua/auto.lua',b'/usr/lib/homensai-vpn/lua/hv_core.lua')
+STOP_WAIT=330      # procd gives the supervisors term_timeout 300 s, then SIGKILL
+SERVICE_SCRIPT=b'/usr/lib/homensai-vpn/'
+
+
+def boot_identity(root):
+    try:value=(root/'proc/sys/kernel/random/boot_id').read_text(encoding='ascii').strip()
+    except (OSError,ValueError,UnicodeDecodeError):return None
+    return value if BOOT_ID.fullmatch(value) else None
+
+
+def boot_uptime(root):
+    try:value=float((root/'proc/uptime').read_text(encoding='ascii').split()[0])
+    except (OSError,ValueError,IndexError,UnicodeDecodeError):return None
+    return value if finite(value) else None
+
+
+# IR-04 (integration review 07.11.2026): opkg runs the OLD prerm 'upgrade' (marks action=upgrade) and then the NEW
+# preinst/postinst, which only know 'prepare' (install). A prepare that finds this boot's live upgrade mark keeps
+# action=upgrade, so status.maintenance.action and a MAINTENANCE-INTERRUPTED record name the real operation. The same
+# liveness rules as maintenance.classify (same boot and at most MAINTENANCE_LIMIT s of uptime; no boot id: the wall
+# clock); anything else (no mark, a symlink, another boot, too old, unreadable) is a fresh install.
+MAINTENANCE_LIMIT=900
+MAINTENANCE_SKEW=60
+
+
+def live_upgrade_mark(root,boot,uptime,now):
+    path=root/'etc/homensai-vpn'/MAINTENANCE_MARKER
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size>4096:return False
+        row=json.loads(path.read_text(encoding='utf8'))
+    except (OSError,ValueError,UnicodeDecodeError,RecursionError):return False
+    if not isinstance(row,dict) or row.get('action')!='upgrade':return False
+    marked=row.get('boot_id') if isinstance(row.get('boot_id'),str) and BOOT_ID.fullmatch(row['boot_id']) else None
+    if marked and boot:
+        if marked!=boot:return False
+        if finite(row.get('uptime')) and uptime is not None:return 0<=uptime-row['uptime']<=MAINTENANCE_LIMIT
+    since=row.get('time')
+    return finite(since) and finite(now) and -MAINTENANCE_SKEW<=now-since<=MAINTENANCE_LIMIT
+
+
+def mark_maintenance(root,action):
+    persist=root/'etc/homensai-vpn'
+    try:
+        persist.mkdir(mode=0o700,parents=True,exist_ok=True)
+        if persist.is_symlink() or not persist.is_dir():raise ValueError('LIFECYCLE-MAINTENANCE-FAILED')
+        now=time.time();boot=boot_identity(root);uptime=boot_uptime(root)
+        kind=MAINTENANCE_ACTIONS[action]
+        if action=='prepare' and live_upgrade_mark(root,boot,uptime,now):kind='upgrade'
+        row={'action':kind,'time':now,'pid':os.getpid()}
+        if boot:row['boot_id']=boot
+        if uptime is not None:row['uptime']=uptime
+        temporary=persist/('.'+MAINTENANCE_MARKER+'.new')
+        fd=os.open(str(temporary),os.O_WRONLY|os.O_CREAT|os.O_TRUNC|getattr(os,'O_NOFOLLOW',0),0o600)
+        with os.fdopen(fd,'w',encoding='utf8') as stream:
+            stream.write(json.dumps(row,sort_keys=True));stream.flush();os.fsync(stream.fileno())
+        os.replace(str(temporary),str(persist/MAINTENANCE_MARKER))
+    except (OSError,KeyError) as error:raise ValueError('LIFECYCLE-MAINTENANCE-FAILED') from error
+
+
+def clear_maintenance(root):
+    try:(root/'etc/homensai-vpn'/MAINTENANCE_MARKER).unlink()
+    except OSError:pass
+
+
+def service_processes(root,supervisors=False):
+    """pids of this package's service processes (daemon/standby instances, an apply child); None when /proc is unreadable.
+    supervisors=True: only the Auto supervisor daemons (SUPERVISOR_SCRIPTS), the processes that write the shutdown record."""
+    try:entries=list((root/'proc').iterdir())
+    except OSError:return None
+    found=[]
+    for entry in entries:
+        if not entry.name.isdigit():continue
+        try:command=(entry/'cmdline').read_bytes()
+        except OSError:continue  # exited meanwhile
+        argv=command.split(bytes([0]))
+        if supervisors:
+            if b'daemon' in argv and any(arg in SUPERVISOR_SCRIPTS for arg in argv):found.append(int(entry.name))
+        elif APPLY_CHILD in command or any(arg.startswith(SERVICE_SCRIPT) for arg in argv) and (b'daemon' in argv or b'standby' in argv):
+            found.append(int(entry.name))
+    return found
+
+
+def wait_service_exit(root,limit=STOP_WAIT,sleep=time.sleep,clock=time.monotonic):
+    """F-17: /etc/init.d stop only asks procd to stop; the supervisor may still be restoring. Wait (bounded) until every
+    service process has exited, outside the control lock (the shutdown recovery takes it)."""
+    until=clock()+limit
+    while True:
+        alive=service_processes(root)
+        if alive==[]:return
+        if alive is None or clock()>=until:raise ValueError('LIFECYCLE-STOP-UNFINISHED')
+        sleep(0.5)
+
+
+def shutdown_refusal(root):
+    path=root/'var/run/homensai-vpn'/SHUTDOWN_RECORD
+    if not os.path.lexists(str(path)):return None
+    try:row=read_dict(path)
+    except (OSError,ValueError,UnicodeDecodeError):return 'LIFECYCLE-RECOVERY-UNFINISHED'
+    return None if row.get('ok') is True else 'LIFECYCLE-RECOVERY-UNFINISHED'
+
+
+def forget_shutdown(root):
+    try:(root/'var/run/homensai-vpn'/SHUTDOWN_RECORD).unlink()
+    except FileNotFoundError:pass
+
+
+def expect_shutdown(root):
+    """First guard of prerm (IR-05): with a live Auto supervisor (or an unreadable /proc) the record of THIS shutdown is
+    expected: {ok:false} now, replaced only by the supervisor's own ok:true. Otherwise the older record is removed."""
+    alive=service_processes(root,supervisors=True)
+    if alive==[]:forget_shutdown(root);return False
+    directory=root/'var/run/homensai-vpn'
+    if directory.is_symlink() or not directory.is_dir():raise ValueError('LIFECYCLE-CONTROL-UNVERIFIED')
+    temporary=directory/('.'+SHUTDOWN_RECORD+'.new')
+    try:temporary.unlink()
+    except FileNotFoundError:pass
+    fd=os.open(str(temporary),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+    with os.fdopen(fd,'w',encoding='utf8') as stream:
+        stream.write(json.dumps({'ok':False,'code':SHUTDOWN_EXPECTED,'expected':True,'time':time.time()},sort_keys=True))
+    os.replace(str(temporary),str(directory/SHUTDOWN_RECORD))
+    return True
 
 
 @contextmanager
@@ -192,11 +638,21 @@ def main(action):
     # check: removal (old prerm 'remove'); upgrade: old prerm during an opkg upgrade
     # (opkg runs the OLD package's prerm 'upgrade <new>' before the new preinst);
     # prepare: new preinst/postinst. Only upgrade/prepare accept a dead interrupted journal.
-    if action not in ('check','prepare','upgrade'):raise SystemExit('LIFECYCLE-ACTION')
+    # check-stopped / upgrade-stopped: prerm again after the service stop (F-16/F-17): first every service process must
+    # have exited and the supervisor's shutdown record (when present) must say its recovery finished. The first guard
+    # made it present whenever an Auto supervisor was running (IR-05), so a killed supervisor is refused too.
+    if action not in MAINTENANCE_ACTIONS:raise SystemExit('LIFECYCLE-ACTION')
+    base=action.split('-')[0]
     try:
+        if action.endswith('-stopped'):wait_service_exit(ROOT)
         with control_lock():
+            mark_maintenance(ROOT,action)
+            if action in ('check','upgrade'):expect_shutdown(ROOT)
+            elif action.endswith('-stopped'):
+                refused=shutdown_refusal(ROOT)
+                if refused:raise ValueError(refused)
             # Removal ('check') never uses the interrupted-journal exception.
-            code=assess(*snapshot(upgrade=action in ('prepare','upgrade')))
+            code=assess(*snapshot(upgrade=base in ('prepare','upgrade')))
             if code:raise ValueError(code)
             if action=='prepare':
                 # No names, priorities, tokens or statistics are changed.
@@ -204,14 +660,30 @@ def main(action):
                 result=subprocess.run(['/sbin/uci','-q','batch'],input=batch,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10)
                 if result.returncode:raise ValueError('LIFECYCLE-AUTO-DISABLE-FAILED')
     except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError) as error:
+        # The package operation is aborted: the maintenance marker goes at once (a Start is possible again).
+        clear_maintenance(ROOT)
         code=str(error) if type(error) is ValueError and str(error).startswith('LIFECYCLE-') else 'LIFECYCLE-STATE-UNVERIFIED'
         print(code,file=sys.stderr);raise SystemExit(1)
-    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(action,'LIFECYCLE-AUTO-DISABLED'))
+    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(base,'LIFECYCLE-AUTO-DISABLED'))
 
 
 if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')
 
 HOMENSAI_LIFECYCLE_GUARD
+if [ "$$refused" != 0 ]; then
+    if [ -x /etc/init.d/homensai-vpn ]; then
+        /etc/init.d/homensai-vpn start || echo LIFECYCLE-RESTART-FAILED: the service could not be started again after the refusal >&2
+    fi
+    echo LIFECYCLE-REFUSED-PREINST: the installed version keeps running, the package operation is aborted >&2
+    exit "$$refused"
+fi
+fi
+running=$$(sed -n 's/^# version //p' /usr/lib/homensai-vpn/integrity.sha256 2>/dev/null | head -n 1)
+case "$$running" in *[!0-9A-Za-z.+~_-]*) running= ;; esac
+if [ -n "$$running" ]; then
+    mkdir -p /etc/homensai-vpn && chmod 0700 /etc/homensai-vpn && printf '%s\n' "$$running" > /etc/homensai-vpn/upgrade-from
+else
+    rm -f /etc/homensai-vpn/upgrade-from
 fi
 exit 0
 endef
@@ -220,8 +692,18 @@ define Package/homensai-auto-vpn/postinst
 #!/bin/sh
 set -eu
 [ -n "$${IPKG_INSTROOT:-}" ] && exit 0
+trap 'rm -f /etc/homensai-vpn/maintenance.json' EXIT
 mkdir -p /etc/homensai-vpn
 chmod 0700 /etc/homensai-vpn
+[ ! -f /etc/config/homensai_vpn ] || chmod 0600 /etc/config/homensai_vpn
+package_version='$(PKG_VERSION)-$(PKG_RELEASE)'
+result=/etc/homensai-vpn/upgrade-result.json
+if [ -f "$$result" ] && [ "$$(sed -n 's/.*"code":"\([A-Z-]*\)".*/\1/p' "$$result")" = UPGRADE-ROLLED-BACK ] &&
+   [ "$$(sed -n 's/.*"from":"\([^"]*\)".*/\1/p' "$$result")" = "$$package_version" ] &&
+   [ "$$(sed -n 's/.*"to":"\([^"]*\)".*/\1/p' "$$result")" = "$$(sed -n 's/^# version //p' /usr/lib/homensai-vpn/integrity.sha256 2>/dev/null | head -n 1)" ]; then
+    echo "UPGRADE-NOT-INSTALLED: $$package_version was rolled back; its files are not installed. Use opkg install --force-reinstall with a verified package" >&2
+    exit 1
+fi
 /usr/bin/python3 - prepare <<'HOMENSAI_LIFECYCLE_GUARD'
 """Own-package lifecycle guard. No routes, VPN keys or firewall writes.
 
@@ -247,6 +729,7 @@ STOPPED={'STOPPED','DISABLED','EXPIRED','ROLLED-BACK'}
 # the journal, the guard or the pair ownership record.
 INTERRUPTED={'ARMED','APPLYING','WAIT-CLIENT','RESTORING'}
 APPLY_CHILD=b'native_switch.py' + bytes([0]) + b'apply' + bytes([0])
+LUA_SUPERVISORS=(b'/usr/lib/homensai-vpn/lua/auto.lua' + bytes([0]), b'/usr/lib/homensai-vpn/lua/hv_core.lua' + bytes([0]))
 
 
 def finite(value):
@@ -331,17 +814,320 @@ def read_dict(path):
     return row
 
 
-def apply_worker_alive(root):
-    """Any native apply child (including the journal's recorded pid) is alive. Unknown counts as alive."""
+HV_STANDBY=b'/usr/lib/homensai-vpn/lua/hv_core.lua' + bytes([0]) + b'standby' + bytes([0])
+HV_FALLBACK='hv-core-fallback.json'
+WRITER_UNRESOLVED='writer-unresolved'
+GIVE_UP_ALARM='ROLLBACK-GIVEN-UP'
+GIVE_UP_FRESH=60  # rollback.give_up republishes its alarm every 10 s
+
+
+def exists_or_unknown(path):
+    try:return os.path.lexists(str(path))
+    except (OSError,ValueError):return True
+
+
+def quiescent_give_up(root,transaction,now=None):
+    """Fenced quiescence (audit 07.11.2026, N3 item 4): the Lua supervisor waits idle in rollback.give_up after
+    ROLLBACK-GIVEN-UP until the service stops or the journal is removed; it writes nothing more to this journal.
+    Proven only by the evidence it already leaves: the unfinished journal has used up its rollback attempts (any
+    supervisor of this package goes straight back to give_up), a fresh BLOCKED/ROLLBACK-GIVEN-UP status bound to this
+    journal, and no unresolved writer marker. Missing or unreadable evidence: not quiescent."""
+    if not isinstance(transaction,dict) or transaction.get('phase') not in INTERRUPTED:return False
+    failures=transaction.get('rollback_failures')
+    if type(failures) is not int or failures<ROLLBACK_FAILURE_LIMIT:return False
+    runtime=root/'var/run/homensai-vpn'
+    if exists_or_unknown(runtime/WRITER_UNRESOLVED):return False
+    try:status=read_dict(runtime/'native-status.json')
+    except (OSError,ValueError,UnicodeDecodeError):return False
+    stamp=status.get('time');now=time.time() if now is None else now
+    return (status.get('state')=='BLOCKED' and status.get('alarm')==GIVE_UP_ALARM
+            and isinstance(transaction.get('source'),str) and status.get('source')==transaction['source']
+            and isinstance(transaction.get('target'),str) and status.get('target')==transaction['target']
+            and finite(stamp) and finite(now) and -5<=now-stamp<=GIVE_UP_FRESH)
+
+
+def apply_worker_alive(root,transaction=None,now=None):
+    """Any process that may be applying a journal is alive: a Python apply child (including the journal's recorded pid)
+    or a Lua Auto supervisor, which applies inside its own process (lua/transaction.lua). The hv_core standby applies
+    nothing itself; it counts only once hv-core-fallback.json exists (it may then exec into the Lua supervisor). A Lua
+    supervisor proven idle in the give-up wait (quiescent_give_up) does not count. Unknown counts as alive."""
     try:entries=list((root/'proc').iterdir())
     except OSError:return True
+    quiescent=None
     for entry in entries:
         if not entry.name.isdigit():continue
         try:command=(entry/'cmdline').read_bytes()
         except (FileNotFoundError,ProcessLookupError):continue  # exited meanwhile
         except OSError:return True
         if APPLY_CHILD in command:return True
+        if not any(script in command for script in LUA_SUPERVISORS):continue
+        if HV_STANDBY in command and LUA_SUPERVISORS[0] not in command:
+            if exists_or_unknown(root/'var/run/homensai-vpn'/HV_FALLBACK):return True
+            continue
+        if quiescent is None:quiescent=quiescent_give_up(root,transaction,now)
+        if not quiescent:return True
     return False
+
+
+# Dependency-free copies of the controllers' record readers (native_switch.validate_journal, pair_auto.read_state):
+# a record a controller would refuse to read can never be recovered by it, so the guard refuses it too.
+JOURNAL_PHASES=('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','ROLLED-BACK','RELEASE-PENDING')
+PROOF_SCOPES=('external-lan','router-hosted-ipv4','router-probed-ipv4')
+PAIR_PHASES=('STARTING','RUNNING','STOPPING','HELD','STOPPED','FAILED')
+LEGACY_INTERFACES={'wgclient1':'wgclient','ovpnclient1':'ovpnclient'}
+ROLLBACK_FAILURE_LIMIT=2
+
+
+def canonical_sha(value):
+    return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+
+
+def hexadecimal(value,length):
+    return isinstance(value,str) and re.fullmatch('[a-f0-9]{%d}'%length,value) is not None
+
+
+def number(value):
+    return type(value) in (int,float) and math.isfinite(value) and value>=0
+
+
+# Dependency-free copies of the delegated validators the readers call (audit 07.11.2026, N3 item 3):
+# failure_diagnosis.profile_identity with vendor_observation.tunnel_identity, pair_policy.validate/role/desired_order/
+# metadata and rollback_recovery.order_steps/restore_origin/validate_step. They raise ValueError like the originals;
+# test_lifecycle_record_parity runs the same records through the real readers and through these copies.
+VENDOR_SAFE=re.compile(r'^[A-Za-z0-9_.:-]{1,96}$$')
+VENDOR_TUNNEL=re.compile(r'^(openvpn|wireguard):[A-Za-z0-9_.-]{1,64}$$')
+PAIR_TRANSITION_KEYS={'source_rule','target_rule','direction','generic_rules','source_id','target_id',
+                      'destination_role','before_policy_role','session_order','primary_order'}
+
+
+def profile_identity(profile):
+    if not isinstance(profile,dict):return None
+    protocol=profile.get('protocol');logical=profile.get('interface');claimed=profile.get('vendor_tunnel_id');identifier=profile.get('id')
+    if (protocol not in ('openvpn','wireguard') or not isinstance(logical,str)
+            or not isinstance(claimed,str) or not VENDOR_TUNNEL.fullmatch(claimed) or claimed!=protocol+':'+logical
+            or not isinstance(identifier,str) or not VENDOR_SAFE.fullmatch(identifier) or not identifier.startswith(protocol+':')
+            or identifier==protocol+':' or 'section' in profile and identifier!=protocol+':'+str(profile['section'])):return None
+    generation=profile.get('vendor_generation')
+    if not isinstance(generation,str) or not re.fullmatch(r'^[a-f0-9]{32}$$',generation):return None
+    return {key:profile.get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')}
+
+
+def policy_validate(value,order):
+    if (not isinstance(value,dict) or not isinstance(order,list) or not 2<=len(order)<=400
+            or any(not isinstance(key,str) or not key for key in order) or len(order)!=len(set(order))
+            or value.get('direction') not in ('first','last')
+            or not all(isinstance(value.get(key),str) and value[key] for key in ('source_rule','target_rule','source_id','target_id'))
+            or value['source_rule']==value['target_rule'] or value['source_id']==value['target_id']
+            or not isinstance(value.get('generic_rules'),list) or not 2<=len(value['generic_rules'])<=16
+            or any(not isinstance(key,str) or key not in order for key in value['generic_rules'])
+            or len(value['generic_rules'])!=len(set(value['generic_rules']))
+            or any(value[role+'_rule'] not in value['generic_rules'] for role in ('source','target'))):
+        raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return value
+
+
+def policy_role(value,order):
+    policy_validate(value,order)
+    generic=sorted(value['generic_rules'],key=order.index)
+    chosen=generic[0] if value['direction']=='first' else generic[-1]
+    for key in ('source','target'):
+        if value[key+'_rule']==chosen:return key
+    raise ValueError('PAIR-POLICY-UNVERIFIED')
+
+
+def desired_order(value,order,destination):
+    if destination not in ('source','target'):raise ValueError('PAIR-POLICY-UNVERIFIED')
+    result=list(order)
+    if policy_role(value,order)!=destination:
+        a=result.index(value['source_rule']);b=result.index(value['target_rule'])
+        result[a],result[b]=result[b],result[a]
+    if policy_role(value,result)!=destination:raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return result
+
+
+def pair_transition(journal):
+    value=journal.get('pair_transition')
+    if value is None:return None
+    if not isinstance(value,dict) or set(value)!=PAIR_TRANSITION_KEYS:raise ValueError('PAIR-POLICY-UNVERIFIED')
+    identity=policy_validate(value,journal.get('before'));before=journal['before']
+    if (identity['source_id']!=journal.get('source') or identity['target_id']!=journal.get('target')
+            or value.get('destination_role') not in ('source','target')
+            or value.get('before_policy_role')!=policy_role(identity,before)
+            or journal.get('after')!=desired_order(identity,before,value['destination_role'])
+            or any(not isinstance(value.get(key),list) or len(value[key])!=len(before)
+                   or set(value[key])!=set(before) for key in ('session_order','primary_order'))
+            or value['primary_order']!=desired_order(identity,before,'source')
+            or value['session_order'] not in (desired_order(identity,before,'source'),desired_order(identity,before,'target'))):
+        raise ValueError('PAIR-POLICY-UNVERIFIED')
+    for key in ('restored_order','restore_target_order'):
+        restored=journal.get(key)
+        if restored is not None and restored not in (before,value['primary_order'],value['session_order']):
+            raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return value
+
+
+def order_steps(before,target):
+    if (not isinstance(before,list) or not isinstance(target,list) or not 2<=len(before)<=400
+            or len(before)!=len(target) or any(not isinstance(x,str) for x in before+target)
+            or len(set(before))!=len(before) or set(before)!=set(target)):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    current=list(before);steps=[]
+    for index,identifier in enumerate(target):
+        if current[index]==identifier:continue
+        previous=list(current);current.remove(identifier);current.insert(index,identifier)
+        steps.append({'version':1,'kind':'reorder','before':previous,'after':list(current),'section':identifier,'index':index})
+    return steps
+
+
+def restore_origin(journal):
+    if 'restore_proof_source' not in journal and 'restore_order_origin' not in journal:return journal.get('restore_before_order')
+    source=journal.get('restore_proof_source');origins=[journal.get('after')]
+    if source=='vendor-rebuild':
+        detail=journal.get('failure_detail')
+        if not isinstance(detail,dict) or detail.get('worker_stage')!='rtp-dispatch':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+        origins.append(journal.get('before'))
+    elif source!='forward':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    if (journal.get('restore_order_origin') not in origins
+            or journal.get('restore_before_order')!=journal.get('before') or journal.get('restore_target_order')!=journal.get('before')
+            or journal.get('before')==journal.get('after') or journal.get('kernel_before_verified') is not True
+            or journal.get('restore_before_verified') is not True or journal.get('rtp_dispatched') is not True
+            or journal.get('forward_policy_touched') is not True or journal.get('confirmed') is not None
+            or journal.get('kernel_confirmed') is not None or 'restore_order_step' not in journal
+            or journal.get('restore_kernel_fingerprint')!=journal.get('kernel_before_fingerprint')):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    return journal['restore_order_origin']
+
+
+def validate_step(journal):
+    before=restore_origin(journal);target=journal.get('restore_target_order')
+    if 'restore_order_step' not in journal:return None
+    step=journal['restore_order_step']
+    if (not isinstance(step,dict) or type(step.get('version')) is not int or step['version']!=1
+            or journal.get('phase') not in ('RESTORING','ROLLED-BACK','RELEASE-PENDING')
+            or journal.get('restore_before_verified') is not True
+            or not hexadecimal(journal.get('restore_kernel_fingerprint'),64)
+            or journal.get('restore_before_order') not in (journal.get('before'),journal.get('after'),journal.get('restored_order'))):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    moves=order_steps(before,target)
+    if step=={'version':1,'kind':'commit','before':target,'after':target}:return step
+    if type(step.get('index')) is int and any(step==expected for expected in moves):return step
+    raise ValueError('JOURNAL-INTEGRITY-FAILED')
+
+
+DELEGATED_ERRORS=(ValueError,TypeError,KeyError,IndexError,AttributeError)
+
+
+def valid_journal(value):
+    """True when native_switch.validate_journal's rules hold, including its delegated nested validators."""
+    try:return journal_rules(value)
+    except DELEGATED_ERRORS:return False
+
+
+def journal_rules(value):
+    if not isinstance(value,dict):return False
+    before=value.get('before',[]);after=value.get('after',[])
+    if (not isinstance(before,list) or not isinstance(after,list) or not 2<=len(before)<=400 or len(before)!=len(after)
+            or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
+            or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)):return False
+    if value.get('phase') not in JOURNAL_PHASES:return False
+    scope=value.get('proof_scope','external-lan')
+    if type(scope) is not str or scope not in PROOF_SCOPES:return False
+    bindings=value.get('process_bindings')
+    if bindings is not None and (not isinstance(bindings,dict) or len(bindings)!=2
+            or any(type(k) is not str or not re.fullmatch(r'(?:wgclient|ovpnclient)[0-9]{1,4}',k)
+                   or type(v) is not int or not 0<v<=0xffffffff for k,v in bindings.items())
+            or len(set(bindings.values()))!=2):return False
+    if not hexadecimal(value.get('hash'),64):return False
+    for key,length in (('vendor_identity',64),('control_revision',32),('manual_request_id',32),('kernel_before_fingerprint',64),
+                       ('restore_kernel_fingerprint',64)):
+        if key in value and not hexadecimal(value[key],length):return False
+    if 'vendor_profiles' in value:
+        profiles=value['vendor_profiles']
+        if (not isinstance(profiles,dict) or set(profiles)!={'source','target'}
+                or any(not isinstance(profiles[role],dict) or profile_identity(profiles[role])!=profiles[role]
+                       or profiles[role].get('id')!=value.get(role) for role in ('source','target'))):
+            return False
+    for key in ('started','deadline','lease_monotonic_until','confirmed','kernel_confirmed','finished'):
+        if key in value and not number(value[key]):return False
+    if value.get('monotonic_deadline') is not None and not number(value['monotonic_deadline']):return False
+    if 'pid' in value and value['pid'] is not None and (type(value['pid']) is not int or value['pid']<=1):return False
+    if 'rollback_failures' in value and (type(value['rollback_failures']) is not int
+                                         or not 0<=value['rollback_failures']<=ROLLBACK_FAILURE_LIMIT):return False
+    if 'rollback_package' in value and (not isinstance(value['rollback_package'],str)
+                                        or not re.fullmatch(r'[0-9A-Za-z.+~-]{1,64}',value['rollback_package'])):return False
+    for key in ('trial','forward_policy_touched','rtp_dispatched','kernel_before_verified','restore_before_verified'):
+        if key in value and type(value[key]) is not bool:return False
+    if 'pair_transition' in value:pair_transition(value)
+    if 'restore_kernel_fingerprint' in value and (value.get('pair_transition') is None or 'restore_before_order' not in value
+                                                  or 'restore_target_order' not in value):return False
+    if 'restore_before_order' in value:
+        order=value['restore_before_order']
+        if not isinstance(order,list) or len(order)!=len(before) or any(not isinstance(x,str) for x in order) or set(order)!=set(before):
+            return False
+    if any(key in value for key in ('restore_order_step','restore_proof_source','restore_order_origin')):validate_step(value)
+    if 'activation_reapply' in value and (value['activation_reapply'] is not True or value.get('pair_transition') is None
+                                          or value.get('manual_request_id') is not None or before!=after):return False
+    if value['phase'] not in ('ROLLED-BACK','RELEASE-PENDING'):
+        for name in ('tx','source','target','trial_nonce'):
+            if not isinstance(value.get(name),str) or not re.fullmatch(r'[A-Za-z0-9_:.\-]{1,96}',value[name]):return False
+        if value['source']==value['target'] or 'started' not in value or 'deadline' not in value:return False
+        if value['deadline']<value['started']:return False
+    return True
+
+
+def valid_pair_state(envelope):
+    """True when pair_auto.read_state's checksum, ownership and delegated optional-field rules hold."""
+    try:return pair_rules(envelope)
+    except DELEGATED_ERRORS:return False
+
+
+def pair_rules(envelope):
+    data=envelope.get('data')
+    if not isinstance(data,dict) or envelope.get('sha256')!=canonical_sha(data):return False
+    interfaces=data.get('interfaces',LEGACY_INTERFACES)
+    if (not isinstance(interfaces,dict) or len(interfaces)!=2
+            or any(not isinstance(name,str) or not re.fullmatch(r'(wgclient|ovpnclient)[1-9][0-9]{0,3}',name)
+                   or re.fullmatch(r'(wgclient|ovpnclient)[1-9][0-9]{0,3}',name).group(1)!=proto for name,proto in interfaces.items())):
+        return False
+    owned=data.get('owned');flags=data.get('before_flags')
+    if not (data.get('phase') in PAIR_PHASES and hexadecimal(data.get('id'),32)
+            and isinstance(owned,list) and all(isinstance(x,str) and x in interfaces for x in owned) and len(owned)==len(set(owned))
+            and isinstance(flags,dict) and set(flags)==set(interfaces) and all(v in ('0','1') for v in flags.values())
+            and hexadecimal(data.get('network_identity'),64)):return False
+    if 'protected_static' in data and (not isinstance(data['protected_static'],dict) or set(data['protected_static'])!={'firewall'}
+            or not hexadecimal(data['protected_static']['firewall'],64)):return False
+    if any(key in data for key in ('kept','kept_flags','kept_at','kept_tx')):
+        kept,kept_flags,at,tx=data.get('kept'),data.get('kept_flags'),data.get('kept_at'),data.get('kept_tx')
+        if (data['phase']!='STOPPED' or not isinstance(kept,list) or not kept or len(kept)!=len(set(map(str,kept)))
+                or ('kept_tx' in data and not hexadecimal(tx,32))
+                or any(not isinstance(x,str) or x not in interfaces for x in kept) or not isinstance(kept_flags,dict)
+                or set(kept_flags)!=set(kept) or any(v not in ('0','1') for v in kept_flags.values()) or not number(at)):return False
+    if 'handover' in data:
+        h=data['handover']
+        if (data['phase']!='STOPPED' or not isinstance(h,dict) or set(h)!={'tx','order','policy_hash','at'}
+                or not hexadecimal(h['tx'],32) or h['policy_hash']!=data.get('policy_hash')
+                or not isinstance(h['order'],list) or h['order']!=data.get('order') or not number(h['at'])):return False
+    if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):return False
+    if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):return False
+    if 'policy_roles' in data:policy_validate(data['policy_roles'],data.get('order'))
+    if 'selected_policy' in data:
+        selected=data['selected_policy']
+        if (not isinstance(selected,dict) or set(selected)!={'role','order','hash','since'}
+                or selected.get('hash')!=data.get('policy_hash') or selected.get('role') not in ('source','target')
+                or type(selected.get('since')) not in (int,float) or not math.isfinite(selected['since']) or selected['since']<=0
+                or policy_role(data.get('policy_roles'),selected.get('order'))!=selected['role']):return False
+    if 'manual_selection' in data:
+        selected=data['manual_selection']
+        if (not isinstance(selected,dict) or set(selected)!={'request_id','role','order','hash','vendor_identity','profiles'}
+                or not hexadecimal(selected.get('request_id'),32)
+                or selected.get('role') not in ('source','target') or selected['role']!=data.get('manual_hold')
+                or not isinstance(selected.get('order'),list) or selected['hash']!=data.get('policy_hash')
+                or len(selected['order'])!=len(data.get('order',[])) or set(selected['order'])!=set(data['order'])
+                or not hexadecimal(selected.get('vendor_identity'),64)
+                or not isinstance(selected.get('profiles'),dict) or set(selected['profiles'])!={'source','target'}
+                or any(not isinstance(selected['profiles'][key],dict) or profile_identity(selected['profiles'][key])!=selected['profiles'][key]
+                       for key in ('source','target'))):return False
+    return True
 
 
 def snapshot(root=Path('/'),upgrade=False):
@@ -357,15 +1143,11 @@ def snapshot(root=Path('/'),upgrade=False):
         transaction=envelope.get('data')
         if type(envelope.get('schema')) is not int or envelope['schema']!=1 or not isinstance(transaction,dict):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
-        checksum=hashlib.sha256(json.dumps(transaction,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
-        before=transaction.get('before');after=transaction.get('after')
-        if (envelope.get('sha256')!=checksum or not isinstance(before,list) or not 2<=len(before)<=400
-                or not isinstance(after,list) or len(before)!=len(after)
-                or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
-                or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
-                or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
+        if envelope.get('sha256')!=canonical_sha(transaction) or not valid_journal(transaction):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
-    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root))
+    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root,transaction))
+    # The pair ownership record must be one the controller can read (checksum and ownership fields), whatever its phase.
+    if owned and not valid_pair_state(owned):raise ValueError('LIFECYCLE-PAIR-UNVERIFIED')
     phase=owned.get('data',{}).get('phase') if owned else None
     # The pair session is left as it is (HELD etc.); the new supervisor fences and recovers it.
     if owned and phase not in ('STOPPED','FAILED') and not (interrupted and phase in ('RUNNING','HELD','STOPPING')):
@@ -385,6 +1167,151 @@ def snapshot(root=Path('/'),upgrade=False):
             if reply.returncode==0:settings[key]=reply.stdout.decode('utf8').strip()
     if upgrade:return settings,status,transaction,intent,stopped,interrupted
     return settings,status,transaction,intent,stopped
+
+
+# Plan item 54 (audit F-16/F-17): the package maintenance marker. Every guard run writes PERSIST/maintenance.json under
+# the control lock BEFORE it assesses the state: a Start that took the lock earlier left its intent for the assessment
+# (refused: Stop Auto first), a Start after it sees the marker and is refused (MAINTENANCE-IN-PROGRESS, maintenance.py /
+# lua/maintenance.lua). Any refusal removes it at once; postinst removes it before the service starts again. The readers
+# count it only within this boot (boot_id) and LIMIT s of uptime after its last write, so a power cut mid-upgrade never
+# blocks for ever. Dependency-free (embedded in the hooks): the same fields maintenance.classify reads.
+ROOT=Path('/')
+MAINTENANCE_MARKER='maintenance.json'
+MAINTENANCE_ACTIONS={'check':'remove','check-stopped':'remove','upgrade':'upgrade','upgrade-stopped':'upgrade','prepare':'install'}
+BOOT_ID=re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+# F-17: the supervisor's last word on its shutdown recovery (native_switch.serve end / lua auto.shutdown). The first guard
+# of prerm removes an older one; after the stop a present record must say ok=true.
+# IR-05 (integration review 07.11.2026): an ABSENT record also passed, so a supervisor killed by procd after its
+# term_timeout (it writes nothing) let the second guard accept an unfinished recovery. Now the first guard writes the
+# expected record {ok:false} when an Auto supervisor process is alive (or /proc cannot be read); only the supervisor's
+# own ok:true at the end of its shutdown recovery replaces it. Without a live supervisor nothing is expected (the older
+# record is removed as before): a monitor-only service (mode no-auto, monitor_only) never blocks a package operation.
+SHUTDOWN_RECORD='supervisor-shutdown.json'
+SHUTDOWN_EXPECTED='LIFECYCLE-RECOVERY-UNFINISHED'
+# the processes that end with the shutdown record: python native_switch.py daemon, lua auto.lua daemon, lua hv_core.lua
+# daemon (hv-core carries the Lua Auto supervisor; never started with no-auto). Not: monitors, the standby, rpcd calls.
+SUPERVISOR_SCRIPTS=(b'/usr/lib/homensai-vpn/native_switch.py',b'/usr/lib/homensai-vpn/lua/auto.lua',b'/usr/lib/homensai-vpn/lua/hv_core.lua')
+STOP_WAIT=330      # procd gives the supervisors term_timeout 300 s, then SIGKILL
+SERVICE_SCRIPT=b'/usr/lib/homensai-vpn/'
+
+
+def boot_identity(root):
+    try:value=(root/'proc/sys/kernel/random/boot_id').read_text(encoding='ascii').strip()
+    except (OSError,ValueError,UnicodeDecodeError):return None
+    return value if BOOT_ID.fullmatch(value) else None
+
+
+def boot_uptime(root):
+    try:value=float((root/'proc/uptime').read_text(encoding='ascii').split()[0])
+    except (OSError,ValueError,IndexError,UnicodeDecodeError):return None
+    return value if finite(value) else None
+
+
+# IR-04 (integration review 07.11.2026): opkg runs the OLD prerm 'upgrade' (marks action=upgrade) and then the NEW
+# preinst/postinst, which only know 'prepare' (install). A prepare that finds this boot's live upgrade mark keeps
+# action=upgrade, so status.maintenance.action and a MAINTENANCE-INTERRUPTED record name the real operation. The same
+# liveness rules as maintenance.classify (same boot and at most MAINTENANCE_LIMIT s of uptime; no boot id: the wall
+# clock); anything else (no mark, a symlink, another boot, too old, unreadable) is a fresh install.
+MAINTENANCE_LIMIT=900
+MAINTENANCE_SKEW=60
+
+
+def live_upgrade_mark(root,boot,uptime,now):
+    path=root/'etc/homensai-vpn'/MAINTENANCE_MARKER
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size>4096:return False
+        row=json.loads(path.read_text(encoding='utf8'))
+    except (OSError,ValueError,UnicodeDecodeError,RecursionError):return False
+    if not isinstance(row,dict) or row.get('action')!='upgrade':return False
+    marked=row.get('boot_id') if isinstance(row.get('boot_id'),str) and BOOT_ID.fullmatch(row['boot_id']) else None
+    if marked and boot:
+        if marked!=boot:return False
+        if finite(row.get('uptime')) and uptime is not None:return 0<=uptime-row['uptime']<=MAINTENANCE_LIMIT
+    since=row.get('time')
+    return finite(since) and finite(now) and -MAINTENANCE_SKEW<=now-since<=MAINTENANCE_LIMIT
+
+
+def mark_maintenance(root,action):
+    persist=root/'etc/homensai-vpn'
+    try:
+        persist.mkdir(mode=0o700,parents=True,exist_ok=True)
+        if persist.is_symlink() or not persist.is_dir():raise ValueError('LIFECYCLE-MAINTENANCE-FAILED')
+        now=time.time();boot=boot_identity(root);uptime=boot_uptime(root)
+        kind=MAINTENANCE_ACTIONS[action]
+        if action=='prepare' and live_upgrade_mark(root,boot,uptime,now):kind='upgrade'
+        row={'action':kind,'time':now,'pid':os.getpid()}
+        if boot:row['boot_id']=boot
+        if uptime is not None:row['uptime']=uptime
+        temporary=persist/('.'+MAINTENANCE_MARKER+'.new')
+        fd=os.open(str(temporary),os.O_WRONLY|os.O_CREAT|os.O_TRUNC|getattr(os,'O_NOFOLLOW',0),0o600)
+        with os.fdopen(fd,'w',encoding='utf8') as stream:
+            stream.write(json.dumps(row,sort_keys=True));stream.flush();os.fsync(stream.fileno())
+        os.replace(str(temporary),str(persist/MAINTENANCE_MARKER))
+    except (OSError,KeyError) as error:raise ValueError('LIFECYCLE-MAINTENANCE-FAILED') from error
+
+
+def clear_maintenance(root):
+    try:(root/'etc/homensai-vpn'/MAINTENANCE_MARKER).unlink()
+    except OSError:pass
+
+
+def service_processes(root,supervisors=False):
+    """pids of this package's service processes (daemon/standby instances, an apply child); None when /proc is unreadable.
+    supervisors=True: only the Auto supervisor daemons (SUPERVISOR_SCRIPTS), the processes that write the shutdown record."""
+    try:entries=list((root/'proc').iterdir())
+    except OSError:return None
+    found=[]
+    for entry in entries:
+        if not entry.name.isdigit():continue
+        try:command=(entry/'cmdline').read_bytes()
+        except OSError:continue  # exited meanwhile
+        argv=command.split(bytes([0]))
+        if supervisors:
+            if b'daemon' in argv and any(arg in SUPERVISOR_SCRIPTS for arg in argv):found.append(int(entry.name))
+        elif APPLY_CHILD in command or any(arg.startswith(SERVICE_SCRIPT) for arg in argv) and (b'daemon' in argv or b'standby' in argv):
+            found.append(int(entry.name))
+    return found
+
+
+def wait_service_exit(root,limit=STOP_WAIT,sleep=time.sleep,clock=time.monotonic):
+    """F-17: /etc/init.d stop only asks procd to stop; the supervisor may still be restoring. Wait (bounded) until every
+    service process has exited, outside the control lock (the shutdown recovery takes it)."""
+    until=clock()+limit
+    while True:
+        alive=service_processes(root)
+        if alive==[]:return
+        if alive is None or clock()>=until:raise ValueError('LIFECYCLE-STOP-UNFINISHED')
+        sleep(0.5)
+
+
+def shutdown_refusal(root):
+    path=root/'var/run/homensai-vpn'/SHUTDOWN_RECORD
+    if not os.path.lexists(str(path)):return None
+    try:row=read_dict(path)
+    except (OSError,ValueError,UnicodeDecodeError):return 'LIFECYCLE-RECOVERY-UNFINISHED'
+    return None if row.get('ok') is True else 'LIFECYCLE-RECOVERY-UNFINISHED'
+
+
+def forget_shutdown(root):
+    try:(root/'var/run/homensai-vpn'/SHUTDOWN_RECORD).unlink()
+    except FileNotFoundError:pass
+
+
+def expect_shutdown(root):
+    """First guard of prerm (IR-05): with a live Auto supervisor (or an unreadable /proc) the record of THIS shutdown is
+    expected: {ok:false} now, replaced only by the supervisor's own ok:true. Otherwise the older record is removed."""
+    alive=service_processes(root,supervisors=True)
+    if alive==[]:forget_shutdown(root);return False
+    directory=root/'var/run/homensai-vpn'
+    if directory.is_symlink() or not directory.is_dir():raise ValueError('LIFECYCLE-CONTROL-UNVERIFIED')
+    temporary=directory/('.'+SHUTDOWN_RECORD+'.new')
+    try:temporary.unlink()
+    except FileNotFoundError:pass
+    fd=os.open(str(temporary),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+    with os.fdopen(fd,'w',encoding='utf8') as stream:
+        stream.write(json.dumps({'ok':False,'code':SHUTDOWN_EXPECTED,'expected':True,'time':time.time()},sort_keys=True))
+    os.replace(str(temporary),str(directory/SHUTDOWN_RECORD))
+    return True
 
 
 @contextmanager
@@ -409,11 +1336,21 @@ def main(action):
     # check: removal (old prerm 'remove'); upgrade: old prerm during an opkg upgrade
     # (opkg runs the OLD package's prerm 'upgrade <new>' before the new preinst);
     # prepare: new preinst/postinst. Only upgrade/prepare accept a dead interrupted journal.
-    if action not in ('check','prepare','upgrade'):raise SystemExit('LIFECYCLE-ACTION')
+    # check-stopped / upgrade-stopped: prerm again after the service stop (F-16/F-17): first every service process must
+    # have exited and the supervisor's shutdown record (when present) must say its recovery finished. The first guard
+    # made it present whenever an Auto supervisor was running (IR-05), so a killed supervisor is refused too.
+    if action not in MAINTENANCE_ACTIONS:raise SystemExit('LIFECYCLE-ACTION')
+    base=action.split('-')[0]
     try:
+        if action.endswith('-stopped'):wait_service_exit(ROOT)
         with control_lock():
+            mark_maintenance(ROOT,action)
+            if action in ('check','upgrade'):expect_shutdown(ROOT)
+            elif action.endswith('-stopped'):
+                refused=shutdown_refusal(ROOT)
+                if refused:raise ValueError(refused)
             # Removal ('check') never uses the interrupted-journal exception.
-            code=assess(*snapshot(upgrade=action in ('prepare','upgrade')))
+            code=assess(*snapshot(upgrade=base in ('prepare','upgrade')))
             if code:raise ValueError(code)
             if action=='prepare':
                 # No names, priorities, tokens or statistics are changed.
@@ -421,9 +1358,11 @@ def main(action):
                 result=subprocess.run(['/sbin/uci','-q','batch'],input=batch,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10)
                 if result.returncode:raise ValueError('LIFECYCLE-AUTO-DISABLE-FAILED')
     except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError) as error:
+        # The package operation is aborted: the maintenance marker goes at once (a Start is possible again).
+        clear_maintenance(ROOT)
         code=str(error) if type(error) is ValueError and str(error).startswith('LIFECYCLE-') else 'LIFECYCLE-STATE-UNVERIFIED'
         print(code,file=sys.stderr);raise SystemExit(1)
-    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(action,'LIFECYCLE-AUTO-DISABLED'))
+    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(base,'LIFECYCLE-AUTO-DISABLED'))
 
 
 if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')
@@ -440,7 +1379,87 @@ fi
 /usr/bin/python3 -c "from pathlib import Path; p=Path('/usr/lib/homensai-vpn/__pycache__'); [x.unlink() for x in p.glob('*.pyc') if x.is_file() and not x.is_symlink()]"
 # Self-restore source (TODO item 15): opkg 21.02 does not tell maintainer scripts where the .ipk is, so the pristine
 # copy is made from the files opkg has just unpacked, each verified against the shipped manifest first.
-/usr/sbin/homensai-vpn-integrity snapshot >/dev/null || echo INTEGRITY-SNAPSHOT-REFUSED >&2
+# A refused copy (no space, permissions only: the documented exit 7) is a warning; a damaged freshly unpacked payload
+# never starts (exit 8); any other exit (2 usage, 126/127 helper missing or not executable, a crash) means the helper
+# itself is not trustworthy, so the installation is not verified and nothing starts either (R4-07b).
+# Since 07.11.2026 (owner decision) exits 8 and "other" roll back to the previous working version when one is kept
+# (rollback_and_start always ends with exit 1, before enable/restart below).
+# Owner decision 07.11.2026: roll back to the previous working version and start it (Auto comes back only from an
+# owner-started intent on disk, never from this start); without a usable previous copy nothing starts. Either way the
+# package operation itself is reported as failed (exit 1): the new version is not installed. The page shows the reason.
+rollback_and_start() {
+    rollback=0
+    sh -s "$$1" <<'HOMENSAI_ROLLBACK' || rollback=$$?
+set -u
+ROOT=$${HOMENSAI_ROLLBACK_ROOT:-}
+PERSIST=$${HOMENSAI_ROLLBACK_PERSIST:-/etc/homensai-vpn}
+reason=$${1:-INTEGRITY-PAYLOAD-DAMAGED}
+case "$$reason" in INTEGRITY-PAYLOAD-DAMAGED|INTEGRITY-HELPER-FAILED) ;; *) reason=INTEGRITY-HELPER-FAILED ;; esac
+MANIFEST_REL=usr/lib/homensai-vpn/integrity.sha256
+PRISTINE=$$PERSIST/pristine/payload.tar.gz
+NOHASH=----------------------------------------------------------------
+version_of() { v=$$(sed -n 's/^# version //p' "$$1" 2>/dev/null | head -n 1); case "$$v" in *[!0-9A-Za-z.+~_-]*) v= ;; esac; printf '%s' "$$v"; }
+rows() { awk -v nohash="$$NOHASH" '!/^#/ && NF==3 && $$1!=nohash && length($$1)==64 && $$2 ~ /^0[0-7][0-7][0-7]$$/ && $$3 ~ /^\/[A-Za-z0-9_.+\/-]+$$/ && $$3 !~ /\.\./ {print}' "$$1" 2>/dev/null; }
+verified() { [ -n "$$(rows "$$2")" ] && rows "$$2" | awk -v d="$$1" '{print $$1 "  " d $$3}' | sha256sum -c >/dev/null 2>&1; }
+record() {
+    mkdir -p "$$PERSIST" 2>/dev/null
+    printf '{"code":"%s","reason":"%s","from":"%s","to":"%s","time":%s}\n' "$$1" "$$reason" "$$new" "$$2" "$$(date +%s)" \
+        > "$$PERSIST/.upgrade-result.json.new" 2>/dev/null && mv -f "$$PERSIST/.upgrade-result.json.new" "$$PERSIST/upgrade-result.json" 2>/dev/null
+    logger -t homensai-vpn "$$1 $$reason $${new:-?} -> $${2:-?}" 2>/dev/null || true
+}
+new=$$(version_of "$$ROOT/$$MANIFEST_REL")
+if ! { [ -f "$$PRISTINE" ] && [ -f "$$PRISTINE.sha256" ] &&
+       [ "$$(sha256sum "$$PRISTINE" 2>/dev/null | cut -d' ' -f1)" = "$$(head -n 1 "$$PRISTINE.sha256" | cut -d' ' -f1)" ]; }; then
+    record UPGRADE-ROLLBACK-UNAVAILABLE ''; exit 5
+fi
+work=$$(mktemp -d "$${TMPDIR:-/tmp}/homensai-rollback.XXXXXX") || { record UPGRADE-ROLLBACK-UNAVAILABLE ''; exit 5; }
+trap 'rm -rf "$$work"' EXIT
+if ! { tar -xzf "$$PRISTINE" -C "$$work" 2>/dev/null && verified "$$work" "$$work/$$MANIFEST_REL"; }; then
+    record UPGRADE-ROLLBACK-UNAVAILABLE ''; exit 5
+fi
+old=$$(version_of "$$work/$$MANIFEST_REL")
+running=$$(head -n 1 "$$PERSIST/upgrade-from" 2>/dev/null)
+case "$$running" in *[!0-9A-Za-z.+~_-]*) running= ;; esac
+if [ -z "$$running" ] || [ "$$old" != "$$running" ]; then
+    logger -t homensai-vpn "UPGRADE-ROLLBACK-VERSION kept $${old:-?} != running before $${running:-?}" 2>/dev/null || true
+    record UPGRADE-ROLLBACK-UNAVAILABLE ''; exit 5
+fi
+failed=0
+for row in $$(rows "$$work/$$MANIFEST_REL" | awk '{print $$2 ":" $$3}') "0644:/$$MANIFEST_REL"; do
+    mode=$${row%%:*}; path=$${row#*:}
+    case "$$path" in /etc/config/*|/etc/homensai-vpn/*) continue ;; esac
+    dst=$$ROOT$$path
+    if mkdir -p "$${dst%/*}" && cp "$$work$$path" "$$dst.rollback-new" && chmod "$$mode" "$$dst.rollback-new" && mv -f "$$dst.rollback-new" "$$dst"; then :
+    else rm -f "$$dst.rollback-new"; failed=1; fi
+done
+sync
+if [ "$$failed" = 0 ] && cmp -s "$$work/$$MANIFEST_REL" "$$ROOT/$$MANIFEST_REL" && verified "$$ROOT" "$$ROOT/$$MANIFEST_REL"; then
+    record UPGRADE-ROLLED-BACK "$$old"; exit 0
+fi
+record UPGRADE-ROLLBACK-FAILED "$$old"; exit 6
+HOMENSAI_ROLLBACK
+    case "$$rollback" in
+    0)
+        echo "UPGRADE-ROLLED-BACK: $$1; the previous working version was restored and started; Auto resumes only if you had started it" >&2
+        rm -f /etc/homensai-vpn/maintenance.json
+        /etc/init.d/homensai-vpn enable || true
+        /etc/init.d/homensai-vpn restart || echo LIFECYCLE-RESTART-FAILED >&2
+        /etc/init.d/rpcd reload || true
+        /usr/bin/python3 /usr/lib/homensai-vpn/luci_cache.py || true ;;
+    6) echo "UPGRADE-ROLLBACK-FAILED: $$1; the previous version did not verify after the copy, the service is not started" >&2 ;;
+    *) echo "UPGRADE-ROLLBACK-UNAVAILABLE: $$1; no verified previous version is kept, the service is not started" >&2 ;;
+    esac
+    exit 1
+}
+snapshot=0
+/usr/sbin/homensai-vpn-integrity snapshot >/dev/null || snapshot=$$?
+case "$$snapshot" in
+    0) rm -f /etc/homensai-vpn/upgrade-result.json ;;
+    7) echo INTEGRITY-SNAPSHOT-REFUSED >&2; rm -f /etc/homensai-vpn/upgrade-result.json ;;
+    8) echo INTEGRITY-PAYLOAD-DAMAGED: the installed files do not match the package manifest >&2; rollback_and_start INTEGRITY-PAYLOAD-DAMAGED ;;
+    *) echo "INTEGRITY-HELPER-FAILED: the integrity helper exited with $$snapshot, the installation is not verified" >&2; rollback_and_start INTEGRITY-HELPER-FAILED ;;
+esac
+rm -f /etc/homensai-vpn/maintenance.json
 /etc/init.d/homensai-vpn enable
 /etc/init.d/homensai-vpn restart
 /etc/init.d/rpcd reload
@@ -478,6 +1497,7 @@ STOPPED={'STOPPED','DISABLED','EXPIRED','ROLLED-BACK'}
 # the journal, the guard or the pair ownership record.
 INTERRUPTED={'ARMED','APPLYING','WAIT-CLIENT','RESTORING'}
 APPLY_CHILD=b'native_switch.py' + bytes([0]) + b'apply' + bytes([0])
+LUA_SUPERVISORS=(b'/usr/lib/homensai-vpn/lua/auto.lua' + bytes([0]), b'/usr/lib/homensai-vpn/lua/hv_core.lua' + bytes([0]))
 
 
 def finite(value):
@@ -562,17 +1582,320 @@ def read_dict(path):
     return row
 
 
-def apply_worker_alive(root):
-    """Any native apply child (including the journal's recorded pid) is alive. Unknown counts as alive."""
+HV_STANDBY=b'/usr/lib/homensai-vpn/lua/hv_core.lua' + bytes([0]) + b'standby' + bytes([0])
+HV_FALLBACK='hv-core-fallback.json'
+WRITER_UNRESOLVED='writer-unresolved'
+GIVE_UP_ALARM='ROLLBACK-GIVEN-UP'
+GIVE_UP_FRESH=60  # rollback.give_up republishes its alarm every 10 s
+
+
+def exists_or_unknown(path):
+    try:return os.path.lexists(str(path))
+    except (OSError,ValueError):return True
+
+
+def quiescent_give_up(root,transaction,now=None):
+    """Fenced quiescence (audit 07.11.2026, N3 item 4): the Lua supervisor waits idle in rollback.give_up after
+    ROLLBACK-GIVEN-UP until the service stops or the journal is removed; it writes nothing more to this journal.
+    Proven only by the evidence it already leaves: the unfinished journal has used up its rollback attempts (any
+    supervisor of this package goes straight back to give_up), a fresh BLOCKED/ROLLBACK-GIVEN-UP status bound to this
+    journal, and no unresolved writer marker. Missing or unreadable evidence: not quiescent."""
+    if not isinstance(transaction,dict) or transaction.get('phase') not in INTERRUPTED:return False
+    failures=transaction.get('rollback_failures')
+    if type(failures) is not int or failures<ROLLBACK_FAILURE_LIMIT:return False
+    runtime=root/'var/run/homensai-vpn'
+    if exists_or_unknown(runtime/WRITER_UNRESOLVED):return False
+    try:status=read_dict(runtime/'native-status.json')
+    except (OSError,ValueError,UnicodeDecodeError):return False
+    stamp=status.get('time');now=time.time() if now is None else now
+    return (status.get('state')=='BLOCKED' and status.get('alarm')==GIVE_UP_ALARM
+            and isinstance(transaction.get('source'),str) and status.get('source')==transaction['source']
+            and isinstance(transaction.get('target'),str) and status.get('target')==transaction['target']
+            and finite(stamp) and finite(now) and -5<=now-stamp<=GIVE_UP_FRESH)
+
+
+def apply_worker_alive(root,transaction=None,now=None):
+    """Any process that may be applying a journal is alive: a Python apply child (including the journal's recorded pid)
+    or a Lua Auto supervisor, which applies inside its own process (lua/transaction.lua). The hv_core standby applies
+    nothing itself; it counts only once hv-core-fallback.json exists (it may then exec into the Lua supervisor). A Lua
+    supervisor proven idle in the give-up wait (quiescent_give_up) does not count. Unknown counts as alive."""
     try:entries=list((root/'proc').iterdir())
     except OSError:return True
+    quiescent=None
     for entry in entries:
         if not entry.name.isdigit():continue
         try:command=(entry/'cmdline').read_bytes()
         except (FileNotFoundError,ProcessLookupError):continue  # exited meanwhile
         except OSError:return True
         if APPLY_CHILD in command:return True
+        if not any(script in command for script in LUA_SUPERVISORS):continue
+        if HV_STANDBY in command and LUA_SUPERVISORS[0] not in command:
+            if exists_or_unknown(root/'var/run/homensai-vpn'/HV_FALLBACK):return True
+            continue
+        if quiescent is None:quiescent=quiescent_give_up(root,transaction,now)
+        if not quiescent:return True
     return False
+
+
+# Dependency-free copies of the controllers' record readers (native_switch.validate_journal, pair_auto.read_state):
+# a record a controller would refuse to read can never be recovered by it, so the guard refuses it too.
+JOURNAL_PHASES=('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','ROLLED-BACK','RELEASE-PENDING')
+PROOF_SCOPES=('external-lan','router-hosted-ipv4','router-probed-ipv4')
+PAIR_PHASES=('STARTING','RUNNING','STOPPING','HELD','STOPPED','FAILED')
+LEGACY_INTERFACES={'wgclient1':'wgclient','ovpnclient1':'ovpnclient'}
+ROLLBACK_FAILURE_LIMIT=2
+
+
+def canonical_sha(value):
+    return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+
+
+def hexadecimal(value,length):
+    return isinstance(value,str) and re.fullmatch('[a-f0-9]{%d}'%length,value) is not None
+
+
+def number(value):
+    return type(value) in (int,float) and math.isfinite(value) and value>=0
+
+
+# Dependency-free copies of the delegated validators the readers call (audit 07.11.2026, N3 item 3):
+# failure_diagnosis.profile_identity with vendor_observation.tunnel_identity, pair_policy.validate/role/desired_order/
+# metadata and rollback_recovery.order_steps/restore_origin/validate_step. They raise ValueError like the originals;
+# test_lifecycle_record_parity runs the same records through the real readers and through these copies.
+VENDOR_SAFE=re.compile(r'^[A-Za-z0-9_.:-]{1,96}$$')
+VENDOR_TUNNEL=re.compile(r'^(openvpn|wireguard):[A-Za-z0-9_.-]{1,64}$$')
+PAIR_TRANSITION_KEYS={'source_rule','target_rule','direction','generic_rules','source_id','target_id',
+                      'destination_role','before_policy_role','session_order','primary_order'}
+
+
+def profile_identity(profile):
+    if not isinstance(profile,dict):return None
+    protocol=profile.get('protocol');logical=profile.get('interface');claimed=profile.get('vendor_tunnel_id');identifier=profile.get('id')
+    if (protocol not in ('openvpn','wireguard') or not isinstance(logical,str)
+            or not isinstance(claimed,str) or not VENDOR_TUNNEL.fullmatch(claimed) or claimed!=protocol+':'+logical
+            or not isinstance(identifier,str) or not VENDOR_SAFE.fullmatch(identifier) or not identifier.startswith(protocol+':')
+            or identifier==protocol+':' or 'section' in profile and identifier!=protocol+':'+str(profile['section'])):return None
+    generation=profile.get('vendor_generation')
+    if not isinstance(generation,str) or not re.fullmatch(r'^[a-f0-9]{32}$$',generation):return None
+    return {key:profile.get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')}
+
+
+def policy_validate(value,order):
+    if (not isinstance(value,dict) or not isinstance(order,list) or not 2<=len(order)<=400
+            or any(not isinstance(key,str) or not key for key in order) or len(order)!=len(set(order))
+            or value.get('direction') not in ('first','last')
+            or not all(isinstance(value.get(key),str) and value[key] for key in ('source_rule','target_rule','source_id','target_id'))
+            or value['source_rule']==value['target_rule'] or value['source_id']==value['target_id']
+            or not isinstance(value.get('generic_rules'),list) or not 2<=len(value['generic_rules'])<=16
+            or any(not isinstance(key,str) or key not in order for key in value['generic_rules'])
+            or len(value['generic_rules'])!=len(set(value['generic_rules']))
+            or any(value[role+'_rule'] not in value['generic_rules'] for role in ('source','target'))):
+        raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return value
+
+
+def policy_role(value,order):
+    policy_validate(value,order)
+    generic=sorted(value['generic_rules'],key=order.index)
+    chosen=generic[0] if value['direction']=='first' else generic[-1]
+    for key in ('source','target'):
+        if value[key+'_rule']==chosen:return key
+    raise ValueError('PAIR-POLICY-UNVERIFIED')
+
+
+def desired_order(value,order,destination):
+    if destination not in ('source','target'):raise ValueError('PAIR-POLICY-UNVERIFIED')
+    result=list(order)
+    if policy_role(value,order)!=destination:
+        a=result.index(value['source_rule']);b=result.index(value['target_rule'])
+        result[a],result[b]=result[b],result[a]
+    if policy_role(value,result)!=destination:raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return result
+
+
+def pair_transition(journal):
+    value=journal.get('pair_transition')
+    if value is None:return None
+    if not isinstance(value,dict) or set(value)!=PAIR_TRANSITION_KEYS:raise ValueError('PAIR-POLICY-UNVERIFIED')
+    identity=policy_validate(value,journal.get('before'));before=journal['before']
+    if (identity['source_id']!=journal.get('source') or identity['target_id']!=journal.get('target')
+            or value.get('destination_role') not in ('source','target')
+            or value.get('before_policy_role')!=policy_role(identity,before)
+            or journal.get('after')!=desired_order(identity,before,value['destination_role'])
+            or any(not isinstance(value.get(key),list) or len(value[key])!=len(before)
+                   or set(value[key])!=set(before) for key in ('session_order','primary_order'))
+            or value['primary_order']!=desired_order(identity,before,'source')
+            or value['session_order'] not in (desired_order(identity,before,'source'),desired_order(identity,before,'target'))):
+        raise ValueError('PAIR-POLICY-UNVERIFIED')
+    for key in ('restored_order','restore_target_order'):
+        restored=journal.get(key)
+        if restored is not None and restored not in (before,value['primary_order'],value['session_order']):
+            raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return value
+
+
+def order_steps(before,target):
+    if (not isinstance(before,list) or not isinstance(target,list) or not 2<=len(before)<=400
+            or len(before)!=len(target) or any(not isinstance(x,str) for x in before+target)
+            or len(set(before))!=len(before) or set(before)!=set(target)):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    current=list(before);steps=[]
+    for index,identifier in enumerate(target):
+        if current[index]==identifier:continue
+        previous=list(current);current.remove(identifier);current.insert(index,identifier)
+        steps.append({'version':1,'kind':'reorder','before':previous,'after':list(current),'section':identifier,'index':index})
+    return steps
+
+
+def restore_origin(journal):
+    if 'restore_proof_source' not in journal and 'restore_order_origin' not in journal:return journal.get('restore_before_order')
+    source=journal.get('restore_proof_source');origins=[journal.get('after')]
+    if source=='vendor-rebuild':
+        detail=journal.get('failure_detail')
+        if not isinstance(detail,dict) or detail.get('worker_stage')!='rtp-dispatch':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+        origins.append(journal.get('before'))
+    elif source!='forward':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    if (journal.get('restore_order_origin') not in origins
+            or journal.get('restore_before_order')!=journal.get('before') or journal.get('restore_target_order')!=journal.get('before')
+            or journal.get('before')==journal.get('after') or journal.get('kernel_before_verified') is not True
+            or journal.get('restore_before_verified') is not True or journal.get('rtp_dispatched') is not True
+            or journal.get('forward_policy_touched') is not True or journal.get('confirmed') is not None
+            or journal.get('kernel_confirmed') is not None or 'restore_order_step' not in journal
+            or journal.get('restore_kernel_fingerprint')!=journal.get('kernel_before_fingerprint')):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    return journal['restore_order_origin']
+
+
+def validate_step(journal):
+    before=restore_origin(journal);target=journal.get('restore_target_order')
+    if 'restore_order_step' not in journal:return None
+    step=journal['restore_order_step']
+    if (not isinstance(step,dict) or type(step.get('version')) is not int or step['version']!=1
+            or journal.get('phase') not in ('RESTORING','ROLLED-BACK','RELEASE-PENDING')
+            or journal.get('restore_before_verified') is not True
+            or not hexadecimal(journal.get('restore_kernel_fingerprint'),64)
+            or journal.get('restore_before_order') not in (journal.get('before'),journal.get('after'),journal.get('restored_order'))):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    moves=order_steps(before,target)
+    if step=={'version':1,'kind':'commit','before':target,'after':target}:return step
+    if type(step.get('index')) is int and any(step==expected for expected in moves):return step
+    raise ValueError('JOURNAL-INTEGRITY-FAILED')
+
+
+DELEGATED_ERRORS=(ValueError,TypeError,KeyError,IndexError,AttributeError)
+
+
+def valid_journal(value):
+    """True when native_switch.validate_journal's rules hold, including its delegated nested validators."""
+    try:return journal_rules(value)
+    except DELEGATED_ERRORS:return False
+
+
+def journal_rules(value):
+    if not isinstance(value,dict):return False
+    before=value.get('before',[]);after=value.get('after',[])
+    if (not isinstance(before,list) or not isinstance(after,list) or not 2<=len(before)<=400 or len(before)!=len(after)
+            or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
+            or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)):return False
+    if value.get('phase') not in JOURNAL_PHASES:return False
+    scope=value.get('proof_scope','external-lan')
+    if type(scope) is not str or scope not in PROOF_SCOPES:return False
+    bindings=value.get('process_bindings')
+    if bindings is not None and (not isinstance(bindings,dict) or len(bindings)!=2
+            or any(type(k) is not str or not re.fullmatch(r'(?:wgclient|ovpnclient)[0-9]{1,4}',k)
+                   or type(v) is not int or not 0<v<=0xffffffff for k,v in bindings.items())
+            or len(set(bindings.values()))!=2):return False
+    if not hexadecimal(value.get('hash'),64):return False
+    for key,length in (('vendor_identity',64),('control_revision',32),('manual_request_id',32),('kernel_before_fingerprint',64),
+                       ('restore_kernel_fingerprint',64)):
+        if key in value and not hexadecimal(value[key],length):return False
+    if 'vendor_profiles' in value:
+        profiles=value['vendor_profiles']
+        if (not isinstance(profiles,dict) or set(profiles)!={'source','target'}
+                or any(not isinstance(profiles[role],dict) or profile_identity(profiles[role])!=profiles[role]
+                       or profiles[role].get('id')!=value.get(role) for role in ('source','target'))):
+            return False
+    for key in ('started','deadline','lease_monotonic_until','confirmed','kernel_confirmed','finished'):
+        if key in value and not number(value[key]):return False
+    if value.get('monotonic_deadline') is not None and not number(value['monotonic_deadline']):return False
+    if 'pid' in value and value['pid'] is not None and (type(value['pid']) is not int or value['pid']<=1):return False
+    if 'rollback_failures' in value and (type(value['rollback_failures']) is not int
+                                         or not 0<=value['rollback_failures']<=ROLLBACK_FAILURE_LIMIT):return False
+    if 'rollback_package' in value and (not isinstance(value['rollback_package'],str)
+                                        or not re.fullmatch(r'[0-9A-Za-z.+~-]{1,64}',value['rollback_package'])):return False
+    for key in ('trial','forward_policy_touched','rtp_dispatched','kernel_before_verified','restore_before_verified'):
+        if key in value and type(value[key]) is not bool:return False
+    if 'pair_transition' in value:pair_transition(value)
+    if 'restore_kernel_fingerprint' in value and (value.get('pair_transition') is None or 'restore_before_order' not in value
+                                                  or 'restore_target_order' not in value):return False
+    if 'restore_before_order' in value:
+        order=value['restore_before_order']
+        if not isinstance(order,list) or len(order)!=len(before) or any(not isinstance(x,str) for x in order) or set(order)!=set(before):
+            return False
+    if any(key in value for key in ('restore_order_step','restore_proof_source','restore_order_origin')):validate_step(value)
+    if 'activation_reapply' in value and (value['activation_reapply'] is not True or value.get('pair_transition') is None
+                                          or value.get('manual_request_id') is not None or before!=after):return False
+    if value['phase'] not in ('ROLLED-BACK','RELEASE-PENDING'):
+        for name in ('tx','source','target','trial_nonce'):
+            if not isinstance(value.get(name),str) or not re.fullmatch(r'[A-Za-z0-9_:.\-]{1,96}',value[name]):return False
+        if value['source']==value['target'] or 'started' not in value or 'deadline' not in value:return False
+        if value['deadline']<value['started']:return False
+    return True
+
+
+def valid_pair_state(envelope):
+    """True when pair_auto.read_state's checksum, ownership and delegated optional-field rules hold."""
+    try:return pair_rules(envelope)
+    except DELEGATED_ERRORS:return False
+
+
+def pair_rules(envelope):
+    data=envelope.get('data')
+    if not isinstance(data,dict) or envelope.get('sha256')!=canonical_sha(data):return False
+    interfaces=data.get('interfaces',LEGACY_INTERFACES)
+    if (not isinstance(interfaces,dict) or len(interfaces)!=2
+            or any(not isinstance(name,str) or not re.fullmatch(r'(wgclient|ovpnclient)[1-9][0-9]{0,3}',name)
+                   or re.fullmatch(r'(wgclient|ovpnclient)[1-9][0-9]{0,3}',name).group(1)!=proto for name,proto in interfaces.items())):
+        return False
+    owned=data.get('owned');flags=data.get('before_flags')
+    if not (data.get('phase') in PAIR_PHASES and hexadecimal(data.get('id'),32)
+            and isinstance(owned,list) and all(isinstance(x,str) and x in interfaces for x in owned) and len(owned)==len(set(owned))
+            and isinstance(flags,dict) and set(flags)==set(interfaces) and all(v in ('0','1') for v in flags.values())
+            and hexadecimal(data.get('network_identity'),64)):return False
+    if 'protected_static' in data and (not isinstance(data['protected_static'],dict) or set(data['protected_static'])!={'firewall'}
+            or not hexadecimal(data['protected_static']['firewall'],64)):return False
+    if any(key in data for key in ('kept','kept_flags','kept_at','kept_tx')):
+        kept,kept_flags,at,tx=data.get('kept'),data.get('kept_flags'),data.get('kept_at'),data.get('kept_tx')
+        if (data['phase']!='STOPPED' or not isinstance(kept,list) or not kept or len(kept)!=len(set(map(str,kept)))
+                or ('kept_tx' in data and not hexadecimal(tx,32))
+                or any(not isinstance(x,str) or x not in interfaces for x in kept) or not isinstance(kept_flags,dict)
+                or set(kept_flags)!=set(kept) or any(v not in ('0','1') for v in kept_flags.values()) or not number(at)):return False
+    if 'handover' in data:
+        h=data['handover']
+        if (data['phase']!='STOPPED' or not isinstance(h,dict) or set(h)!={'tx','order','policy_hash','at'}
+                or not hexadecimal(h['tx'],32) or h['policy_hash']!=data.get('policy_hash')
+                or not isinstance(h['order'],list) or h['order']!=data.get('order') or not number(h['at'])):return False
+    if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):return False
+    if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):return False
+    if 'policy_roles' in data:policy_validate(data['policy_roles'],data.get('order'))
+    if 'selected_policy' in data:
+        selected=data['selected_policy']
+        if (not isinstance(selected,dict) or set(selected)!={'role','order','hash','since'}
+                or selected.get('hash')!=data.get('policy_hash') or selected.get('role') not in ('source','target')
+                or type(selected.get('since')) not in (int,float) or not math.isfinite(selected['since']) or selected['since']<=0
+                or policy_role(data.get('policy_roles'),selected.get('order'))!=selected['role']):return False
+    if 'manual_selection' in data:
+        selected=data['manual_selection']
+        if (not isinstance(selected,dict) or set(selected)!={'request_id','role','order','hash','vendor_identity','profiles'}
+                or not hexadecimal(selected.get('request_id'),32)
+                or selected.get('role') not in ('source','target') or selected['role']!=data.get('manual_hold')
+                or not isinstance(selected.get('order'),list) or selected['hash']!=data.get('policy_hash')
+                or len(selected['order'])!=len(data.get('order',[])) or set(selected['order'])!=set(data['order'])
+                or not hexadecimal(selected.get('vendor_identity'),64)
+                or not isinstance(selected.get('profiles'),dict) or set(selected['profiles'])!={'source','target'}
+                or any(not isinstance(selected['profiles'][key],dict) or profile_identity(selected['profiles'][key])!=selected['profiles'][key]
+                       for key in ('source','target'))):return False
+    return True
 
 
 def snapshot(root=Path('/'),upgrade=False):
@@ -588,15 +1911,11 @@ def snapshot(root=Path('/'),upgrade=False):
         transaction=envelope.get('data')
         if type(envelope.get('schema')) is not int or envelope['schema']!=1 or not isinstance(transaction,dict):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
-        checksum=hashlib.sha256(json.dumps(transaction,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
-        before=transaction.get('before');after=transaction.get('after')
-        if (envelope.get('sha256')!=checksum or not isinstance(before,list) or not 2<=len(before)<=400
-                or not isinstance(after,list) or len(before)!=len(after)
-                or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
-                or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
-                or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
+        if envelope.get('sha256')!=canonical_sha(transaction) or not valid_journal(transaction):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
-    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root))
+    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root,transaction))
+    # The pair ownership record must be one the controller can read (checksum and ownership fields), whatever its phase.
+    if owned and not valid_pair_state(owned):raise ValueError('LIFECYCLE-PAIR-UNVERIFIED')
     phase=owned.get('data',{}).get('phase') if owned else None
     # The pair session is left as it is (HELD etc.); the new supervisor fences and recovers it.
     if owned and phase not in ('STOPPED','FAILED') and not (interrupted and phase in ('RUNNING','HELD','STOPPING')):
@@ -616,6 +1935,151 @@ def snapshot(root=Path('/'),upgrade=False):
             if reply.returncode==0:settings[key]=reply.stdout.decode('utf8').strip()
     if upgrade:return settings,status,transaction,intent,stopped,interrupted
     return settings,status,transaction,intent,stopped
+
+
+# Plan item 54 (audit F-16/F-17): the package maintenance marker. Every guard run writes PERSIST/maintenance.json under
+# the control lock BEFORE it assesses the state: a Start that took the lock earlier left its intent for the assessment
+# (refused: Stop Auto first), a Start after it sees the marker and is refused (MAINTENANCE-IN-PROGRESS, maintenance.py /
+# lua/maintenance.lua). Any refusal removes it at once; postinst removes it before the service starts again. The readers
+# count it only within this boot (boot_id) and LIMIT s of uptime after its last write, so a power cut mid-upgrade never
+# blocks for ever. Dependency-free (embedded in the hooks): the same fields maintenance.classify reads.
+ROOT=Path('/')
+MAINTENANCE_MARKER='maintenance.json'
+MAINTENANCE_ACTIONS={'check':'remove','check-stopped':'remove','upgrade':'upgrade','upgrade-stopped':'upgrade','prepare':'install'}
+BOOT_ID=re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+# F-17: the supervisor's last word on its shutdown recovery (native_switch.serve end / lua auto.shutdown). The first guard
+# of prerm removes an older one; after the stop a present record must say ok=true.
+# IR-05 (integration review 07.11.2026): an ABSENT record also passed, so a supervisor killed by procd after its
+# term_timeout (it writes nothing) let the second guard accept an unfinished recovery. Now the first guard writes the
+# expected record {ok:false} when an Auto supervisor process is alive (or /proc cannot be read); only the supervisor's
+# own ok:true at the end of its shutdown recovery replaces it. Without a live supervisor nothing is expected (the older
+# record is removed as before): a monitor-only service (mode no-auto, monitor_only) never blocks a package operation.
+SHUTDOWN_RECORD='supervisor-shutdown.json'
+SHUTDOWN_EXPECTED='LIFECYCLE-RECOVERY-UNFINISHED'
+# the processes that end with the shutdown record: python native_switch.py daemon, lua auto.lua daemon, lua hv_core.lua
+# daemon (hv-core carries the Lua Auto supervisor; never started with no-auto). Not: monitors, the standby, rpcd calls.
+SUPERVISOR_SCRIPTS=(b'/usr/lib/homensai-vpn/native_switch.py',b'/usr/lib/homensai-vpn/lua/auto.lua',b'/usr/lib/homensai-vpn/lua/hv_core.lua')
+STOP_WAIT=330      # procd gives the supervisors term_timeout 300 s, then SIGKILL
+SERVICE_SCRIPT=b'/usr/lib/homensai-vpn/'
+
+
+def boot_identity(root):
+    try:value=(root/'proc/sys/kernel/random/boot_id').read_text(encoding='ascii').strip()
+    except (OSError,ValueError,UnicodeDecodeError):return None
+    return value if BOOT_ID.fullmatch(value) else None
+
+
+def boot_uptime(root):
+    try:value=float((root/'proc/uptime').read_text(encoding='ascii').split()[0])
+    except (OSError,ValueError,IndexError,UnicodeDecodeError):return None
+    return value if finite(value) else None
+
+
+# IR-04 (integration review 07.11.2026): opkg runs the OLD prerm 'upgrade' (marks action=upgrade) and then the NEW
+# preinst/postinst, which only know 'prepare' (install). A prepare that finds this boot's live upgrade mark keeps
+# action=upgrade, so status.maintenance.action and a MAINTENANCE-INTERRUPTED record name the real operation. The same
+# liveness rules as maintenance.classify (same boot and at most MAINTENANCE_LIMIT s of uptime; no boot id: the wall
+# clock); anything else (no mark, a symlink, another boot, too old, unreadable) is a fresh install.
+MAINTENANCE_LIMIT=900
+MAINTENANCE_SKEW=60
+
+
+def live_upgrade_mark(root,boot,uptime,now):
+    path=root/'etc/homensai-vpn'/MAINTENANCE_MARKER
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size>4096:return False
+        row=json.loads(path.read_text(encoding='utf8'))
+    except (OSError,ValueError,UnicodeDecodeError,RecursionError):return False
+    if not isinstance(row,dict) or row.get('action')!='upgrade':return False
+    marked=row.get('boot_id') if isinstance(row.get('boot_id'),str) and BOOT_ID.fullmatch(row['boot_id']) else None
+    if marked and boot:
+        if marked!=boot:return False
+        if finite(row.get('uptime')) and uptime is not None:return 0<=uptime-row['uptime']<=MAINTENANCE_LIMIT
+    since=row.get('time')
+    return finite(since) and finite(now) and -MAINTENANCE_SKEW<=now-since<=MAINTENANCE_LIMIT
+
+
+def mark_maintenance(root,action):
+    persist=root/'etc/homensai-vpn'
+    try:
+        persist.mkdir(mode=0o700,parents=True,exist_ok=True)
+        if persist.is_symlink() or not persist.is_dir():raise ValueError('LIFECYCLE-MAINTENANCE-FAILED')
+        now=time.time();boot=boot_identity(root);uptime=boot_uptime(root)
+        kind=MAINTENANCE_ACTIONS[action]
+        if action=='prepare' and live_upgrade_mark(root,boot,uptime,now):kind='upgrade'
+        row={'action':kind,'time':now,'pid':os.getpid()}
+        if boot:row['boot_id']=boot
+        if uptime is not None:row['uptime']=uptime
+        temporary=persist/('.'+MAINTENANCE_MARKER+'.new')
+        fd=os.open(str(temporary),os.O_WRONLY|os.O_CREAT|os.O_TRUNC|getattr(os,'O_NOFOLLOW',0),0o600)
+        with os.fdopen(fd,'w',encoding='utf8') as stream:
+            stream.write(json.dumps(row,sort_keys=True));stream.flush();os.fsync(stream.fileno())
+        os.replace(str(temporary),str(persist/MAINTENANCE_MARKER))
+    except (OSError,KeyError) as error:raise ValueError('LIFECYCLE-MAINTENANCE-FAILED') from error
+
+
+def clear_maintenance(root):
+    try:(root/'etc/homensai-vpn'/MAINTENANCE_MARKER).unlink()
+    except OSError:pass
+
+
+def service_processes(root,supervisors=False):
+    """pids of this package's service processes (daemon/standby instances, an apply child); None when /proc is unreadable.
+    supervisors=True: only the Auto supervisor daemons (SUPERVISOR_SCRIPTS), the processes that write the shutdown record."""
+    try:entries=list((root/'proc').iterdir())
+    except OSError:return None
+    found=[]
+    for entry in entries:
+        if not entry.name.isdigit():continue
+        try:command=(entry/'cmdline').read_bytes()
+        except OSError:continue  # exited meanwhile
+        argv=command.split(bytes([0]))
+        if supervisors:
+            if b'daemon' in argv and any(arg in SUPERVISOR_SCRIPTS for arg in argv):found.append(int(entry.name))
+        elif APPLY_CHILD in command or any(arg.startswith(SERVICE_SCRIPT) for arg in argv) and (b'daemon' in argv or b'standby' in argv):
+            found.append(int(entry.name))
+    return found
+
+
+def wait_service_exit(root,limit=STOP_WAIT,sleep=time.sleep,clock=time.monotonic):
+    """F-17: /etc/init.d stop only asks procd to stop; the supervisor may still be restoring. Wait (bounded) until every
+    service process has exited, outside the control lock (the shutdown recovery takes it)."""
+    until=clock()+limit
+    while True:
+        alive=service_processes(root)
+        if alive==[]:return
+        if alive is None or clock()>=until:raise ValueError('LIFECYCLE-STOP-UNFINISHED')
+        sleep(0.5)
+
+
+def shutdown_refusal(root):
+    path=root/'var/run/homensai-vpn'/SHUTDOWN_RECORD
+    if not os.path.lexists(str(path)):return None
+    try:row=read_dict(path)
+    except (OSError,ValueError,UnicodeDecodeError):return 'LIFECYCLE-RECOVERY-UNFINISHED'
+    return None if row.get('ok') is True else 'LIFECYCLE-RECOVERY-UNFINISHED'
+
+
+def forget_shutdown(root):
+    try:(root/'var/run/homensai-vpn'/SHUTDOWN_RECORD).unlink()
+    except FileNotFoundError:pass
+
+
+def expect_shutdown(root):
+    """First guard of prerm (IR-05): with a live Auto supervisor (or an unreadable /proc) the record of THIS shutdown is
+    expected: {ok:false} now, replaced only by the supervisor's own ok:true. Otherwise the older record is removed."""
+    alive=service_processes(root,supervisors=True)
+    if alive==[]:forget_shutdown(root);return False
+    directory=root/'var/run/homensai-vpn'
+    if directory.is_symlink() or not directory.is_dir():raise ValueError('LIFECYCLE-CONTROL-UNVERIFIED')
+    temporary=directory/('.'+SHUTDOWN_RECORD+'.new')
+    try:temporary.unlink()
+    except FileNotFoundError:pass
+    fd=os.open(str(temporary),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+    with os.fdopen(fd,'w',encoding='utf8') as stream:
+        stream.write(json.dumps({'ok':False,'code':SHUTDOWN_EXPECTED,'expected':True,'time':time.time()},sort_keys=True))
+    os.replace(str(temporary),str(directory/SHUTDOWN_RECORD))
+    return True
 
 
 @contextmanager
@@ -640,11 +2104,21 @@ def main(action):
     # check: removal (old prerm 'remove'); upgrade: old prerm during an opkg upgrade
     # (opkg runs the OLD package's prerm 'upgrade <new>' before the new preinst);
     # prepare: new preinst/postinst. Only upgrade/prepare accept a dead interrupted journal.
-    if action not in ('check','prepare','upgrade'):raise SystemExit('LIFECYCLE-ACTION')
+    # check-stopped / upgrade-stopped: prerm again after the service stop (F-16/F-17): first every service process must
+    # have exited and the supervisor's shutdown record (when present) must say its recovery finished. The first guard
+    # made it present whenever an Auto supervisor was running (IR-05), so a killed supervisor is refused too.
+    if action not in MAINTENANCE_ACTIONS:raise SystemExit('LIFECYCLE-ACTION')
+    base=action.split('-')[0]
     try:
+        if action.endswith('-stopped'):wait_service_exit(ROOT)
         with control_lock():
+            mark_maintenance(ROOT,action)
+            if action in ('check','upgrade'):expect_shutdown(ROOT)
+            elif action.endswith('-stopped'):
+                refused=shutdown_refusal(ROOT)
+                if refused:raise ValueError(refused)
             # Removal ('check') never uses the interrupted-journal exception.
-            code=assess(*snapshot(upgrade=action in ('prepare','upgrade')))
+            code=assess(*snapshot(upgrade=base in ('prepare','upgrade')))
             if code:raise ValueError(code)
             if action=='prepare':
                 # No names, priorities, tokens or statistics are changed.
@@ -652,15 +2126,686 @@ def main(action):
                 result=subprocess.run(['/sbin/uci','-q','batch'],input=batch,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10)
                 if result.returncode:raise ValueError('LIFECYCLE-AUTO-DISABLE-FAILED')
     except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError) as error:
+        # The package operation is aborted: the maintenance marker goes at once (a Start is possible again).
+        clear_maintenance(ROOT)
         code=str(error) if type(error) is ValueError and str(error).startswith('LIFECYCLE-') else 'LIFECYCLE-STATE-UNVERIFIED'
         print(code,file=sys.stderr);raise SystemExit(1)
-    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(action,'LIFECYCLE-AUTO-DISABLED'))
+    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(base,'LIFECYCLE-AUTO-DISABLED'))
 
 
 if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')
 
 HOMENSAI_LIFECYCLE_GUARD
 /etc/init.d/homensai-vpn stop
+if ! /usr/bin/python3 - "$$action-stopped" <<'HOMENSAI_LIFECYCLE_GUARD'
+"""Own-package lifecycle guard. No routes, VPN keys or firewall writes.
+
+The package embeds this stdlib-only checker before unpacking new files. The only
+write action clears three application-owned Auto scope options under its lock.
+"""
+from contextlib import contextmanager
+import fcntl
+import hashlib
+import json
+import math
+import os
+import re
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+ACTIVE={'OBSERVING','ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'}
+STOPPED={'STOPPED','DISABLED','EXPIRED','ROLLED-BACK'}
+# Upgrade only: an unfinished journal whose worker is provably gone. The new
+# supervisor's guarded recovery owns it after the restart; nothing here touches
+# the journal, the guard or the pair ownership record.
+INTERRUPTED={'ARMED','APPLYING','WAIT-CLIENT','RESTORING'}
+APPLY_CHILD=b'native_switch.py' + bytes([0]) + b'apply' + bytes([0])
+LUA_SUPERVISORS=(b'/usr/lib/homensai-vpn/lua/auto.lua' + bytes([0]), b'/usr/lib/homensai-vpn/lua/hv_core.lua' + bytes([0]))
+
+
+def finite(value):
+    try:return type(value) in (int,float) and math.isfinite(value) and value>=0
+    except OverflowError:return False
+
+
+def closed(status,transaction,interrupted=False):
+    return (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True
+            or interrupted is True and transaction.get('phase') in INTERRUPTED)
+
+
+def stop_acknowledged(status,transaction,intent,stopped,interrupted=False):
+    requested=intent.get('time');stop=stopped.get('requested');stamp=status.get('time')
+    return (intent.get('mode')=='on' and isinstance(intent.get('trial'),str) and bool(intent['trial'])
+            and stopped.get('trial')==intent['trial'] and finite(requested) and finite(stop)
+            and finite(stamp) and requested<=stop<=stamp
+            and (status.get('state') in STOPPED or interrupted is True and status.get('state')=='BLOCKED')
+            and closed(status,transaction,interrupted))
+
+
+def assess(settings,status,transaction,intent,stopped,interrupted=False):
+    if any(not isinstance(row,dict) for row in (settings,status,transaction,intent,stopped)):
+        return 'LIFECYCLE-STATE-UNVERIFIED'
+    flag=settings.get('native_enabled',False)
+    if not (type(flag) is bool or flag is None or isinstance(flag,str) and flag in ('0','1','')):return 'LIFECYCLE-CONFIG-UNVERIFIED'
+    if status and not isinstance(status.get('state'),str):return 'LIFECYCLE-STATE-UNVERIFIED'
+    acknowledged=stop_acknowledged(status,transaction,intent,stopped,interrupted)
+    legacy_ack=False
+    if isinstance(settings.get('native_trial'),str) and settings['native_trial']:
+        stop=stopped.get('requested');stamp=status.get('time');request_time=intent.get('time',0)
+        legacy_ack=(stopped.get('trial')==settings['native_trial'] and finite(stop) and finite(stamp)
+                    and finite(request_time) and request_time<=stop<=stamp
+                    and (status.get('state') in STOPPED or interrupted is True and status.get('state')=='BLOCKED')
+                    and closed(status,transaction,interrupted))
+    requested=intent.get('mode')=='on'
+    # A known private trial mismatch invalidates a historical request. Public
+    # inventory omits this field and therefore takes the conservative ack path.
+    if 'native_trial' in settings and intent.get('trial')!=settings['native_trial']:
+        requested=False
+    if status.get('state') in ACTIVE or status.get('state')=='STOPPED-ON-RESERVE' or status.get('guard')=='closed':
+        return 'LIFECYCLE-STOP-AUTO-FIRST'
+    if status and status.get('state') not in STOPPED|{'BLOCKED'}:return 'LIFECYCLE-STATE-UNVERIFIED'
+    if transaction and transaction.get('phase')!='ROLLED-BACK':
+        # Upgrade exception: proven-dead worker, reported BLOCKED/STOPPED controller.
+        if not (interrupted is True and transaction.get('phase') in INTERRUPTED
+                and status.get('state') in STOPPED|{'BLOCKED'}):return 'LIFECYCLE-JOURNAL-ACTIVE'
+    if flag in (True,'1') and not legacy_ack or requested and not acknowledged:return 'LIFECYCLE-STOP-AUTO-FIRST'
+    return None
+
+
+def read_dict(path):
+    if path.is_symlink():raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+    if not path.exists():return {}
+    if not path.is_file() or path.stat().st_size>1024*1024:raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+    def number(raw):
+        value=float(raw) if any(c in raw for c in '.eE') else int(raw)
+        if not finite(value) and not (value<0 and finite(-value)):
+            raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+        return value
+    def pairs(items):
+        row={}
+        for key,value in items:
+            if key in row:raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+            row[key]=value
+        return row
+    def constant(raw):raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+    try:
+        row=json.loads(path.read_text(encoding='utf8'),parse_int=number,parse_float=number,
+                       parse_constant=constant,object_pairs_hook=pairs)
+        pending=[(iter((row,)),0)]
+        while pending:
+            items,depth=pending[-1]
+            try:value=next(items)
+            except StopIteration:
+                pending.pop();continue
+            if depth>64:raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+            if isinstance(value,(dict,list)):
+                pending.append((iter(value.values() if isinstance(value,dict) else value),depth+1))
+    except (RecursionError,OverflowError):raise ValueError('LIFECYCLE-STATE-UNVERIFIED') from None
+    if not isinstance(row,dict):raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+    return row
+
+
+HV_STANDBY=b'/usr/lib/homensai-vpn/lua/hv_core.lua' + bytes([0]) + b'standby' + bytes([0])
+HV_FALLBACK='hv-core-fallback.json'
+WRITER_UNRESOLVED='writer-unresolved'
+GIVE_UP_ALARM='ROLLBACK-GIVEN-UP'
+GIVE_UP_FRESH=60  # rollback.give_up republishes its alarm every 10 s
+
+
+def exists_or_unknown(path):
+    try:return os.path.lexists(str(path))
+    except (OSError,ValueError):return True
+
+
+def quiescent_give_up(root,transaction,now=None):
+    """Fenced quiescence (audit 07.11.2026, N3 item 4): the Lua supervisor waits idle in rollback.give_up after
+    ROLLBACK-GIVEN-UP until the service stops or the journal is removed; it writes nothing more to this journal.
+    Proven only by the evidence it already leaves: the unfinished journal has used up its rollback attempts (any
+    supervisor of this package goes straight back to give_up), a fresh BLOCKED/ROLLBACK-GIVEN-UP status bound to this
+    journal, and no unresolved writer marker. Missing or unreadable evidence: not quiescent."""
+    if not isinstance(transaction,dict) or transaction.get('phase') not in INTERRUPTED:return False
+    failures=transaction.get('rollback_failures')
+    if type(failures) is not int or failures<ROLLBACK_FAILURE_LIMIT:return False
+    runtime=root/'var/run/homensai-vpn'
+    if exists_or_unknown(runtime/WRITER_UNRESOLVED):return False
+    try:status=read_dict(runtime/'native-status.json')
+    except (OSError,ValueError,UnicodeDecodeError):return False
+    stamp=status.get('time');now=time.time() if now is None else now
+    return (status.get('state')=='BLOCKED' and status.get('alarm')==GIVE_UP_ALARM
+            and isinstance(transaction.get('source'),str) and status.get('source')==transaction['source']
+            and isinstance(transaction.get('target'),str) and status.get('target')==transaction['target']
+            and finite(stamp) and finite(now) and -5<=now-stamp<=GIVE_UP_FRESH)
+
+
+def apply_worker_alive(root,transaction=None,now=None):
+    """Any process that may be applying a journal is alive: a Python apply child (including the journal's recorded pid)
+    or a Lua Auto supervisor, which applies inside its own process (lua/transaction.lua). The hv_core standby applies
+    nothing itself; it counts only once hv-core-fallback.json exists (it may then exec into the Lua supervisor). A Lua
+    supervisor proven idle in the give-up wait (quiescent_give_up) does not count. Unknown counts as alive."""
+    try:entries=list((root/'proc').iterdir())
+    except OSError:return True
+    quiescent=None
+    for entry in entries:
+        if not entry.name.isdigit():continue
+        try:command=(entry/'cmdline').read_bytes()
+        except (FileNotFoundError,ProcessLookupError):continue  # exited meanwhile
+        except OSError:return True
+        if APPLY_CHILD in command:return True
+        if not any(script in command for script in LUA_SUPERVISORS):continue
+        if HV_STANDBY in command and LUA_SUPERVISORS[0] not in command:
+            if exists_or_unknown(root/'var/run/homensai-vpn'/HV_FALLBACK):return True
+            continue
+        if quiescent is None:quiescent=quiescent_give_up(root,transaction,now)
+        if not quiescent:return True
+    return False
+
+
+# Dependency-free copies of the controllers' record readers (native_switch.validate_journal, pair_auto.read_state):
+# a record a controller would refuse to read can never be recovered by it, so the guard refuses it too.
+JOURNAL_PHASES=('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','ROLLED-BACK','RELEASE-PENDING')
+PROOF_SCOPES=('external-lan','router-hosted-ipv4','router-probed-ipv4')
+PAIR_PHASES=('STARTING','RUNNING','STOPPING','HELD','STOPPED','FAILED')
+LEGACY_INTERFACES={'wgclient1':'wgclient','ovpnclient1':'ovpnclient'}
+ROLLBACK_FAILURE_LIMIT=2
+
+
+def canonical_sha(value):
+    return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+
+
+def hexadecimal(value,length):
+    return isinstance(value,str) and re.fullmatch('[a-f0-9]{%d}'%length,value) is not None
+
+
+def number(value):
+    return type(value) in (int,float) and math.isfinite(value) and value>=0
+
+
+# Dependency-free copies of the delegated validators the readers call (audit 07.11.2026, N3 item 3):
+# failure_diagnosis.profile_identity with vendor_observation.tunnel_identity, pair_policy.validate/role/desired_order/
+# metadata and rollback_recovery.order_steps/restore_origin/validate_step. They raise ValueError like the originals;
+# test_lifecycle_record_parity runs the same records through the real readers and through these copies.
+VENDOR_SAFE=re.compile(r'^[A-Za-z0-9_.:-]{1,96}$$')
+VENDOR_TUNNEL=re.compile(r'^(openvpn|wireguard):[A-Za-z0-9_.-]{1,64}$$')
+PAIR_TRANSITION_KEYS={'source_rule','target_rule','direction','generic_rules','source_id','target_id',
+                      'destination_role','before_policy_role','session_order','primary_order'}
+
+
+def profile_identity(profile):
+    if not isinstance(profile,dict):return None
+    protocol=profile.get('protocol');logical=profile.get('interface');claimed=profile.get('vendor_tunnel_id');identifier=profile.get('id')
+    if (protocol not in ('openvpn','wireguard') or not isinstance(logical,str)
+            or not isinstance(claimed,str) or not VENDOR_TUNNEL.fullmatch(claimed) or claimed!=protocol+':'+logical
+            or not isinstance(identifier,str) or not VENDOR_SAFE.fullmatch(identifier) or not identifier.startswith(protocol+':')
+            or identifier==protocol+':' or 'section' in profile and identifier!=protocol+':'+str(profile['section'])):return None
+    generation=profile.get('vendor_generation')
+    if not isinstance(generation,str) or not re.fullmatch(r'^[a-f0-9]{32}$$',generation):return None
+    return {key:profile.get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')}
+
+
+def policy_validate(value,order):
+    if (not isinstance(value,dict) or not isinstance(order,list) or not 2<=len(order)<=400
+            or any(not isinstance(key,str) or not key for key in order) or len(order)!=len(set(order))
+            or value.get('direction') not in ('first','last')
+            or not all(isinstance(value.get(key),str) and value[key] for key in ('source_rule','target_rule','source_id','target_id'))
+            or value['source_rule']==value['target_rule'] or value['source_id']==value['target_id']
+            or not isinstance(value.get('generic_rules'),list) or not 2<=len(value['generic_rules'])<=16
+            or any(not isinstance(key,str) or key not in order for key in value['generic_rules'])
+            or len(value['generic_rules'])!=len(set(value['generic_rules']))
+            or any(value[role+'_rule'] not in value['generic_rules'] for role in ('source','target'))):
+        raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return value
+
+
+def policy_role(value,order):
+    policy_validate(value,order)
+    generic=sorted(value['generic_rules'],key=order.index)
+    chosen=generic[0] if value['direction']=='first' else generic[-1]
+    for key in ('source','target'):
+        if value[key+'_rule']==chosen:return key
+    raise ValueError('PAIR-POLICY-UNVERIFIED')
+
+
+def desired_order(value,order,destination):
+    if destination not in ('source','target'):raise ValueError('PAIR-POLICY-UNVERIFIED')
+    result=list(order)
+    if policy_role(value,order)!=destination:
+        a=result.index(value['source_rule']);b=result.index(value['target_rule'])
+        result[a],result[b]=result[b],result[a]
+    if policy_role(value,result)!=destination:raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return result
+
+
+def pair_transition(journal):
+    value=journal.get('pair_transition')
+    if value is None:return None
+    if not isinstance(value,dict) or set(value)!=PAIR_TRANSITION_KEYS:raise ValueError('PAIR-POLICY-UNVERIFIED')
+    identity=policy_validate(value,journal.get('before'));before=journal['before']
+    if (identity['source_id']!=journal.get('source') or identity['target_id']!=journal.get('target')
+            or value.get('destination_role') not in ('source','target')
+            or value.get('before_policy_role')!=policy_role(identity,before)
+            or journal.get('after')!=desired_order(identity,before,value['destination_role'])
+            or any(not isinstance(value.get(key),list) or len(value[key])!=len(before)
+                   or set(value[key])!=set(before) for key in ('session_order','primary_order'))
+            or value['primary_order']!=desired_order(identity,before,'source')
+            or value['session_order'] not in (desired_order(identity,before,'source'),desired_order(identity,before,'target'))):
+        raise ValueError('PAIR-POLICY-UNVERIFIED')
+    for key in ('restored_order','restore_target_order'):
+        restored=journal.get(key)
+        if restored is not None and restored not in (before,value['primary_order'],value['session_order']):
+            raise ValueError('PAIR-POLICY-UNVERIFIED')
+    return value
+
+
+def order_steps(before,target):
+    if (not isinstance(before,list) or not isinstance(target,list) or not 2<=len(before)<=400
+            or len(before)!=len(target) or any(not isinstance(x,str) for x in before+target)
+            or len(set(before))!=len(before) or set(before)!=set(target)):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    current=list(before);steps=[]
+    for index,identifier in enumerate(target):
+        if current[index]==identifier:continue
+        previous=list(current);current.remove(identifier);current.insert(index,identifier)
+        steps.append({'version':1,'kind':'reorder','before':previous,'after':list(current),'section':identifier,'index':index})
+    return steps
+
+
+def restore_origin(journal):
+    if 'restore_proof_source' not in journal and 'restore_order_origin' not in journal:return journal.get('restore_before_order')
+    source=journal.get('restore_proof_source');origins=[journal.get('after')]
+    if source=='vendor-rebuild':
+        detail=journal.get('failure_detail')
+        if not isinstance(detail,dict) or detail.get('worker_stage')!='rtp-dispatch':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+        origins.append(journal.get('before'))
+    elif source!='forward':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    if (journal.get('restore_order_origin') not in origins
+            or journal.get('restore_before_order')!=journal.get('before') or journal.get('restore_target_order')!=journal.get('before')
+            or journal.get('before')==journal.get('after') or journal.get('kernel_before_verified') is not True
+            or journal.get('restore_before_verified') is not True or journal.get('rtp_dispatched') is not True
+            or journal.get('forward_policy_touched') is not True or journal.get('confirmed') is not None
+            or journal.get('kernel_confirmed') is not None or 'restore_order_step' not in journal
+            or journal.get('restore_kernel_fingerprint')!=journal.get('kernel_before_fingerprint')):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    return journal['restore_order_origin']
+
+
+def validate_step(journal):
+    before=restore_origin(journal);target=journal.get('restore_target_order')
+    if 'restore_order_step' not in journal:return None
+    step=journal['restore_order_step']
+    if (not isinstance(step,dict) or type(step.get('version')) is not int or step['version']!=1
+            or journal.get('phase') not in ('RESTORING','ROLLED-BACK','RELEASE-PENDING')
+            or journal.get('restore_before_verified') is not True
+            or not hexadecimal(journal.get('restore_kernel_fingerprint'),64)
+            or journal.get('restore_before_order') not in (journal.get('before'),journal.get('after'),journal.get('restored_order'))):
+        raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    moves=order_steps(before,target)
+    if step=={'version':1,'kind':'commit','before':target,'after':target}:return step
+    if type(step.get('index')) is int and any(step==expected for expected in moves):return step
+    raise ValueError('JOURNAL-INTEGRITY-FAILED')
+
+
+DELEGATED_ERRORS=(ValueError,TypeError,KeyError,IndexError,AttributeError)
+
+
+def valid_journal(value):
+    """True when native_switch.validate_journal's rules hold, including its delegated nested validators."""
+    try:return journal_rules(value)
+    except DELEGATED_ERRORS:return False
+
+
+def journal_rules(value):
+    if not isinstance(value,dict):return False
+    before=value.get('before',[]);after=value.get('after',[])
+    if (not isinstance(before,list) or not isinstance(after,list) or not 2<=len(before)<=400 or len(before)!=len(after)
+            or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
+            or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)):return False
+    if value.get('phase') not in JOURNAL_PHASES:return False
+    scope=value.get('proof_scope','external-lan')
+    if type(scope) is not str or scope not in PROOF_SCOPES:return False
+    bindings=value.get('process_bindings')
+    if bindings is not None and (not isinstance(bindings,dict) or len(bindings)!=2
+            or any(type(k) is not str or not re.fullmatch(r'(?:wgclient|ovpnclient)[0-9]{1,4}',k)
+                   or type(v) is not int or not 0<v<=0xffffffff for k,v in bindings.items())
+            or len(set(bindings.values()))!=2):return False
+    if not hexadecimal(value.get('hash'),64):return False
+    for key,length in (('vendor_identity',64),('control_revision',32),('manual_request_id',32),('kernel_before_fingerprint',64),
+                       ('restore_kernel_fingerprint',64)):
+        if key in value and not hexadecimal(value[key],length):return False
+    if 'vendor_profiles' in value:
+        profiles=value['vendor_profiles']
+        if (not isinstance(profiles,dict) or set(profiles)!={'source','target'}
+                or any(not isinstance(profiles[role],dict) or profile_identity(profiles[role])!=profiles[role]
+                       or profiles[role].get('id')!=value.get(role) for role in ('source','target'))):
+            return False
+    for key in ('started','deadline','lease_monotonic_until','confirmed','kernel_confirmed','finished'):
+        if key in value and not number(value[key]):return False
+    if value.get('monotonic_deadline') is not None and not number(value['monotonic_deadline']):return False
+    if 'pid' in value and value['pid'] is not None and (type(value['pid']) is not int or value['pid']<=1):return False
+    if 'rollback_failures' in value and (type(value['rollback_failures']) is not int
+                                         or not 0<=value['rollback_failures']<=ROLLBACK_FAILURE_LIMIT):return False
+    if 'rollback_package' in value and (not isinstance(value['rollback_package'],str)
+                                        or not re.fullmatch(r'[0-9A-Za-z.+~-]{1,64}',value['rollback_package'])):return False
+    for key in ('trial','forward_policy_touched','rtp_dispatched','kernel_before_verified','restore_before_verified'):
+        if key in value and type(value[key]) is not bool:return False
+    if 'pair_transition' in value:pair_transition(value)
+    if 'restore_kernel_fingerprint' in value and (value.get('pair_transition') is None or 'restore_before_order' not in value
+                                                  or 'restore_target_order' not in value):return False
+    if 'restore_before_order' in value:
+        order=value['restore_before_order']
+        if not isinstance(order,list) or len(order)!=len(before) or any(not isinstance(x,str) for x in order) or set(order)!=set(before):
+            return False
+    if any(key in value for key in ('restore_order_step','restore_proof_source','restore_order_origin')):validate_step(value)
+    if 'activation_reapply' in value and (value['activation_reapply'] is not True or value.get('pair_transition') is None
+                                          or value.get('manual_request_id') is not None or before!=after):return False
+    if value['phase'] not in ('ROLLED-BACK','RELEASE-PENDING'):
+        for name in ('tx','source','target','trial_nonce'):
+            if not isinstance(value.get(name),str) or not re.fullmatch(r'[A-Za-z0-9_:.\-]{1,96}',value[name]):return False
+        if value['source']==value['target'] or 'started' not in value or 'deadline' not in value:return False
+        if value['deadline']<value['started']:return False
+    return True
+
+
+def valid_pair_state(envelope):
+    """True when pair_auto.read_state's checksum, ownership and delegated optional-field rules hold."""
+    try:return pair_rules(envelope)
+    except DELEGATED_ERRORS:return False
+
+
+def pair_rules(envelope):
+    data=envelope.get('data')
+    if not isinstance(data,dict) or envelope.get('sha256')!=canonical_sha(data):return False
+    interfaces=data.get('interfaces',LEGACY_INTERFACES)
+    if (not isinstance(interfaces,dict) or len(interfaces)!=2
+            or any(not isinstance(name,str) or not re.fullmatch(r'(wgclient|ovpnclient)[1-9][0-9]{0,3}',name)
+                   or re.fullmatch(r'(wgclient|ovpnclient)[1-9][0-9]{0,3}',name).group(1)!=proto for name,proto in interfaces.items())):
+        return False
+    owned=data.get('owned');flags=data.get('before_flags')
+    if not (data.get('phase') in PAIR_PHASES and hexadecimal(data.get('id'),32)
+            and isinstance(owned,list) and all(isinstance(x,str) and x in interfaces for x in owned) and len(owned)==len(set(owned))
+            and isinstance(flags,dict) and set(flags)==set(interfaces) and all(v in ('0','1') for v in flags.values())
+            and hexadecimal(data.get('network_identity'),64)):return False
+    if 'protected_static' in data and (not isinstance(data['protected_static'],dict) or set(data['protected_static'])!={'firewall'}
+            or not hexadecimal(data['protected_static']['firewall'],64)):return False
+    if any(key in data for key in ('kept','kept_flags','kept_at','kept_tx')):
+        kept,kept_flags,at,tx=data.get('kept'),data.get('kept_flags'),data.get('kept_at'),data.get('kept_tx')
+        if (data['phase']!='STOPPED' or not isinstance(kept,list) or not kept or len(kept)!=len(set(map(str,kept)))
+                or ('kept_tx' in data and not hexadecimal(tx,32))
+                or any(not isinstance(x,str) or x not in interfaces for x in kept) or not isinstance(kept_flags,dict)
+                or set(kept_flags)!=set(kept) or any(v not in ('0','1') for v in kept_flags.values()) or not number(at)):return False
+    if 'handover' in data:
+        h=data['handover']
+        if (data['phase']!='STOPPED' or not isinstance(h,dict) or set(h)!={'tx','order','policy_hash','at'}
+                or not hexadecimal(h['tx'],32) or h['policy_hash']!=data.get('policy_hash')
+                or not isinstance(h['order'],list) or h['order']!=data.get('order') or not number(h['at'])):return False
+    if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):return False
+    if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):return False
+    if 'policy_roles' in data:policy_validate(data['policy_roles'],data.get('order'))
+    if 'selected_policy' in data:
+        selected=data['selected_policy']
+        if (not isinstance(selected,dict) or set(selected)!={'role','order','hash','since'}
+                or selected.get('hash')!=data.get('policy_hash') or selected.get('role') not in ('source','target')
+                or type(selected.get('since')) not in (int,float) or not math.isfinite(selected['since']) or selected['since']<=0
+                or policy_role(data.get('policy_roles'),selected.get('order'))!=selected['role']):return False
+    if 'manual_selection' in data:
+        selected=data['manual_selection']
+        if (not isinstance(selected,dict) or set(selected)!={'request_id','role','order','hash','vendor_identity','profiles'}
+                or not hexadecimal(selected.get('request_id'),32)
+                or selected.get('role') not in ('source','target') or selected['role']!=data.get('manual_hold')
+                or not isinstance(selected.get('order'),list) or selected['hash']!=data.get('policy_hash')
+                or len(selected['order'])!=len(data.get('order',[])) or set(selected['order'])!=set(data['order'])
+                or not hexadecimal(selected.get('vendor_identity'),64)
+                or not isinstance(selected.get('profiles'),dict) or set(selected['profiles'])!={'source','target'}
+                or any(not isinstance(selected['profiles'][key],dict) or profile_identity(selected['profiles'][key])!=selected['profiles'][key]
+                       for key in ('source','target'))):return False
+    return True
+
+
+def snapshot(root=Path('/'),upgrade=False):
+    runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
+    pair=read_dict(runtime/'pair-auto-control.json')
+    owned=read_dict(persist/'pair-auto-state.json')
+    if pair.get('mode')=='on':raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
+    status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
+    stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
+    envelope=read_dict(journal_path)
+    transaction={}
+    if journal_path.exists():
+        transaction=envelope.get('data')
+        if type(envelope.get('schema')) is not int or envelope['schema']!=1 or not isinstance(transaction,dict):
+            raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
+        if envelope.get('sha256')!=canonical_sha(transaction) or not valid_journal(transaction):
+            raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
+    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root,transaction))
+    # The pair ownership record must be one the controller can read (checksum and ownership fields), whatever its phase.
+    if owned and not valid_pair_state(owned):raise ValueError('LIFECYCLE-PAIR-UNVERIFIED')
+    phase=owned.get('data',{}).get('phase') if owned else None
+    # The pair session is left as it is (HELD etc.); the new supervisor fences and recovers it.
+    if owned and phase not in ('STOPPED','FAILED') and not (interrupted and phase in ('RUNNING','HELD','STOPPING')):
+        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
+    settings={'native_enabled':'0','native_trial':''}
+    config=root/'etc/config/homensai_vpn'
+    if config.is_symlink():raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
+    if config.exists():
+        pending=subprocess.run(['/sbin/uci','-q','changes','homensai_vpn'],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        if pending.returncode:raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
+        if pending.stdout.strip():raise ValueError('LIFECYCLE-PENDING-UCI-CHANGES')
+        check=subprocess.run(['/sbin/uci','-q','show','homensai_vpn'],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        if check.returncode:raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
+        for key in ('native_enabled','native_trial'):
+            reply=subprocess.run(['/sbin/uci','-q','get','homensai_vpn.main.'+key],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+            if reply.returncode not in (0,1):raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
+            if reply.returncode==0:settings[key]=reply.stdout.decode('utf8').strip()
+    if upgrade:return settings,status,transaction,intent,stopped,interrupted
+    return settings,status,transaction,intent,stopped
+
+
+# Plan item 54 (audit F-16/F-17): the package maintenance marker. Every guard run writes PERSIST/maintenance.json under
+# the control lock BEFORE it assesses the state: a Start that took the lock earlier left its intent for the assessment
+# (refused: Stop Auto first), a Start after it sees the marker and is refused (MAINTENANCE-IN-PROGRESS, maintenance.py /
+# lua/maintenance.lua). Any refusal removes it at once; postinst removes it before the service starts again. The readers
+# count it only within this boot (boot_id) and LIMIT s of uptime after its last write, so a power cut mid-upgrade never
+# blocks for ever. Dependency-free (embedded in the hooks): the same fields maintenance.classify reads.
+ROOT=Path('/')
+MAINTENANCE_MARKER='maintenance.json'
+MAINTENANCE_ACTIONS={'check':'remove','check-stopped':'remove','upgrade':'upgrade','upgrade-stopped':'upgrade','prepare':'install'}
+BOOT_ID=re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+# F-17: the supervisor's last word on its shutdown recovery (native_switch.serve end / lua auto.shutdown). The first guard
+# of prerm removes an older one; after the stop a present record must say ok=true.
+# IR-05 (integration review 07.11.2026): an ABSENT record also passed, so a supervisor killed by procd after its
+# term_timeout (it writes nothing) let the second guard accept an unfinished recovery. Now the first guard writes the
+# expected record {ok:false} when an Auto supervisor process is alive (or /proc cannot be read); only the supervisor's
+# own ok:true at the end of its shutdown recovery replaces it. Without a live supervisor nothing is expected (the older
+# record is removed as before): a monitor-only service (mode no-auto, monitor_only) never blocks a package operation.
+SHUTDOWN_RECORD='supervisor-shutdown.json'
+SHUTDOWN_EXPECTED='LIFECYCLE-RECOVERY-UNFINISHED'
+# the processes that end with the shutdown record: python native_switch.py daemon, lua auto.lua daemon, lua hv_core.lua
+# daemon (hv-core carries the Lua Auto supervisor; never started with no-auto). Not: monitors, the standby, rpcd calls.
+SUPERVISOR_SCRIPTS=(b'/usr/lib/homensai-vpn/native_switch.py',b'/usr/lib/homensai-vpn/lua/auto.lua',b'/usr/lib/homensai-vpn/lua/hv_core.lua')
+STOP_WAIT=330      # procd gives the supervisors term_timeout 300 s, then SIGKILL
+SERVICE_SCRIPT=b'/usr/lib/homensai-vpn/'
+
+
+def boot_identity(root):
+    try:value=(root/'proc/sys/kernel/random/boot_id').read_text(encoding='ascii').strip()
+    except (OSError,ValueError,UnicodeDecodeError):return None
+    return value if BOOT_ID.fullmatch(value) else None
+
+
+def boot_uptime(root):
+    try:value=float((root/'proc/uptime').read_text(encoding='ascii').split()[0])
+    except (OSError,ValueError,IndexError,UnicodeDecodeError):return None
+    return value if finite(value) else None
+
+
+# IR-04 (integration review 07.11.2026): opkg runs the OLD prerm 'upgrade' (marks action=upgrade) and then the NEW
+# preinst/postinst, which only know 'prepare' (install). A prepare that finds this boot's live upgrade mark keeps
+# action=upgrade, so status.maintenance.action and a MAINTENANCE-INTERRUPTED record name the real operation. The same
+# liveness rules as maintenance.classify (same boot and at most MAINTENANCE_LIMIT s of uptime; no boot id: the wall
+# clock); anything else (no mark, a symlink, another boot, too old, unreadable) is a fresh install.
+MAINTENANCE_LIMIT=900
+MAINTENANCE_SKEW=60
+
+
+def live_upgrade_mark(root,boot,uptime,now):
+    path=root/'etc/homensai-vpn'/MAINTENANCE_MARKER
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size>4096:return False
+        row=json.loads(path.read_text(encoding='utf8'))
+    except (OSError,ValueError,UnicodeDecodeError,RecursionError):return False
+    if not isinstance(row,dict) or row.get('action')!='upgrade':return False
+    marked=row.get('boot_id') if isinstance(row.get('boot_id'),str) and BOOT_ID.fullmatch(row['boot_id']) else None
+    if marked and boot:
+        if marked!=boot:return False
+        if finite(row.get('uptime')) and uptime is not None:return 0<=uptime-row['uptime']<=MAINTENANCE_LIMIT
+    since=row.get('time')
+    return finite(since) and finite(now) and -MAINTENANCE_SKEW<=now-since<=MAINTENANCE_LIMIT
+
+
+def mark_maintenance(root,action):
+    persist=root/'etc/homensai-vpn'
+    try:
+        persist.mkdir(mode=0o700,parents=True,exist_ok=True)
+        if persist.is_symlink() or not persist.is_dir():raise ValueError('LIFECYCLE-MAINTENANCE-FAILED')
+        now=time.time();boot=boot_identity(root);uptime=boot_uptime(root)
+        kind=MAINTENANCE_ACTIONS[action]
+        if action=='prepare' and live_upgrade_mark(root,boot,uptime,now):kind='upgrade'
+        row={'action':kind,'time':now,'pid':os.getpid()}
+        if boot:row['boot_id']=boot
+        if uptime is not None:row['uptime']=uptime
+        temporary=persist/('.'+MAINTENANCE_MARKER+'.new')
+        fd=os.open(str(temporary),os.O_WRONLY|os.O_CREAT|os.O_TRUNC|getattr(os,'O_NOFOLLOW',0),0o600)
+        with os.fdopen(fd,'w',encoding='utf8') as stream:
+            stream.write(json.dumps(row,sort_keys=True));stream.flush();os.fsync(stream.fileno())
+        os.replace(str(temporary),str(persist/MAINTENANCE_MARKER))
+    except (OSError,KeyError) as error:raise ValueError('LIFECYCLE-MAINTENANCE-FAILED') from error
+
+
+def clear_maintenance(root):
+    try:(root/'etc/homensai-vpn'/MAINTENANCE_MARKER).unlink()
+    except OSError:pass
+
+
+def service_processes(root,supervisors=False):
+    """pids of this package's service processes (daemon/standby instances, an apply child); None when /proc is unreadable.
+    supervisors=True: only the Auto supervisor daemons (SUPERVISOR_SCRIPTS), the processes that write the shutdown record."""
+    try:entries=list((root/'proc').iterdir())
+    except OSError:return None
+    found=[]
+    for entry in entries:
+        if not entry.name.isdigit():continue
+        try:command=(entry/'cmdline').read_bytes()
+        except OSError:continue  # exited meanwhile
+        argv=command.split(bytes([0]))
+        if supervisors:
+            if b'daemon' in argv and any(arg in SUPERVISOR_SCRIPTS for arg in argv):found.append(int(entry.name))
+        elif APPLY_CHILD in command or any(arg.startswith(SERVICE_SCRIPT) for arg in argv) and (b'daemon' in argv or b'standby' in argv):
+            found.append(int(entry.name))
+    return found
+
+
+def wait_service_exit(root,limit=STOP_WAIT,sleep=time.sleep,clock=time.monotonic):
+    """F-17: /etc/init.d stop only asks procd to stop; the supervisor may still be restoring. Wait (bounded) until every
+    service process has exited, outside the control lock (the shutdown recovery takes it)."""
+    until=clock()+limit
+    while True:
+        alive=service_processes(root)
+        if alive==[]:return
+        if alive is None or clock()>=until:raise ValueError('LIFECYCLE-STOP-UNFINISHED')
+        sleep(0.5)
+
+
+def shutdown_refusal(root):
+    path=root/'var/run/homensai-vpn'/SHUTDOWN_RECORD
+    if not os.path.lexists(str(path)):return None
+    try:row=read_dict(path)
+    except (OSError,ValueError,UnicodeDecodeError):return 'LIFECYCLE-RECOVERY-UNFINISHED'
+    return None if row.get('ok') is True else 'LIFECYCLE-RECOVERY-UNFINISHED'
+
+
+def forget_shutdown(root):
+    try:(root/'var/run/homensai-vpn'/SHUTDOWN_RECORD).unlink()
+    except FileNotFoundError:pass
+
+
+def expect_shutdown(root):
+    """First guard of prerm (IR-05): with a live Auto supervisor (or an unreadable /proc) the record of THIS shutdown is
+    expected: {ok:false} now, replaced only by the supervisor's own ok:true. Otherwise the older record is removed."""
+    alive=service_processes(root,supervisors=True)
+    if alive==[]:forget_shutdown(root);return False
+    directory=root/'var/run/homensai-vpn'
+    if directory.is_symlink() or not directory.is_dir():raise ValueError('LIFECYCLE-CONTROL-UNVERIFIED')
+    temporary=directory/('.'+SHUTDOWN_RECORD+'.new')
+    try:temporary.unlink()
+    except FileNotFoundError:pass
+    fd=os.open(str(temporary),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+    with os.fdopen(fd,'w',encoding='utf8') as stream:
+        stream.write(json.dumps({'ok':False,'code':SHUTDOWN_EXPECTED,'expected':True,'time':time.time()},sort_keys=True))
+    os.replace(str(temporary),str(directory/SHUTDOWN_RECORD))
+    return True
+
+
+@contextmanager
+def control_lock():
+    directory=Path('/var/run/homensai-vpn');directory.mkdir(mode=0o700,parents=True,exist_ok=True)
+    if directory.is_symlink():raise ValueError('LIFECYCLE-CONTROL-UNVERIFIED')
+    metadata=directory.stat()
+    if metadata.st_uid!=os.geteuid() or metadata.st_mode&0o022:raise ValueError('LIFECYCLE-CONTROL-UNVERIFIED')
+    fd=os.open(str(directory/'auto-control.lock'),os.O_CREAT|os.O_RDWR|getattr(os,'O_NOFOLLOW',0),0o600)
+    try:
+        until=time.monotonic()+10
+        while True:
+            try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB);break
+            except BlockingIOError:
+                if time.monotonic()>=until:raise ValueError('LIFECYCLE-CONTROL-BUSY')
+                time.sleep(0.05)
+        yield
+    finally:os.close(fd)
+
+
+def main(action):
+    # check: removal (old prerm 'remove'); upgrade: old prerm during an opkg upgrade
+    # (opkg runs the OLD package's prerm 'upgrade <new>' before the new preinst);
+    # prepare: new preinst/postinst. Only upgrade/prepare accept a dead interrupted journal.
+    # check-stopped / upgrade-stopped: prerm again after the service stop (F-16/F-17): first every service process must
+    # have exited and the supervisor's shutdown record (when present) must say its recovery finished. The first guard
+    # made it present whenever an Auto supervisor was running (IR-05), so a killed supervisor is refused too.
+    if action not in MAINTENANCE_ACTIONS:raise SystemExit('LIFECYCLE-ACTION')
+    base=action.split('-')[0]
+    try:
+        if action.endswith('-stopped'):wait_service_exit(ROOT)
+        with control_lock():
+            mark_maintenance(ROOT,action)
+            if action in ('check','upgrade'):expect_shutdown(ROOT)
+            elif action.endswith('-stopped'):
+                refused=shutdown_refusal(ROOT)
+                if refused:raise ValueError(refused)
+            # Removal ('check') never uses the interrupted-journal exception.
+            code=assess(*snapshot(upgrade=base in ('prepare','upgrade')))
+            if code:raise ValueError(code)
+            if action=='prepare':
+                # No names, priorities, tokens or statistics are changed.
+                batch=b"set homensai_vpn.main.native_enabled='0'\nset homensai_vpn.main.native_until='0'\nset homensai_vpn.main.native_trial=''\ncommit homensai_vpn\n"
+                result=subprocess.run(['/sbin/uci','-q','batch'],input=batch,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10)
+                if result.returncode:raise ValueError('LIFECYCLE-AUTO-DISABLE-FAILED')
+    except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError) as error:
+        # The package operation is aborted: the maintenance marker goes at once (a Start is possible again).
+        clear_maintenance(ROOT)
+        code=str(error) if type(error) is ValueError and str(error).startswith('LIFECYCLE-') else 'LIFECYCLE-STATE-UNVERIFIED'
+        print(code,file=sys.stderr);raise SystemExit(1)
+    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(base,'LIFECYCLE-AUTO-DISABLED'))
+
+
+if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')
+
+HOMENSAI_LIFECYCLE_GUARD
+then
+    /etc/init.d/homensai-vpn start || echo LIFECYCLE-RESTART-FAILED: the service could not be started again after the refusal >&2
+    echo LIFECYCLE-REFUSED-AFTER-STOP: the recovery is not finished, the service runs again, the package operation is aborted >&2
+    exit 1
+fi
 /etc/init.d/homensai-vpn disable
 if [ "$$action" = check ]; then
     # Removal: no DNS-through-both-tunnels snippet (dns_dual) stays behind; each GL per-tunnel dnsmasq runs GL's own

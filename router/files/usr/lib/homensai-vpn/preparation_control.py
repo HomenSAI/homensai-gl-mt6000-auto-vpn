@@ -405,6 +405,7 @@ def verify(action,plan):
 # auto stayed 0). restore_autostart() puts back the value each before-record saved, under the control lock, only:
 #   * after the owner's own Stop: pair intent not 'on'; the durable stop latch (native-stop.json) is valid, comes from
 #     the page (request_source 'manual') and is newer than both the session start and the owner's resume marker;
+#     only records written BEFORE that Stop (review 04.11.2026: a newer record is a Start in progress - nothing then);
 #   * with a settled route: journal absent or ROLLED-BACK; the session STOPPED (no boot keep/handover), FAILED with
 #     nothing owned, absent, or HELD only by a change made outside the app (the K9 hold: its guard is released by the
 #     same Stop; nothing else of that session is touched here);
@@ -423,35 +424,38 @@ BOOT_RESTORE_ACTIONS=('vpn-boot',)
 CLIENT_NAME=re.compile(r'(wgclient|ovpnclient)[1-9][0-9]{0,8}')
 
 
-def _owner_stop_latched(state):
+def _owner_stop_time(state):
+    """The time of the owner's own Stop the restore may act on, or None."""
     from boot_resume import MARKER
     latch=read_json(PERSIST/'native-stop.json',None)
-    if not isinstance(latch,dict) or latch.get('control_revision_failed') is True or latch.get('request_source')!='manual':return False
+    if not isinstance(latch,dict) or latch.get('control_revision_failed') is True or latch.get('request_source')!='manual':return None
     stopped=latch.get('requested')
-    if type(stopped) not in (int,float) or not stopped==stopped or stopped in (float('inf'),float('-inf')):return False
+    if type(stopped) not in (int,float) or not stopped==stopped or stopped in (float('inf'),float('-inf')):return None
     marker=read_json(PERSIST/MARKER,None)
     if isinstance(marker,dict) and marker.get('enabled') is True:
         at=marker.get('time')
-        if type(at) not in (int,float) or stopped<at:return False
+        if type(at) not in (int,float) or stopped<at:return None
     started=state.get('started') if isinstance(state,dict) else None
-    return not (type(started) in (int,float) and stopped<started)
+    return None if type(started) in (int,float) and stopped<started else stopped
 
 
 def _restore_allowed():
+    """-> (skip reason or None, the owner's Stop time)."""
     from pair_auto import read_state,intent,READOPT_CODES
     from native_switch import journal_read
-    if intent().get('mode')=='on':return 'auto-on'
+    if intent().get('mode')=='on':return 'auto-on',None
     state=read_state()
     phase=state.get('phase') if state else None
-    if any(key in state for key in ('kept','handover')):return 'session-kept'
+    if any(key in state for key in ('kept','handover')):return 'session-kept',None
     if not (phase is None or phase=='STOPPED' or phase=='FAILED' and not state.get('owned')
-            or phase=='HELD' and state.get('recovery_error') in READOPT_CODES):return 'session-not-stopped'
-    if journal_read().get('phase') not in (None,'ROLLED-BACK'):return 'route-not-settled'
-    if not _owner_stop_latched(state):return 'no-owner-stop'
+            or phase=='HELD' and state.get('recovery_error') in READOPT_CODES):return 'session-not-stopped',None
+    if journal_read().get('phase') not in (None,'ROLLED-BACK'):return 'route-not-settled',None
+    stopped=_owner_stop_time(state)
+    if stopped is None:return 'no-owner-stop',None
     for name in ('manual-control.json','pair-manual-control.json'):
         pending=read_json(RUNTIME/name,{})
-        if pending and (not isinstance(pending,dict) or pending.get('state') not in TERMINAL_MANUAL):return 'manual-pending'
-    return None
+        if pending and (not isinstance(pending,dict) or pending.get('state') not in TERMINAL_MANUAL):return 'manual-pending',None
+    return None,stopped
 
 
 def _autostart_records():
@@ -526,11 +530,18 @@ def restore_autostart():
     try:
         with control_lock():
             # a condition that is not met is not an error: nothing to do now (lower-case reason, never a page code)
-            skipped=_restore_allowed()
+            skipped,stopped=_restore_allowed()
             if skipped:return answer(skipped=skipped)
             records()  # the whole history must verify before any of it is used
             by_section=_autostart_records();by_boot=_boot_records();changes=[]
             if not by_section and not by_boot:return answer()
+            # Review 04.11.2026 (finding 1): Start runs auto_prepare BEFORE pair_request writes the 'on' intent. A record
+            # written at or after the owner's Stop belongs to a Start after that Stop (in progress, or refused later):
+            # undoing it would take back what that Start just prepared (auto=1 again, the stock start link back) and
+            # its begin() would refuse PAIR-PROFILES-UNVERIFIED. Nothing is restored then; the owner's next Stop (a
+            # newer latch) undoes that Start's preparation as before.
+            if any(data['time']>=stopped for rows in list(by_section.values())+list(by_boot.values()) for _,data in rows):
+                return answer(skipped='start-in-progress')
             values=options() if by_section else {}
             for section,rows in sorted(by_section.items()):
                 row=values.get(section)
@@ -578,6 +589,17 @@ def _log(line):
 # files that decide it changed since the last run (no Lua/uci child on an idle tick). Lua: backend.autostart_after_stop
 # (same key files) runs `python3 preparation_control.py restore-autostart`.
 _after_stop={}
+# Review 04.11.2026 (finding 3): of the session record only what _restore_allowed decides from. Its file identity changed
+# on every STOPPING/HELD pair of writes of a HELD session (a held journal, a damped return): the Lua line then started
+# python3 on every pass although nothing it decides from had changed. Lua: backend.after_stop_key (the same fields).
+SESSION_FIELDS=('id','phase','recovery_error','started','owned','kept','handover')
+
+
+def _session_key(path):
+    try:data=read_json(path,{}).get('data',{})
+    except (OSError,ValueError,AttributeError):return 'unreadable'
+    if not isinstance(data,dict):return 'unreadable'
+    return tuple(json.dumps(data.get(name),sort_keys=True) for name in SESSION_FIELDS)
 
 
 def after_stop_key():
@@ -592,9 +614,10 @@ def after_stop_key():
         if read_json(intent_path,{}).get('mode')=='on':return None  # Auto runs: nothing to restore, no lock taken
     except (OSError,ValueError,AttributeError):pass
     key=[]
-    for path in (directory,ROOT/'etc/config/network',ROOT/'etc/rc.d',PERSIST/'native-stop.json',intent_path,state_path,JOURNAL):
+    for path in (directory,ROOT/'etc/config/network',ROOT/'etc/rc.d',PERSIST/'native-stop.json',intent_path,JOURNAL):
         try:st=path.lstat();key.append((st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns))
         except OSError:key.append(None)
+    key.append(_session_key(state_path))
     return tuple(key)
 
 

@@ -5,7 +5,7 @@ var PROBE_APPLIED=null,PROBE_LOG_KEY='homensai-vpn-probe-log-open',PROBE_LOG_ROW
 function probeLevelText(level,boost){
   var v=PROBE_LEVELS[level]||PROBE_LEVELS[5],detect=v[0]*3,fast=v[0]+20;
   var names={1:bi('Economy','Экономно'),2:bi('Light','Лёгкий'),3:bi('Balanced','Сбалансировано'),4:bi('Reliable','Надёжно'),5:bi('Maximum reliability','Максимальная надёжность')};
-  return names[level]+' · '+bi('channel check every '+v[0]+' s, websites every '+v[1]+' s (ping: its own setting in Settings). A failure is confirmed in about '+(boost?fast:detect)+' s','проверка каналов раз в '+v[0]+' с, сайты раз в '+v[1]+' с (пинг — отдельная настройка в «Настройках»). Сбой подтверждается примерно за '+(boost?fast:detect)+' с')+(boost&&fast<detect?bi(' (without boost '+detect+' s).',' (без ускорения '+detect+' с).'):'.');
+  return names[level]+' · '+bi('channel check every '+v[0]+' s, websites every '+v[1]+' s (ping: its own setting in Settings). With the Previous rule a failure is confirmed in about '+(boost?fast:detect)+' s (the default model decides by probability)','проверка каналов раз в '+v[0]+' с, сайты раз в '+v[1]+' с (пинг — отдельная настройка в «Настройках»). При «Прежнем правиле» сбой подтверждается примерно за '+(boost?fast:detect)+' с (модель по умолчанию решает по вероятности)')+(boost&&fast<detect?bi(' (without boost '+detect+' s).',' (без ускорения '+detect+' с).'):'.');
 }
 function probeDecision(row){
   var level=bi('level ','уровень ')+row.level,cadence=bi('check every ','проверка раз в ')+row.interval+bi(' s, websites every ',' с, сайты раз в ')+row.measure_interval+bi(' s',' с');
@@ -16,7 +16,8 @@ function probeDecision(row){
     // Passive suspicion (probe_policy.Booster.suspect): only dense full checks, never a switch by itself.
     var ev=row.evidence||{},why={'rx-stall':bi('sends data but receives nothing','отправляет данные, но ничего не получает')+(ev.stalled_s!=null?bi(' for '+Math.round(ev.stalled_s)+' s',' '+Math.round(ev.stalled_s)+' с'):''),
       'wg-handshake-stale':bi('WireGuard handshake is older than 3 min while sending','рукопожатие WireGuard старше 3 мин при отправке данных'),
-      'link-missing':bi('the tunnel interface disappeared','интерфейс туннеля пропал')}[row.reason]||String(row.reason||'');
+      'link-missing':bi('the tunnel interface disappeared','интерфейс туннеля пропал'),
+      'cusum-loss':bi('heartbeat echoes keep getting lost','ответы пульса теряются снова и снова')}[row.reason]||String(row.reason||'');
     if(row.kind==='suspicion-start')return [bi('Suspicion: dense checks','Подозрение: частые проверки'),role+' '+why+bi('; full checks every ','; полные проверки раз в ')+row.dense_interval+bi(' s. A suspicion alone never switches.',' с. Одно подозрение никогда не переключает.')];
     var ended={'false-alarm':bi('Suspicion cleared: checks passed','Подозрение снято: проверки пройдены'),'failure-confirmed':bi('Suspicion confirmed by failed checks','Подозрение подтверждено неудачными проверками'),'switched':bi('Suspicion ended: Auto switched','Подозрение завершено: Auto переключил канал'),'expired':bi('Suspicion ended without confirmation','Подозрение завершено без подтверждения'),'cancelled':bi('Suspicion ended: Auto is not watching','Подозрение завершено: Auto не наблюдает')};
     return [ended[row.result]||row.result,role+'; '+(row.failures||0)+bi(' failed of ',' неудачных из ')+(row.checks||0)+bi(' checks in ',' проверок за ')+(row.duration||0)+bi(' s; back to ',' с; возврат на ')+level];

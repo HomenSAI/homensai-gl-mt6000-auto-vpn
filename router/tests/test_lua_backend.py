@@ -245,6 +245,12 @@ def py_diagnostic(world):
         return [blockers,selection]
 
 
+def py_key_gate(world,profiles):
+    with PythonRouter(world):
+        selection={'source':{'id':profiles[0]},'target':{'id':profiles[1]}}
+        return [n.key_unaccepted(profiles[0]),n.key_unaccepted(profiles[1]),n.key_blockers([],selection)]
+
+
 def py_attest_policy(world,selection):
     with PythonRouter(world):
         with patch.object(n,'slot_contract_verified',return_value=True):
@@ -462,13 +468,28 @@ def network_cases():
           b"\toption disabled '1'\n\nconfig dnsmasq 'wgclient4'\n\toption disabled '0'\nconfig host\n\toption name 'x'\n")
     firewall=(b"config zone\n\toption name 'wan'\n\toption gl_wan_like '1'\n\toption gl_bwa_managed\t'1'\r\n\toption gl_wan_likes '1'\n"
               b"config rule\n\toption name 'v'\n\toption gl_vpn_rules '1'\n\nconfig\trule\n\toption gl_vpn_rules '1'  \r\nconfig rule\n\toption gl_vpn_rules '0'\n")
-    for name,data in (('dhcp',dhcp),('firewall',firewall),('wireguard',b"config peer 'x'\n"),('dhcp',b''),('firewall',b'\n\n')):
+    # F-34: the stock exit options count outside a VPN client zone and with a value the stock client never writes
+    wan=b"config zone\n\toption name 'wan'\n\toption network 'wan wan6'\n\toption gl_bwa_bridge_reject '1'\n\toption gl_wan_like '1'\n"
+    own=b"config zone 'ovpnclient2'\n\toption name 'ovpnclient2'\n\toption network 'ovpnclient2'\n\toption gl_wan_like '1'\r\n\toption gl_bwa_managed '1'\n\toption gl_bwa_exit_id 'ovpnclient2'\n\toption gl_bwa_bridge_reject '0'\n"
+    lan=b"config zone\n\toption name 'lan'\n\tlist network 'lan'\n\tlist network 'wgclient1'\n\toption gl_bwa_managed '1'\n\toption gl_bwa_exit_id 'wgclient1'\n"
+    zones=[wan+own+lan,own+lan,wan+own.replace(b"'ovpnclient2'",b"'ovpnclient'")+lan,own.replace(b"'1'",b"'yes'")+lan,
+           own.replace(b"'ovpnclient2'\n\toption gl_bwa_bridge",b"'lan'\n\toption gl_bwa_bridge")+b"config rule\n\toption gl_bwa_managed '1'\n",
+           b"\n"+own+b"config\tzone 'wgclient1'\r\n\toption gl_wan_like 1\n\toption gl_bwa_exit_id 'wgclient12345'\n",
+           b"config zone wgclient1\n\toption gl_wan_like '1'\nconfig zone 'wgclient1' x\n\toption gl_wan_like '1'\n"]
+    # R4-05: valid header forms end the client's zone (quoted type, trailing comment, double quotes, bare name, unparsable rest)
+    for header in (b"config 'zone' 'lan'\n",b"config zone 'lan' # LAN policy\n",b'config "zone" "lan"\n',b"config zone lan\n",
+                   b"config zone 'lan' extra words\n",b"config\tzone\t'lan'\t#x\n",b"config 'zone' 'ovpnclient2'\n",b'config "zone" "ovpnclient2"\n'):
+        zones.append(own+header+b"\tlist network 'lan'\n\toption gl_bwa_bridge_reject '1'\n")
+    for name,data in [('dhcp',dhcp),('firewall',firewall),('wireguard',b"config peer 'x'\n"),('dhcp',b''),('firewall',b'\n\n')]+[('firewall',z) for z in zones]:
         for managed in (None,{'wgclient3':'wgclient','ovpnclient2':'ovpnclient'}):
             cases.append(('config_digest',{'name':name,'data':data.hex(),'managed':managed},lambda nm=name,d=data,m=managed:pair_auto.config_digest(nm,d,m)))
     for data in (firewall,b"config defaults\n",firewall.replace(b"'1'  \r\n",b"'1'")):
         cases.append(('static_firewall_digest',{'data':data.hex()},lambda d=data:pair_auto.static_firewall_digest(d)))
     for settings in ({},{'recovery_failures':'5','recovery_cooldown':' 120 ','recovery_return_policy':'hold_reserve'},
-                     {'recovery_failures':'99','recovery_attempt_limit':'011','recovery_attempt_window':'x'},{'recovery_min_dwell':'-5','recovery_primary_stable':'1e3'}):
+                     {'recovery_failures':'99','recovery_attempt_limit':'011','recovery_attempt_window':'x'},{'recovery_min_dwell':'-5','recovery_primary_stable':'1e3'},
+                     # F-46 / R2-03: '3_0', 30.5, True and a 5000-digit string take the default in both twins
+                     {'recovery_primary_stable':'3_0','recovery_cooldown':30.5,'recovery_min_dwell':True,'recovery_failures':'9'*5000},
+                     {'recovery_primary_stable':' +30 ','recovery_cooldown':'999999999','recovery_min_dwell':'-5000000000','recovery_failures':' 0000000007'}):
         cases.append(('settings_fingerprint',{'settings':settings},lambda s=settings:recovery_settings.fingerprint(s)))
     return cases
 

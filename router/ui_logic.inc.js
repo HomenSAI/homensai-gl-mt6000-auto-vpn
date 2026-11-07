@@ -342,10 +342,5 @@ function channelLampTone(status,inventory,role,now,light){
   var confirmed=(typeof heldConfirmedPath==='function'?heldConfirmedPath:manualConfirmedPath)(status,pair.source,pair.target,now);
   return manualChannelTone(pair[role],role,confirmed,now,!light||(typeof autoRuns==='function'?autoRuns(light):autoWorking(light)),status);
 }
-// Auto lamp colour, same rule as the sidebar: green while Auto runs (a manual choice never stops it).
-function autoLampColor(light,paused){
-  var signal=light&&typeof autoSignal==='function'?autoSignal(light):null;
-  if(paused)return 'yellow';
-  if(signal==='off')return 'grey';
-  return (typeof autoRuns==='function'?autoRuns(light):typeof autoWorking==='function'&&autoWorking(light))?'green':signal==='yellow'?'yellow':'red';
-}
+// Every Auto lamp uses the same table, including waiting while Auto stays enabled.
+function autoLampColor(light,paused){var signal=autoSignal(light);return signal==='off'?'grey':signal;}

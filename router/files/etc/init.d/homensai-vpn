@@ -5,13 +5,27 @@ STOP=10
 
 # Self-check of the installed files (TODO item 15, docs/architecture/INTEGRITY-MATRIX-2026-11-01.ru.md), before any
 # instance starts. Prints the mode the tool decided: normal | no-c (pure Lua JSON) | python (Lua damaged) | stopped
-# (Lua and Python damaged). It never touches the guard, nft, routes, the Auto flag, the owner's config or state files.
-# A damaged tool is first put back from the pristine copy (both checked against their sha256); without a tool or a
-# manifest the service starts as before.
+# (Lua and Python damaged) | no-auto (the tool itself is missing). It never touches the guard, nft, routes, the Auto
+# flag, the owner's config or state files. A damaged tool is first put back from the pristine copy (both checked against
+# their sha256). Owner decision 07.11.2026: without the tool the installation cannot be verified, so the page and the
+# monitoring run but Auto (the native/pair supervisor, also inside hv-core) is not started; the reason is logged and
+# published as status.integrity (INTEGRITY-TOOL-MISSING, mode no-auto) with the fix: reinstall the package.
+# BH-01 (bug hunt 07.11.2026): every way the tool cannot be trusted ends the same as a missing tool - no Auto, the
+# reason logged and published (mode no-auto). $1 code, $2 log text; $report as in integrity_gate.
+integrity_no_auto() {
+    logger -t homensai-vpn "$1: $2; the page and monitoring run, Auto is not started; reinstall the package" 2>/dev/null || true
+    mkdir -p "${report%/*}" 2>/dev/null &&
+        printf '{"code":"%s","mode":"no-auto","restored":0,"files":["/usr/sbin/homensai-vpn-integrity"],"version":"","time":%s}
+'             "$1" "$(date +%s)" > "$report.new" 2>/dev/null && mv -f "$report.new" "$report" 2>/dev/null || true
+    echo no-auto
+}
+
 integrity_gate() {
     local tool=/usr/sbin/homensai-vpn-integrity manifest=/usr/lib/homensai-vpn/integrity.sha256
-    local pristine=/etc/homensai-vpn/pristine/payload.tar.gz want have
-    [ -f "$tool" ] || { logger -t homensai-vpn 'INTEGRITY-TOOL-MISSING' 2>/dev/null || true; echo normal; return 0; }
+    local pristine=/etc/homensai-vpn/pristine/payload.tar.gz report=/var/run/homensai-vpn/integrity.json want have mode
+    if [ ! -f "$tool" ]; then
+        integrity_no_auto INTEGRITY-TOOL-MISSING '/usr/sbin/homensai-vpn-integrity is missing'; return 0
+    fi
     want=$(awk '$3=="/usr/sbin/homensai-vpn-integrity" {print $1}' "$manifest" 2>/dev/null)
     have=$(sha256sum "$tool" 2>/dev/null | cut -d' ' -f1)
     if [ -n "$want" ] && [ "$want" != "$have" ]; then
@@ -22,20 +36,57 @@ integrity_gate() {
             chmod 0755 "$tool.integrity-new" && mv -f "$tool.integrity-new" "$tool"
             logger -t homensai-vpn 'INTEGRITY-FILE-RESTORED /usr/sbin/homensai-vpn-integrity' 2>/dev/null || true
         else
-            rm -f "$tool.integrity-new"; echo normal; return 0
+            # BH-01: a damaged tool that cannot be put back checks nothing: never full Auto
+            rm -f "$tool.integrity-new"
+            integrity_no_auto INTEGRITY-TOOL-DAMAGED 'the self-check tool does not match its checksum and the pristine copy cannot restore it'
+            return 0
         fi
     fi
-    sh "$tool" boot 2>/dev/null | sed -n 's/^mode=//p' | tail -n 1
+    mode=$(sh "$tool" boot 2>/dev/null | sed -n 's/^mode=//p' | tail -n 1)
+    case "$mode" in
+        normal|no-c|python|stopped) echo "$mode" ;;
+        # BH-01: a crash, no answer or an unknown mode: the installation is not verified (fail closed)
+        *) integrity_no_auto INTEGRITY-TOOL-FAILED 'the self-check tool gave no usable answer' ;;
+    esac
 }
 
+# Plan item 54 (audit F-16/F-17): the package hooks keep /etc/homensai-vpn/maintenance.json while an install, upgrade or
+# removal runs (Start and the switching buttons are refused meanwhile). A marker an interrupted operation left behind
+# (power cut, killed opkg) blocks nothing once it is stale (another boot, or more than 900 s of uptime old); here it is
+# reported as MAINTENANCE-INTERRUPTED (upgrade-result.json: a red line on the page until the next good installation, and
+# the system log) and removed. An active marker (the package operation still runs) stays. $1: the integrity mode.
+maintenance_report() {
+    local marker=/etc/homensai-vpn/maintenance.json cleared=
+    [ -e "$marker" ] || [ -L "$marker" ] || return 0
+    case "$1" in
+        stopped) return 0 ;;
+        python) cleared=$(/usr/bin/python3 /usr/lib/homensai-vpn/maintenance.py clear-stale 2>/dev/null) ;;
+        *) cleared=$(env LUA_PATH='/usr/lib/homensai-vpn/lua/?.lua;;' $2 /usr/bin/lua /usr/lib/homensai-vpn/lua/maintenance.lua clear-stale 2>/dev/null) ||
+               cleared=$(/usr/bin/python3 /usr/lib/homensai-vpn/maintenance.py clear-stale 2>/dev/null) ;;
+    esac
+    [ -z "$cleared" ] || logger -t homensai-vpn "$cleared: the previous package operation did not finish; nothing is blocked" 2>/dev/null || true
+}
+
+# Owner decision 07.11.2026 15:10: "Monitoring is always started, regardless of any conditions." The monitor instance
+# below (Lua monitor or Python agent) no longer depends on option enabled, the onboarding/terms state, the integrity
+# modes normal/no-c/python/no-auto or a maintenance marker; the monitor only reads and reports and never changes LAN
+# traffic. Auto keeps every gate it had: an option enabled other than 1 (an older version's "Stop monitor", a manual
+# uci change, or an unreadable config) still starts no Auto supervisor (no native instance, no hv-core). That is
+# recorded in $auto_gate (RAM) as SERVICE-AUTO-OFF, so an owner's Start is refused with that code instead of being
+# queued for a supervisor that does not run (auto_control.service_auto_blocker, lua/control_request.lua). Only two
+# conditions still start nothing at all: integrity mode "stopped" (both the Lua and the Python program files are
+# damaged and could not be restored: there is no verified program left to run, a damaged one would run as root under
+# unlimited respawn and could write wrong state/history) and an unsupported board without the explicit monitor-only
+# marker (the hardware deployment check, as in postinst). docs: router/tests/MONITOR-BOOT-NOTE.md.
 start_service() {
-    local enabled monitor_only lua_monitor
+    local enabled monitor_only lua_monitor auto_service=1 auto_gate=/var/run/homensai-vpn/service-auto.json
     # Power-cut integrity: an own config that no longer parses (flash damage) is reported with a code instead of
-    # a silent stop; enabled then reads as 0, so the service stays off and never touches LAN traffic.
+    # a silent stop; enabled then reads as 0: monitoring runs on the defaults, Auto is not started.
     if command -v uci >/dev/null 2>&1 && ! uci -q show homensai_vpn >/dev/null 2>&1; then
-        logger -t homensai-vpn 'HOMENSAI-CONFIG-UNREADABLE: /etc/config/homensai_vpn is missing or does not parse; service stays off' 2>/dev/null || true
+        logger -t homensai-vpn 'HOMENSAI-CONFIG-UNREADABLE: /etc/config/homensai_vpn is missing or does not parse; monitoring runs, Auto is not started' 2>/dev/null || true
         echo 'HOMENSAI-CONFIG-UNREADABLE' >&2
     fi
+    rm -f "$auto_gate" 2>/dev/null
     config_load homensai_vpn
     chmod 0600 /etc/config/homensai_vpn
     config_get_bool enabled main enabled 0
@@ -44,7 +95,15 @@ start_service() {
     if [ "${CONFIG_main_monitor_only+x}" = x ]; then monitor_only=$CONFIG_main_monitor_only
     else monitor_only=0; fi
     [ "${CONFIG_main_monitor_only_LENGTH+x}" != x ] || monitor_only=INVALID
-    [ "$enabled" -eq 1 ] || return 0
+    # option enabled is no monitor switch any more (owner decision 07.11.2026); it keeps only the Auto supervisor off
+    if [ "$enabled" != 1 ]; then
+        auto_service=0
+        logger -t homensai-vpn 'SERVICE-AUTO-OFF: option enabled is not 1; monitoring runs, the Auto supervisor is not started' 2>/dev/null || true
+        echo 'SERVICE-AUTO-OFF: option enabled is not 1; monitoring runs, the Auto supervisor is not started' >&2
+        { mkdir -p "${auto_gate%/*}" && printf '{"code":"SERVICE-AUTO-OFF","time":%s}
+' "$(date +%s)" > "$auto_gate.new" &&
+            mv -f "$auto_gate.new" "$auto_gate"; } 2>/dev/null || true
+    fi
     case "$monitor_only" in
         0)
             local board
@@ -63,9 +122,16 @@ start_service() {
     local integrity_mode canon_env=
     integrity_mode=$(integrity_gate)
     case "$integrity_mode" in
+        # the one integrity mode without a monitor: no verified program file is left to run (see the note above)
         stopped) echo 'INTEGRITY-SERVICE-STOPPED: Lua and Python files are damaged; the service stays off' >&2; return 0 ;;
         no-c) canon_env=HOMENSAI_CANON_C=0 ;;
+        no-auto) echo 'INTEGRITY-NO-AUTO: the self-check tool is missing or cannot be trusted; monitoring runs, Auto is not started; reinstall the package' >&2 ;;
+        normal|python) ;;
+        # BH-01: anything else (the gate itself failed) is never a full start
+        *) integrity_mode=no-auto
+           echo 'INTEGRITY-NO-AUTO: the self-check gave no mode; monitoring runs, Auto is not started; reinstall the package' >&2 ;;
     esac
+    maintenance_report "$integrity_mode" "$canon_env"
     lua_monitor=0
     [ "${CONFIG_main_lua_monitor-1}" = 1 ] && [ -f /usr/lib/homensai-vpn/lua/monitor.lua ] && [ "$integrity_mode" != python ] && lua_monitor=1
     # Lua plan item 8 (owner switch, default off): option lua_core_process '1' runs the Lua monitor and the Lua
@@ -75,7 +141,8 @@ start_service() {
     # Back to two processes: uci set homensai_vpn.main.lua_core_process='0'; uci commit homensai_vpn.
     local lua_core lua_auto
     lua_core=0
-    if [ "$monitor_only" = 0 ] && [ "$lua_monitor" = 1 ] && [ "${CONFIG_main_lua_core_process:-0}" = 1 ]; then
+    # hv-core carries the Auto supervisor inside the monitor process: never with no-auto or SERVICE-AUTO-OFF
+    if [ "$monitor_only" = 0 ] && [ "$auto_service" = 1 ] && [ "$integrity_mode" != no-auto ] && [ "$lua_monitor" = 1 ] && [ "${CONFIG_main_lua_core_process:-0}" = 1 ]; then
         config_get lua_auto main lua_auto 1
         [ "$lua_auto" = 1 ] && [ -x /usr/bin/lua ] && [ -f /usr/lib/homensai-vpn/lua/hv_core.lua ] && [ -f /usr/lib/homensai-vpn/lua/auto.lua ] && [ -f /usr/lib/homensai-vpn/lua/backend.lua ] && lua_core=1
     fi
@@ -98,6 +165,10 @@ start_service() {
     procd_set_param stderr 1
     procd_close_instance
     [ "$monitor_only" = 0 ] || return 0
+    # option enabled other than 1: monitoring only, no Auto supervisor (SERVICE-AUTO-OFF recorded above)
+    [ "$auto_service" = 1 ] || return 0
+    # no-auto (integrity tool missing): no native instance, so neither the Lua nor the Python Auto supervisor runs
+    [ "$integrity_mode" != no-auto ] || return 0
     # 2.0.0-lua line, plan item 1: option lua_auto '1' runs the Lua Auto supervisor in the same procd
     # instance (default ON since 2.0.0-alpha24, owner decision 01.11.2026; the Python supervisor below stays the
     # fallback). Both hold native.lock, so only one of them can ever run. Return to Python:
@@ -147,15 +218,38 @@ stop_service() {
     # Interruption codes (01.11.2026, interruption.lua): a clean stop (service stop, reload, reboot) leaves this small
     # marker - one write per stop; the next start reads it as RESTART-CLEAN. A boot without it is a power cut or a
     # hang (RESTART-INTERRUPTED-*). Leftover .pending files are swept at the next start.
+    # A system shutdown (procd runs the K* scripts with 'shutdown', see shutdown() below) also stores why: a reboot by
+    # the GL timer (gl_timer.reboot matches the local time, boot_cause.lua) is RESTART-PLANNED-REBOOT at the next start.
+    local reason=
+    if [ "${HOMENSAI_SHUTDOWN:-0}" = 1 ]; then
+        reason=reboot
+        if [ -x /usr/bin/lua ] && [ -f /usr/lib/homensai-vpn/lua/boot_cause.lua ]; then
+            reason=$(TZ="$(cat /etc/TZ 2>/dev/null)" /usr/bin/lua /usr/lib/homensai-vpn/lua/boot_cause.lua shutdown-reason 2>/dev/null)
+            case "$reason" in planned-reboot|reboot) ;; *) reason=reboot ;; esac
+        fi
+    fi
     if [ -d /etc/homensai-vpn ]; then
-        printf '{"state":"stopped","time":%s}' "$(date +%s)" > /etc/homensai-vpn/.service-run.json.stop.pending 2>/dev/null &&
+        if [ -n "$reason" ]; then
+            printf '{"state":"stopped","time":%s,"reason":"%s"}' "$(date +%s)" "$reason" > /etc/homensai-vpn/.service-run.json.stop.pending 2>/dev/null
+        else
+            printf '{"state":"stopped","time":%s}' "$(date +%s)" > /etc/homensai-vpn/.service-run.json.stop.pending 2>/dev/null
+        fi &&
             mv -f /etc/homensai-vpn/.service-run.json.stop.pending /etc/homensai-vpn/service-run.json 2>/dev/null || true
     fi
     ubus -t 10 call homensai-vpn-lua shutdown >/dev/null 2>&1 || true
     sqm_release
     rm -f /var/run/homensai-vpn/lua-monitor.ready
+    # the WireGuard hotplug listener (60-homensai) writes only while the monitor runs
+    rm -f /var/run/homensai-vpn/wg-events.on
     # hv-core: a fallback to separate processes lasts until the service stops; a stop is clean, not a crash
     rm -f /var/run/homensai-vpn/hv-core-fallback.json /var/run/homensai-vpn/hv-core.json /var/run/homensai-vpn/hv-core-watchdog.json
+}
+
+# procd runs every K* script with 'shutdown' on reboot/poweroff (rc.common's default shutdown() is a plain stop):
+# the same stop, marked as a system shutdown for the interruption record above.
+shutdown() {
+    HOMENSAI_SHUTDOWN=1
+    stop
 }
 
 reload_service() {

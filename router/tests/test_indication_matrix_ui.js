@@ -129,11 +129,11 @@ for(const requested of REQUESTED)for(const phase of PHASES)for(const state of ST
     const v=o.channel[role],norm=Object.fromEntries(Object.entries(v).map(([k,x])=>[k,k==='manual'&&x==='switching'?'yellow':x]));
     if(new Set(Object.values(norm)).size!==1)fail('channel-disagree '+role+' '+JSON.stringify(v),d,v);
   }
-  // (b) Auto surfaces agree: the lamp (button, state text, sidebar, journal) is one colour; the traffic light refines it.
+  // (b) Every Auto lamp agrees. The power switch independently shows the confirmed session, including a failure.
   const a=o.auto,lamp=a.lampColor;
   if(a.journal!==lamp)fail('auto journal '+a.journal+' vs lamp '+lamp,d,a);
   if(a.sidebar!==lamp)fail('auto sidebar '+a.sidebar+' vs lamp '+lamp,d,a);
-  if((a.button==='green')!==(lamp==='green'))fail('auto button '+a.button+' vs lamp '+lamp,d,a);
+  if((a.button==='green')!==c.autoEnabled(o.light))fail('auto button '+a.button+' vs confirmed session '+c.autoEnabled(o.light),d,a);
   if((a.stateText==='green')!==(lamp==='green')||(a.stateText==='grey')!==(lamp==='grey'))fail('auto state text '+a.stateText+' vs lamp '+lamp,d,a);
   const okSignal={green:['green','yellow'],yellow:['yellow'],red:['red'],grey:['off']}[lamp]||[];
   if(!okSignal.includes(a.signal))fail('auto traffic light '+a.signal+' vs lamp '+lamp,d,a);
@@ -142,8 +142,8 @@ for(const requested of REQUESTED)for(const phase of PHASES)for(const state of ST
   if(fresh&&phase==='RUNNING'&&['OBSERVING','COMMITTED'].includes(state)&&carrierRole&&health[carrierRole]==='healthy'&&lamp!=='green')fail('running-healthy-carrier-not-green '+lamp+' '+o.light.key,d,o.light);
   if(fresh&&phase==='RUNNING'&&['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE'].includes(state)&&carrierRole&&['failed','inactive'].includes(health[carrierRole])&&lamp!=='red')fail('failed-carrier-not-red '+lamp,d,o.light);
   if(fresh&&requested==='on'&&state==='BLOCKED-REAL'&&lamp!=='red')fail('controller-alarm-not-red '+lamp,d,o.light);
-  if(fresh&&phase==='RUNNING'&&state==='BLOCKED-TRANSIENT'&&lamp!=='green')fail('transient-blocker-not-green '+lamp,d,o.light);
-  if(fresh&&phase==='RUNNING'&&moving&&(lamp!=='green'||a.signal!=='yellow'))fail('running-switch-not-green-lamp-yellow-light '+lamp+'/'+a.signal,d,o.light);
+  if(fresh&&phase==='RUNNING'&&state==='BLOCKED-TRANSIENT'&&!(carrierRole&&['failed','inactive'].includes(health[carrierRole]))&&lamp!=='yellow')fail('transient-blocker-not-yellow '+lamp,d,o.light);
+  if(fresh&&phase==='RUNNING'&&moving&&(lamp!=='yellow'||a.signal!=='yellow'))fail('running-switch-not-yellow '+lamp+'/'+a.signal,d,o.light);
   if(fresh&&phase==='STARTING'&&state!=='BLOCKED-REAL'&&a.signal!=='yellow')fail('starting-not-yellow '+a.signal+' '+o.light.key,d,o.light);
   // A controller alarm in the last answer stays red while the next answer is missing; everything else waits out the 90 s grace.
   if(['rpc-new','stale-new'].includes(transport)&&requested==='on'&&state!=='BLOCKED-REAL'&&lamp==='red')fail('short-loss-red ('+transport+')',d,o.light);

@@ -22,7 +22,7 @@ function recoveryWizard(inventory){
   var defaults={interval:10,failures:3,successes:2,cooldown:60,min_dwell:60,return_policy:'healthy_primary',primary_successes:2,primary_stable:120,attempt_limit:3,attempt_window:15,rescue_stable:10},draft={};
   Object.keys(defaults).forEach(function(key){var saved=key==='interval'?settings.interval:settings['recovery_'+key];draft[key]=saved==null?defaults[key]:saved;});
   // Channel-failure detector (option failure_model, channel_model.py): not part of the presets.
-  var models={hmm:bi('Standard: model, leaves a long outage at ~25 s, stays on 15–20 s blips','Стандартный: модель, уход при долгом обрыве ~25 с, сбои 15–20 с не уводят'),'hmm-fast':bi('Fast: model, ~21 s, may leave a 20 s blip','Быстрый: модель, ~21 с, может уйти на сбое 20 с'),consecutive:bi('Previous rule: failures in a row','Прежнее правило: сбои подряд')};
+  var models={hmm:bi('Standard: model (experimental: simulation only), leaves a long outage at ~25 s, stays on 15 s blips, may leave on 20 s','Стандартный: модель (экспериментально: только симуляция), уход при долгом обрыве ~25 с, сбои 15 с не уводят, на 20 с может уйти'),'hmm-fast':bi('Fast: model, ~21 s, may leave a 20 s blip','Быстрый: модель, ~21 с, может уйти на сбое 20 с'),consecutive:bi('Previous rule: failures in a row','Прежнее правило: сбои подряд')};
   draft.failure_model=models[settings.failure_model]?settings.failure_model:'hmm';
   // Every preset (and the defaults) fills every field at once; fields it does not name take the default value.
   if(Object.keys(defaults).every(function(key){return String(draft[key])===String(defaults[key]);}))presetName='defaults';

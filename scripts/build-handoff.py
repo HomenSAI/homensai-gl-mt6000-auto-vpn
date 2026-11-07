@@ -5,8 +5,18 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def git(*args):return subprocess.check_output(['git',*args],cwd=ROOT)
 
+def bundle_readme(version,source):
+    """Reviewers are sent to the exact commit the archive was built from, never to a tag that may name another tree."""
+    if not re.fullmatch('[a-f0-9]{40}',source):raise ValueError('HANDOFF-SOURCE')
+    return ('Context-only Claude review bundle '+version+' built from source commit '+source+'. This is not a router package and '
+            'does not include complete application source. Clone HomenSAI/homensai-gl-mt6000-auto-vpn and check out exactly '
+            'commit '+source+' (git checkout '+source+') to audit code and referenced receipts; the tag handoff-v'+version+
+            ' may point to a different commit. SOURCE-COMMIT in this archive repeats the commit. No test/deployment '
+            'authorization is granted.\n').encode()
+
 def build(source,out):
     if not re.fullmatch('[a-f0-9]{40}',source):raise ValueError('HANDOFF-SOURCE')
+    if git('rev-parse','--verify',source+'^{commit}').decode().strip()!=source:raise ValueError('HANDOFF-SOURCE')
     out=out.resolve()
     if not out.is_relative_to((ROOT/'private').resolve()):raise ValueError('HANDOFF-PRIVATE-OUTPUT')
     manifest=git('show',source+':VERSION.json');data=json.loads(manifest);version=data['handoff']['version']
@@ -26,11 +36,13 @@ def build(source,out):
             info=zipfile.ZipInfo(prefix+name,date_time=(1980,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED;info.create_system=3;info.external_attr=0o100644<<16
             archive.writestr(info,payload)
         info=zipfile.ZipInfo(prefix+'BUNDLE-README.md',date_time=(1980,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED;info.create_system=3;info.external_attr=0o100644<<16
-        archive.writestr(info,('Context-only Claude review bundle '+version+'. This is not a router package and does not include complete application source. Clone HomenSAI/homensai-gl-mt6000-auto-vpn at tag handoff-v'+version+' to audit code and referenced receipts. No test/deployment authorization is granted.\n').encode())
+        archive.writestr(info,bundle_readme(version,source))
+        info=zipfile.ZipInfo(prefix+'SOURCE-COMMIT',date_time=(1980,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED;info.create_system=3;info.external_attr=0o100644<<16
+        archive.writestr(info,(source+'\n').encode())
     out.mkdir(parents=True,exist_ok=True);name=prefix[:-1]+'.zip';artifact=out/name;artifact.write_bytes(raw.getvalue());(out/'VERSION.json').write_bytes(manifest)
     hashes={name:hashlib.sha256(artifact.read_bytes()).hexdigest(),'VERSION.json':hashlib.sha256(manifest).hexdigest()}
     (out/'SHA256SUMS.txt').write_bytes(''.join(sha+'  '+name+'\n' for name,sha in hashes.items()).encode())
-    print(json.dumps({'source':source,'handoff':version,'zip':str(artifact),'sha256':hashes[name],'bytes':artifact.stat().st_size,'members':len(set(names))+1,'application_package_included':False},sort_keys=True))
+    print(json.dumps({'source':source,'handoff':version,'zip':str(artifact),'sha256':hashes[name],'bytes':artifact.stat().st_size,'members':len(set(names))+2,'application_package_included':False},sort_keys=True))
     return artifact
 
 if __name__=='__main__':

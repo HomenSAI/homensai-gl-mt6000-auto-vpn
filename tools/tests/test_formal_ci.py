@@ -79,7 +79,8 @@ class Validation(unittest.TestCase):
         self.assertEqual(data['variant'], 'fix')
         # 04.11.2026: every K fix of the model is in the code (integ/alpha8), so no xfail is left; a new real finding
         # adds one with its K number (load_expected checks that)
-        self.assertEqual(sorted(data['fixed']), sorted(['K1T', 'K2', 'K3', 'K4', 'K5', 'K9', 'K11']))
+        # 07.11.2026: F32 (outside change held by risk) and T4A (the owner's Stop ends the hold STOPPED) are in the code too
+        self.assertEqual(sorted(data['fixed']), sorted(['K1T', 'K2', 'K3', 'K4', 'K5', 'K9', 'K11', 'K12', 'F32', 'T4A']))
         self.assertTrue(all(e['status'] in ('xfail', 'accepted') for e in data['known'].values()))
 
     def test_xfail_needs_a_k_number(self):

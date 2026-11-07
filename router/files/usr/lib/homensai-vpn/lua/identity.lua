@@ -113,7 +113,8 @@ end
 ------------------------------------------------------------------------------------------------------
 -- stock_derived
 ------------------------------------------------------------------------------------------------------
-function M.anonymous(value) return value==true or value=='1' end
+-- Python `section.get('.anonymous') in (True,'1')`: the numbers 1 and 1.0 equal True there (D18)
+function M.anonymous(value) return value==true or value=='1' or canon.number(value)==1 end
 
 local SELECTORS={'from_type','from','to_type','to','to_manual','to_list_external'}
 local function empty_selector(v) return isnone(v) or v=='' or (canon.is_array(v) and #v==0) end

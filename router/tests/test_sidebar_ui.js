@@ -65,7 +65,7 @@ console.log('PASS: constrained-height sidebar geometry, external header clearanc
 {
  const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
  const source=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+menu['admin/services/homensai-vpn'].action.path.split('/').pop()+'.js','utf8');
- const tabsLine=source.split('\n').find(line=>line.includes('    var tabs='));
+ const tabsLine=source.split('\n').find(line=>/^\s*var tabs=/.test(line));
  const linkLine=source.split('\n').find(line=>line.includes('function tabLink(key)'));
  const hybrid=source.includes('hv-hybrid-release');
  const linksLine=hybrid?"var links=tabs.map(function(tab){return tabLink(tab[0]);});":source.split('\n').find(line=>line.includes("var links=['channels','diagnostics','events','settings','help'].map(tabLink)"));

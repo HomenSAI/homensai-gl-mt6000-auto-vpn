@@ -9,6 +9,8 @@ Open Help immediately after Settings, then Start or continue training. Lesson an
 
 The application monitors existing OpenVPN/WireGuard clients. Primary and reserve are roles, not protocol names. Configure servers and keys in the stock GL.iNet VPN app.
 On the prepared supported MT3000, explicit Auto Start can start the saved pair and select its traffic policy. It recovers after confirmed failure; primary return follows the saved policy and operator preference.
+Why this project has so much mathematics, physics and biology. These experiments exist because the author, Serhii Khomenko, has always loved these sciences, even though they never came easily to him. That is why every idea is tested honestly: compared with the previous method in the simulator and on the router, and only what is really better is kept.
+New in the 2.1.0-alpha9 line: Auto no longer leaves the primary on every hiccup (a probability model decides, not three failed checks in a row; experimental: chosen in simulation, not validated on hardware); an advisor can suggest, once a night, how fast to react through one slider (modes Advice, Auto, Manual; Advice is the default); Auto tells a router without internet (WAN-DOWN) from a failed tunnel; a changed VPN-server key is reported and accepted only by you; the first-run wizard can be skipped. All of this is tested on a PC and not yet verified on the router.
 
 Example: primary fails repeatedly → healthy reserve is confirmed → its route is selected. Return follows policy.
 
@@ -50,7 +52,7 @@ Step 2: use the readiness list for your actual mode. Prepared-MT3000 router-prob
 What is the LAN helper? A small PowerShell 7 script (plain text, you can read it) that runs on your Windows computer, not on the router. Install PowerShell 7 once, put the two downloaded files in one folder and start the launcher, then choose mode 1 (check only) first:
 The Auto switch says whether Auto is on or off. The chip «Traffic here» marks the channel carrying your traffic, «Standing by» the other one. A green channel lamp means the channel works, not independent proof of Internet for every client; yellow means a check or a switch; red means it does not respond; grey means no fresh data. Inspect fresh channel checks for availability.
 To choose a route manually, press Switch here on the Primary or Reserve card (Home, or the Channels tab of the Console) when the button is available, then wait for confirmed selection. A queued request is not completion; the status shows the switch until the router confirms it. Manual selection never turns Auto off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails.
-Use the Auto switch to request startup or shutdown. Wait for the actual final state. Turning Auto off does not stop monitoring; managed shutdown may restore the original routing/interface settings. If the reserve is retained, press Switch here on the Primary card when the primary works.
+Use the Auto switch to request startup or shutdown. Wait for the actual final state. Turning Auto off does not stop monitoring; managed shutdown may restore the original routing/interface settings. If a working reserve is retained, press Switch here on the Primary card when the primary works; a retained reserve that itself fails (proven by a fresh check) is rescued to a healthy primary by Auto after a short stability wait.
 
 Example: “2 of 2 VPNs work” confirms router observations for both paths; it does not certify every LAN client.
 
@@ -121,9 +123,9 @@ Readiness is mode-specific. Prepared router-probed Auto and a separate client-co
 - [ ] A speed test
 - [ ] A Telegram message
 
-### 5. What does the status Reserve in use confirm?
+### 5. What does the status Works via the reserve confirm?
 
-The yellow status Reserve in use means the reserve route carries traffic. It does not by itself prove the primary is broken; its card shows its own checks.
+The green status Works via the reserve means there is internet and the reserve route carries traffic; there is no spare channel until the primary is back. It does not by itself prove the primary is broken; its card shows its own checks.
 
 - [x] The reserve route is selected; primary health is checked separately
 - [ ] Everything is on the primary

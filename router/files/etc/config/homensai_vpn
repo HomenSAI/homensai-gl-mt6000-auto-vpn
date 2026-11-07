@@ -6,6 +6,9 @@ config main 'main'
     option live_log_limit '2000'
     option history_days '7'
     option appearance_design 'b'
+    # Trust on first use of the VPN servers' keys: warn (default when absent), enforce (Auto refuses a channel whose
+    # server key changed until homensai-vpn-server-key accept), off.
+    # option server_key_pin 'warn'
 
 # Existing profiles are selected in LuCI. No keys or VPN passwords are stored here.
 # config server 'office'

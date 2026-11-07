@@ -1,6 +1,6 @@
 // Help: the program core as a pyramid (Python base, Lua default, C JSON module) and the fallback steps between the levels.
 // Lazy Help module only. Facts and thresholds: docs/architecture/CORE-LEVELS-2026-10-31.ru.md (from the code).
-function coreSvg(tag,attrs){var n=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.keys(attrs||{}).forEach(function(k){n.setAttribute(k,String(attrs[k]));});return n;}
+function coreSvg(tag,attrs){var n=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.keys(attrs||{}).forEach(function(k){if(k==='style')hvCss(n,attrs[k]);else n.setAttribute(k,String(attrs[k]));});return n;}
 function coreLevelsDiagram(){
   if(typeof document==='undefined'||!document.createElementNS)return E('p',{},'');
   // Maslow-style pyramid: C on top, Lua in the middle, Python at the base; in every tier the measured MT3000 switch

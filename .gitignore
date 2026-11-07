@@ -23,3 +23,13 @@ dist/
 build/
 .DS_Store
 Thumbs.db
+
+# Secret hygiene (audit 04.11.2026): never track local agent worktrees, key stores, encrypted/archived router dumps or private notes
+.claude/worktrees/
+*.dpapi
+*.enc
+*.tgz
+*.private.*
+*.local.*
+router-backup*
+*.ovpn

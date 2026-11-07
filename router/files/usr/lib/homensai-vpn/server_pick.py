@@ -488,6 +488,21 @@ def role_of(c):
 
 
 _RENAMED=('before','after','restored_order','restore_target_order','restore_before_order','restore_order_origin')
+SERVER_FIELDS=('client_id','peer_id','group_id')  # the route_policy fields of one rule a switch_plan writes
+
+
+def policy_delta_only(before,after,section):
+    """F-27: True when the route_policy sections after this supervisor's own server change differ from the ones before
+    it only in the rule `section`, and there only in SERVER_FIELDS (client_id/peer_id/group_id). Every other section
+    and option must be identical, in the same order: a foreign edit made meanwhile is never adopted as our own."""
+    if not isinstance(before,list) or not isinstance(after,list) or len(before)!=len(after) or not isinstance(section,str):return False
+    for old,new in zip(before,after):
+        if not isinstance(old,dict) or not isinstance(new,dict):return False
+        if old.get('.name')!=new.get('.name'):return False
+        if old==new:continue
+        if old.get('.name')!=section:return False
+        if {k:v for k,v in old.items() if k not in SERVER_FIELDS}!={k:v for k,v in new.items() if k not in SERVER_FIELDS}:return False
+    return True
 
 
 def rebind(state,journal,order,hash_,profile,role='target'):
@@ -713,10 +728,37 @@ def availability(state):
     return 100*((state['ok'] if state else 0)+1)/((state['ok']+state['bad'] if state else 0)+2)
 
 
-def probe_plan(rows,states,now):
-    """Which rows (by index, at most MAX_MEASURED) this round measures: the current one, unknown and stale ones, and
+ROUND_MAX=2**31-1
+
+
+def probe_window(rows,round_=0):
+    """Which rows (by index) the bounded probing may touch in round `round_` (R3-07): all of them with at most
+    MAX_MEASURED candidates; otherwise always the current server plus MAX_MEASURED-1 of the others, a window that moves
+    by its own size every round, so every candidate is measured within ceil(others / (MAX_MEASURED-1)) rounds. Round 0
+    is the old prefix (the first MAX_MEASURED lines) whenever the current server is inside it."""
+    n=len(rows)
+    if n<=MAX_MEASURED:return [True]*n
+    cur=next((i for i,row in enumerate(rows) if row.get('current')),None)
+    others=[i for i in range(n) if i!=cur]
+    k=MAX_MEASURED-(1 if cur is not None else 0)
+    start=(round_*k)%len(others)
+    window=[False]*n
+    if cur is not None:window[cur]=True
+    for j in range(k):window[others[(start+j)%len(others)]]=True
+    return window
+
+
+def next_round(previous):
+    """The round number of this job from the previous published block (its `round`), 0 without a sane one."""
+    value=previous.get('round') if isinstance(previous,dict) else None
+    if isinstance(value,bool) or not isinstance(value,int) or not 0<=value<ROUND_MAX:return 0
+    return value+1
+
+
+def probe_plan(rows,states,now,round_=0):
+    """Which rows (by index, inside probe_window) this round measures: the current one, unknown and stale ones, and
     the plausible best (mu - z sd <= the lowest mu + z sd among the servers alive last time). states: per row."""
-    z=Z_PLAUSIBLE_E3/1000;posts=[posterior(s) for s in states]
+    z=Z_PLAUSIBLE_E3/1000;posts=[posterior(s) for s in states];window=probe_window(rows,round_)
     upper=None
     for s,p in zip(states,posts):
         if p is not None and s['alive']:
@@ -724,7 +766,7 @@ def probe_plan(rows,states,now):
             if upper is None or u<upper:upper=u
     plan=[]
     for i,row in enumerate(rows):
-        if i>=MAX_MEASURED:plan.append(False);continue
+        if not window[i]:plan.append(False);continue
         s,p=states[i],posts[i]
         plan.append(bool(row.get('current') or p is None or now-s['t']>=STALE or upper is None or p[0]-z*math.sqrt(p[1])<=upper))
     return plan
@@ -755,13 +797,13 @@ def decide_bayes(rows,states):
     return best[0] if best else None
 
 
-def bayes_round(tunnel,rows,model,io,device,now):
-    """Measure the rows the bandit picks (and all of them when the current server does not answer), update the model
-    (in place) and give every row its published reading: alive (this round, else the last known), latency_ms (the
-    posterior median exp(mu), whole ms). -> (target or None, probes) - probes: the measured servers."""
+def bayes_round(tunnel,rows,model,io,device,now,round_=0):
+    """Measure the rows the bandit picks (and all of this round's window when the current server does not answer),
+    update the model (in place) and give every row its published reading: alive (this round, else the last known),
+    latency_ms (the posterior median exp(mu), whole ms). -> (target or None, probes) - probes: the measured servers."""
     keys=[model_key(tunnel['tunnel_id'],row['profile']) for row in rows]
     states=[model_state(model.get(k),now) for k in keys]
-    plan=probe_plan(rows,states,now)
+    plan=probe_plan(rows,states,now,round_);window=probe_window(rows,round_)
     measured=[False]*len(rows)
     def run(i):
         m=measure(tunnel['protocol'],rows[i],io,device)
@@ -772,8 +814,8 @@ def bayes_round(tunnel,rows,model,io,device,now):
         if plan[i]:run(i)
         else:rows[i].update(alive=None,latency_ms=None,address=None)
     if any(row.get('current') and measured[i] and rows[i]['alive'] is not True for i,row in enumerate(rows)):
-        for i in range(min(len(rows),MAX_MEASURED)):
-            if not measured[i]:run(i)
+        for i in range(len(rows)):
+            if window[i] and not measured[i]:run(i)
     target=decide_bayes(rows,states)
     for i,row in enumerate(rows):
         p=posterior(states[i])
@@ -805,17 +847,21 @@ def job(io,request,now):
     last=state.get('last') if isinstance(state.get('last'),dict) else {}
     device=io['wan']() if enabled and io.get('wan') else None
     active=None;active_read=False
-    result={'time':now,'enabled':enabled,'tunnels':[]}
+    try:previous=json.loads(io['read'](io['runtime']+'/'+RESULT) or '{}')
+    except Exception:previous=None
+    round_=next_round(previous)  # R3-07: the probe window of a long list moves every round
+    result={'time':now,'round':round_,'enabled':enabled,'tunnels':[]}
     for tunnel in tunnels(uci):
         try:profiles=io['read'](tunnel['profiles'])
         except Exception:profiles=None
         rows=candidates(tunnel,profiles,uci)
         current=next((row['profile'] for row in rows if row['current']),None)
         code=None;ordered=False;target=None
-        if bayes:target,_=bayes_round(tunnel,rows,model,io,device,now)
+        if bayes:target,_=bayes_round(tunnel,rows,model,io,device,now,round_)
         else:
+            window=probe_window(rows,round_)
             for index,row in enumerate(rows):
-                if enabled and index<MAX_MEASURED:row.update(measure(tunnel['protocol'],row,io,device))
+                if enabled and window[index]:row.update(measure(tunnel['protocol'],row,io,device))
                 else:row.update(alive=None,latency_ms=None,address=None)
         ranked=rank(rows)
         best=next((row['profile'] for row in ranked if row.get('alive') is True),None)

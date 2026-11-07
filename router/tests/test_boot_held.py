@@ -27,6 +27,7 @@ import native_switch as native
 import pair_auto as pair
 import retention_settings
 from test_failure_matrix import Backend, TX
+from test_key_gate import enforce
 
 IDENTITY='b'*64
 
@@ -232,7 +233,7 @@ class VariantC(Fixture):
         native.serve()
         old=pair.read_state()
         selection={'process_bindings':None,'order':self.before,'hash':self.b.fingerprint,
-                   'source':{'interface':'wgclient1'},'target':{'interface':'ovpnclient1'}}
+                   'source':{'id':'s','interface':'wgclient1'},'target':{'id':'t','interface':'ovpnclient1'}}
         with patch.object(pair,'preflight',return_value=selection),patch('pair_interfaces.selection',return_value=dict(self.INTERFACES)),\
              patch('pair_policy.proof',return_value=None),patch.object(pair,'require_running'),patch.object(pair,'client_down',side_effect=lambda n:not self.b.up[n]):
             state=pair.begin(self.b,self.b.data['settings'],{'id':'c'*32,'revision':self.revision})
@@ -240,6 +241,34 @@ class VariantC(Fixture):
         self.assertEqual(state['owned'],['wgclient1','ovpnclient1'],'still owned: a later Stop returns them')
         self.assertEqual(state['before_flags'],{'wgclient1':'0','ovpnclient1':'0'})
         self.assertEqual(self.ifup,['ovpnclient1','wgclient1'],'no second ifup')
+
+    def test_a_key_on_the_idle_reserve_does_not_stop_the_start(self):
+        # owner 05.11.2026: the primary carries the traffic here, the Lua twin in test_boot_held.lua
+        native.serve()
+        old=pair.read_state();self.assertIn('kept',old)
+        enforce(self,self.dir,self.b.selection['target']['id'])
+        with patch.object(pair,'preflight',return_value=dict(self.b.selection,process_bindings=None)),patch('pair_interfaces.selection',return_value=dict(self.INTERFACES)),\
+             patch.object(pair,'require_running'),patch.object(pair,'client_down',side_effect=lambda n:not self.b.up[n]):
+            state=pair.begin(self.b,self.b.data['settings'],{'id':'c'*32,'revision':auto_control.current_revision()})
+        self.assertNotEqual(state['id'],old['id']);self.assertEqual(state['owned'],['wgclient1','ovpnclient1'])
+
+    def test_an_unaccepted_key_refuses_the_start_and_the_kept_clients_go_as_after_any_failed_resume(self):
+        # review 05.11.2026, the Lua twin in test_boot_held.lua
+        native.serve()
+        old=pair.read_state();self.assertIn('kept',old)
+        enforce(self,self.dir,self.b.selection['source']['id'])
+        native.STOP=False
+        self.assertTrue(self.start()['accepted'])
+        request=pair.intent()
+        revision=auto_control.current_revision()
+        with patch.object(pair,'preflight',return_value=dict(self.b.selection,process_bindings=None)):
+            self.assertTrue(pair.tick(self.b,self.b.data['settings'],revision))
+        row=pair.intent()
+        self.assertEqual((row['mode'],row['failed_request_id'],row['failure_code']),('off',request['id'],'SERVER-KEY-UNACCEPTED'))
+        self.assertEqual(pair.read_state()['id'],old['id'],'no new session');self.assertIn('kept',pair.read_state());self.assertEqual(self.ifdown,[])
+        agent.atomic_json(self.dir/boot_resume.STATE,{'state':'FAILED'})
+        pair.tick(self.b,self.b.data['settings'],revision)
+        self.assertNotIn('kept',pair.read_state());self.assertEqual(sorted(self.ifdown),['ovpnclient1','wgclient1'],'stopped as the old cleanup would have')
 
     def test_no_marker_a_newer_stop_or_a_client_down_keeps_the_old_cleanup(self):
         for case in ('no-marker','stop','down'):
@@ -360,6 +389,51 @@ class VariantD(Fixture):
         state=pair.read_state()
         self.assertEqual(state['phase'],'HELD');self.assertNotIn('handover',state)
         self.assertEqual(native.journal_read()['phase'],'HELD-ON-RESERVE','not adopted')
+
+    def test_a_key_on_the_idle_primary_lets_the_start_adopt_the_reserve(self):
+        # owner 05.11.2026: the reserve carries the traffic, it is the channel that must be clean; no return onto the primary
+        sel=self.b.selection
+        native.serve()
+        held=native.journal_read();self.assertIn('handover',pair.read_state())
+        enforce(self,self.dir,sel['source']['id'])
+        native.STOP=False
+        self.assertTrue(self.start()['accepted'])
+        state=self.begin()
+        journal=native.journal_read()
+        self.assertEqual((journal['phase'],journal['reason'],journal['tx']),('COMMITTED','BOOT-RESERVE-ADOPTED',held['tx']))
+        self.assertEqual(state['phase'],'RUNNING');self.assertEqual(self.b.current,self.held['after'],'the traffic stays on the reserve')
+        self.assertIn('selected_policy',state,'the route is proved: no BLOCKED first pass')
+        self.assertEqual(native.key_unaccepted(journal['source']),'SERVER-KEY-UNACCEPTED','the gate of a return still stands')
+
+    def test_an_unaccepted_key_the_boot_resume_starts_nothing_and_the_code_is_visible(self):
+        # review 05.11.2026: the resume's Start meets the same refusal as the owner's; no exception for a power cut. Owner
+        # 05.11.2026: the channel that counts is the reserve that carries the traffic
+        sel=self.b.selection
+        for changed in (sel['target']['id'],):
+            with self.subTest(changed=changed):
+                self.tearDown();self.setUp()
+                native.serve()
+                held=native.journal_read();self.assertIn('handover',pair.read_state())
+                enforce(self,self.dir,changed)
+                native.STOP=False
+                ups=list(self.ifup);guards=self.b.guarded
+                clock=[0.0]
+                def sleep(seconds):
+                    clock[0]+=seconds
+                    with patch.object(pair,'preflight',return_value=dict(sel,process_bindings=None)):
+                        pair.tick(self.b,self.b.data['settings'],auto_control.current_revision())
+                state=boot_resume._resume(self.dir,self.dir,sleep,lambda:clock[0],boot_resume.WINDOW,'boot')[0]
+                self.assertEqual(state,'FAILED')
+                row=json.loads((self.dir/boot_resume.STATE).read_text())
+                self.assertEqual((row['state'],row['code']),('FAILED','SERVER-KEY-UNACCEPTED'))
+                self.assertEqual(pair.intent()['failure_code'],'SERVER-KEY-UNACCEPTED');self.assertEqual(pair.intent()['mode'],'off')
+                journal=native.journal_read()
+                self.assertEqual((journal['phase'],journal['tx']),('HELD-ON-RESERVE',held['tx']),'not adopted')
+                self.assertEqual(self.b.current,self.held['after'],'the traffic stays')
+                self.assertEqual(self.b.guarded,guards,'the guard stays');self.assertEqual(self.ifup,ups,'no client started')
+                pair.tick(self.b,self.b.data['settings'],auto_control.current_revision())
+                state=pair.read_state()
+                self.assertNotIn('handover',state);self.assertEqual(state['phase'],'HELD','the failed resume releases it, as every failed resume')
 
     def test_stop_failed_resume_or_expiry_release_the_handover(self):
         for case in ('stop','failed','expiry'):

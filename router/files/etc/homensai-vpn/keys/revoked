@@ -1,0 +1,2 @@
+# Revoked HomenS.AI release keys: "<key id>:<first chain seq>" (entries from that seq on are rejected).
+# Written by scripts/signing/keytool.py; see docs/architecture/SIGNING-2026-11-03.ru.md.

@@ -1,0 +1,12 @@
+{
+  "_comment": "Known non-conforming steps of tools/formal/trace_check.py (code against model.py), keyed by signature event/how-the-pass-ended|field:model->product of the closest model state. verdict: product-bug (the code does what the model forbids and the model is right), candidate (looks like a product bug on the fakes, needs the router), model-gap (the code is right or acceptable, the model abstracts it away), consequence (a later step of a listed finding). A signature that is not listed fails the check. The ids of a new entry are explained in 'ids'. 04.11.2026: the list is empty: T1-T4 fixed in the code, G1-G7 in the model (docs/architecture/FORMAL-FIXES-2026-11-03.ru.md). 07.11.2026: F-32 (an outside change of a running session held by risk) and T4-A (the owner's Stop ends the hold STOPPED) are modelled (model switches F32, T4A, tools/formal/F32-MODEL-NOTE.md); the three gl_pol kinds they caused before are conforming, the list stays empty.",
+  "ids": {},
+  "known": {},
+  "invariants": {
+    "INCONSISTENT": {"note": "G7: a recovery whose cleanup failed ends with the journal still RESTORING until the next pass exits and rolls back (expected.json: accepted in the fault profiles)."}
+  },
+  "existing_leaks": {
+    "LEAK:other-running": {"note": "test_forward_resume arranges a RUNNING session without the VPN-only guard begin() would have left: the first journal writes of its attempt are seen without a guard. An arrangement, not a product state."}
+  },
+  "parity": {}
+}

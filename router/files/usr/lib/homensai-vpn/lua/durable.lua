@@ -132,8 +132,13 @@ function M.write(path,text,opts)
   local renamed,rerr=ops.rename(pending,path)
   if not renamed then ops.remove(pending);error(rerr or 'durable: rename',0) end
   if sync then
-    if not M.sync_directory(directory) then ops.sync_all() end
-    if created_directory then M.sync_directory(string.match(directory,'^(.*)/[^/]+$') or '/') end
+    -- review F-25 (06.11.2026): the rename must be on flash before write() returns (agent.atomic_json raises when its
+    -- directory fsync fails): an unprovable directory sync is an error, the caller then treats the write as not done
+    if not M.sync_directory(directory) and not ops.sync_all() then error('durable: directory fsync unavailable',0) end
+    if created_directory then
+      local parent=string.match(directory,'^(.*)/[^/]+$') or '/'
+      if not M.sync_directory(parent) and not ops.sync_all() then error('durable: directory fsync unavailable',0) end
+    end
   end
   return true
 end
@@ -164,7 +169,7 @@ function M.append(path,text,opts)
   if created then ops.chmod600(path) end
   if sync then
     if not ops.fsync(path) and not ops.sync_all() then error('durable: fsync unavailable',0) end
-    if created and not M.sync_directory(directory) then ops.sync_all() end
+    if created and not M.sync_directory(directory) and not ops.sync_all() then error('durable: directory fsync unavailable',0) end
   end
   return true
 end
@@ -175,7 +180,7 @@ function M.rename(from,to)
   split(from)
   local ok,err=M.ops.rename(from,to)
   if not ok then error(err or 'durable: rename',0) end
-  if not M.in_ram(to) and not M.sync_directory(directory) then M.ops.sync_all() end
+  if not M.in_ram(to) and not M.sync_directory(directory) and not M.ops.sync_all() then error('durable: directory fsync unavailable',0) end
   return true
 end
 

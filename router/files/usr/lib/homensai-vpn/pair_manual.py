@@ -134,8 +134,12 @@ def controls():
             if journal.get('phase') not in (None,'ROLLED-BACK'):reserve.append('TRANSACTION-IN-PROGRESS')
         if not healthy(status,source,now,valid_for):primary.append('SOURCE-NOT-HEALTHY')
         if not healthy(status,target,now,valid_for):reserve.append('PAIR-MANUAL-TARGET-UNHEALTHY')
+        for side,identifier in ((primary,source),(reserve,target)):
+            pinned=n.key_unaccepted(identifier)  # a button is refused only towards the channel with the unaccepted key
+            if pinned:side.append(pinned)
         ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
         events=ledger.get('events')
+        if events:events=pair.effective_events(ledger,now)  # BH3-03: ages on the monotonic clock of this boot
         if events:
             from recovery_settings import normalized
             policy=normalized(settings)
@@ -177,10 +181,88 @@ def light_gate(direction,settings):
     target=native.get('source') if direction=='primary' else native.get('target')
     if not healthy(status,target,now,observation_window(settings)):
         return 'SOURCE-NOT-HEALTHY' if direction=='primary' else 'PAIR-MANUAL-TARGET-UNHEALTHY'
+    return n.key_unaccepted(target)
+
+
+CLIENT_REQUEST_ID='[A-Za-z0-9_-]{8,64}'
+CLIENT_LEDGER_LIMIT=16
+
+
+def client_request_valid(value):
+    return isinstance(value,str) and re.fullmatch(CLIENT_REQUEST_ID,value) is not None
+
+
+def ledger_path(runtime=None):
+    from agent import RUNTIME
+    return (RUNTIME if runtime is None else runtime)/'pair-manual-requests.json'
+
+
+def ledger_read(runtime=None):
+    """The answers already given to caller-supplied request ids (F-35), newest last. Raises on a damaged file.
+    Lua: manual_request.ledger_read."""
+    from agent import read_json
+    data=read_json(ledger_path(runtime),{})
+    if data=={}:return []
+    entries=data.get('entries') if isinstance(data,dict) and set(data)=={'entries'} else None
+    if (not isinstance(entries,list) or len(entries)>CLIENT_LEDGER_LIMIT
+            or not all(isinstance(e,dict) and set(e)=={'client','reply'} and client_request_valid(e['client'])
+                       and isinstance(e['reply'],dict) and type(e['reply'].get('accepted')) is bool for e in entries)):
+        raise ValueError('PAIR-MANUAL-STATE-UNVERIFIED')
+    return entries
+
+
+# BH-07 (bug hunt 07.11.2026): a refusal for a condition that passes by itself (a speed test ending, another manual
+# operation running, an unconfirmed answer after a storage error) is not kept for its id: the owner's Retry with the
+# same id after a lost answer is decided afresh instead of replaying a stale refusal for ever. Accepted answers (they
+# changed state: the no-double-switch guarantee) and lasting refusals are still kept and replayed. An entry of this kind
+# written by an older version is ignored the same way. Lua: manual_request.TRANSIENT / transient_refusal.
+TRANSIENT_REFUSALS=frozenset(('SPEED-BUSY','PAIR-MANUAL-BUSY','PAIR-MANUAL-REQUEST-UNCONFIRMED'))
+
+
+def transient_refusal(reply):
+    blockers=reply.get('blockers') if isinstance(reply,dict) else None
+    return (isinstance(reply,dict) and reply.get('accepted') is False and isinstance(blockers,list) and len(blockers)>0
+            and blockers[0] in TRANSIENT_REFUSALS)
+
+
+def ledger_find(client,runtime=None):
+    for entry in reversed(ledger_read(runtime)):
+        if entry['client']==client:return None if transient_refusal(entry['reply']) else dict(entry['reply'],replayed=True)
     return None
 
 
-def request(direction,revision,request_source=None):
+def ledger_store_locked(client,reply,runtime=None):
+    """Caller holds the control lock. Keeps the last CLIENT_LEDGER_LIMIT answers."""
+    from agent import atomic_json
+    entries=[e for e in ledger_read(runtime) if e['client']!=client][-(CLIENT_LEDGER_LIMIT-1):]
+    atomic_json(ledger_path(runtime),{'entries':entries+[{'client':client,'reply':reply}]})
+
+
+def request(direction,revision,request_source=None,client_request_id=None):
+    """The owner's click. With a caller-supplied client_request_id (F-35) the first answer is kept and a repeated id
+    gets that answer back (replayed: true) instead of a second action: a delayed retry of a Resume can never clear a
+    newer hold. Without an id the behaviour is unchanged. Lua: manual_request.request (same ledger file)."""
+    from agent import RUNTIME
+    from auto_control import control_lock
+    def refuse(code):return {'accepted':False,'queued':False,'completed':False,'blockers':[code]}
+    if client_request_id is None:return _request(direction,revision,request_source,None)
+    if not client_request_valid(client_request_id):return refuse('PAIR-MANUAL-FIELDS')
+    try:
+        stored=ledger_find(client_request_id)
+        if stored is not None:return stored
+    except (OSError,ValueError):return refuse('PAIR-MANUAL-STATE-UNVERIFIED')
+    reply=_request(direction,revision,request_source,client_request_id)
+    if reply.get('accepted') is True:return reply  # stored with its row under the same lock
+    try:
+        with control_lock(RUNTIME):
+            stored=ledger_find(client_request_id)
+            if stored is not None:return stored
+            if not transient_refusal(reply):ledger_store_locked(client_request_id,reply)  # BH-07
+    except (OSError,ValueError):pass
+    return reply
+
+
+def _request(direction,revision,request_source,client):
     from agent import RUNTIME,read_json,atomic_json
     from auto_control import control_lock,revision_locked,normalize_request_source
     import native_switch as n,pair_auto as pair
@@ -214,12 +296,17 @@ def request(direction,revision,request_source=None):
             if pause_status().get('active'):return refuse('SPEED-BUSY')
             current=revision_locked(RUNTIME);state=pair.read_state()
             if current!=revision or not active(state,pair.intent(),revision):return refuse('CONTROL-REVISION-STALE')
+            if client is not None:
+                stored=ledger_find(client)  # the same id raced in meanwhile: its answer, never a second action
+                if stored is not None:return stored
             old=read()
             if old and old['state'] in PENDING:return refuse('PAIR-MANUAL-BUSY')
             now=time.time();row={'id':uuid.uuid4().hex,'pair':state['id'],'revision':revision,'direction':direction,
                 'state':'QUEUED','requested':now,'updated':now,'selection':selection,'code':None,'request_source':normalize_request_source(request_source)}
             atomic_json(path(),row)
-        return {'accepted':True,'queued':True,'completed':False,'request_id':row['id'],'control_revision':revision}
+            reply={'accepted':True,'queued':True,'completed':False,'request_id':row['id'],'control_revision':revision}
+            if client is not None:ledger_store_locked(client,reply)
+        return reply
     except (OSError,ValueError,KeyError,TypeError,n.Refused,subprocess.SubprocessError):return refuse('PAIR-MANUAL-REQUEST-UNCONFIRMED')
 
 
@@ -241,6 +328,24 @@ def recover():
     from auto_control import control_lock
     with control_lock():
         terminalize_pending_locked('UNCONFIRMED','PAIR-MANUAL-RECOVERED')
+
+
+def expire_queued():
+    """The 60 s of a queued click end outside consume too (review 04.11.2026, finding 4): a pass that fails before it
+    never reached the expiry, the row stayed QUEUED and the page busy. Only an old row is touched, with consume's own
+    result. Never fails a pass. Lua: manual.expire_queued."""
+    from agent import RUNTIME,atomic_json
+    from auto_control import control_lock
+    def stale(row):
+        return bool(row) and row['state']=='QUEUED' and not row['requested']<=time.time()<=row['requested']+60
+    try:
+        if not stale(read()):return False
+        with control_lock(RUNTIME):
+            row=read()
+            if not stale(row):return False
+            row.update(state='CANCELLED',updated=max(time.time(),row['requested']),code='PAIR-MANUAL-EXPIRED');atomic_json(path(),row)
+        return True
+    except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return False
 
 
 def lease_until(settings,state):
@@ -327,6 +432,8 @@ def consume(backend,state,settings,revision):
                 finish('COMPLETED','MANUAL-ALREADY-SELECTED');return True
             if kernel.get('verified') is not True and kernel.get('repairable_missing') is not True:
                 raise n.Refused('KERNEL-POLICY-UNVERIFIED')
+            pinned=n.key_unaccepted(selection[hold]['id'])  # before the lease and the budget; attempt() and instant_manual() refuse it too
+            if pinned:raise n.Refused(pinned)
             if instant:
                 # Owner button (30 Oct 2026): a manual switch to a live channel happens at once. The attempt budget and
                 # cooldown exist against automatic flapping; a person's click neither waits for them nor uses them up.
@@ -339,7 +446,7 @@ def consume(backend,state,settings,revision):
                 from recovery_settings import normalized
                 recovery=normalized(settings)
                 pair.require_running(revision);now=time.time();ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
-                events,permitted=pair.budget(ledger.get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
+                events,permitted=pair.budget(pair.effective_events(ledger,now),now,recovery['attempt_window']*60,recovery['attempt_limit'])
                 if not permitted:raise n.Refused('PAIR-RATE-LIMIT')
                 if events and now-events[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
                 until=pair.configure_lease(state);blockers,fresh=backend.diagnostic()
@@ -348,10 +455,10 @@ def consume(backend,state,settings,revision):
                         or not state_order_matches(state,journal,backend.order())):raise n.Refused('MANUAL-CONFIG-CHANGED')
                 def charge_dispatched():
                     pair.require_running(revision);stamp=time.time();fresh_ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
-                    charged,allowed=pair.budget(fresh_ledger.get('events'),stamp,recovery['attempt_window']*60,recovery['attempt_limit'])
+                    charged,allowed=pair.budget(pair.effective_events(fresh_ledger,stamp),stamp,recovery['attempt_window']*60,recovery['attempt_limit'])
                     if not allowed:raise n.Refused('PAIR-RATE-LIMIT')
                     if charged and stamp-charged[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
-                    atomic_json(PERSIST/'pair-auto-budget.json',{'events':charged+[stamp]})
+                    pair.ledger_charge(charged,stamp)
                 n.attempt(backend,fresh,until,False,control_revision=revision,manual_request_id=row['id'],
                           request_source=row.get('request_source'),pair_destination=hold,pair_session_order=state['order'],on_dispatch=charge_dispatched)
             journal=n.journal_read();context=metadata(journal)
@@ -363,13 +470,15 @@ def consume(backend,state,settings,revision):
             if kernel.get('verified') is not True or kernel.get('role')!=hold:raise n.Refused('KERNEL-POLICY-UNVERIFIED')
         elif row['direction']=='reserve':
             if journal.get('phase') not in (None,'ROLLED-BACK') or backend.order()!=(state['order'],state['policy_hash']):raise n.Refused('TRANSACTION-IN-PROGRESS')
+            pinned=n.key_unaccepted(selection['target']['id'])
+            if pinned:raise n.Refused(pinned)
             if backend.health(selection['target']['id']) is not True:raise n.Refused('PAIR-MANUAL-TARGET-UNHEALTHY')
             from recovery_settings import normalized
             recovery=normalized(settings)
-            pair.require_running(revision);now=time.time();ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]});events,permitted=pair.budget(ledger.get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
+            pair.require_running(revision);now=time.time();ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]});events,permitted=pair.budget(pair.effective_events(ledger,now),now,recovery['attempt_window']*60,recovery['attempt_limit'])
             if not permitted:raise n.Refused('PAIR-RATE-LIMIT')
             if events and now-events[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
-            pair.require_running(revision);atomic_json(PERSIST/'pair-auto-budget.json',{'events':events+[now]})
+            pair.require_running(revision);pair.ledger_charge(events,now)
             until=pair.configure_lease(state);blockers,selection=backend.diagnostic()
             if blockers:raise n.Refused(blockers[0])
             n.attempt(backend,selection,until,False,control_revision=revision,manual_request_id=row['id'],request_source=row.get('request_source'))
@@ -378,6 +487,8 @@ def consume(backend,state,settings,revision):
             hold='target'
         else:
             if journal.get('tx')!=expected.get('tx') or journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE'):raise n.Refused('RETURN-TRANSACTION-MISMATCH')
+            pinned=n.key_unaccepted(selection['source']['id'])
+            if pinned:raise n.Refused(pinned)
             handled,_=n.handle_return(backend,journal,{'time':row['requested'],'tx':journal['tx']},0,control_revision=revision)
             from manual_dispatch import _confirmed_return
             record={'requested_at':row['requested'],'transaction_id':journal['tx'],'source_id':selection['source']['id'],'target_id':selection['target']['id']}
@@ -403,6 +514,40 @@ def consume(backend,state,settings,revision):
     except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:
         code=str(error) if isinstance(error,n.Refused) and re.fullmatch('[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'PAIR-MANUAL-UNCONFIRMED'
         finish('REFUSED' if isinstance(error,n.Refused) else 'UNCONFIRMED',code)
+    return True
+
+
+def hold_verified(backend,state,journal,settings,status,hold,resolved,now,age,required):
+    """Finding 7 in a manual hold (the same rule as native_switch.committed_recovery_decision): the held channel is the
+    recorded one, or the vendor rebuilt it. Only vendor_generation changed, the vendor is quiet (READY): a healthy streak of
+    the NEW generation proves it (the journal proof is rebound, a primary hold may sit on a ROLLED-BACK journal), a
+    failure streak of the new generation is left to the caller's failure check, which releases the hold. False: unknown.
+    required: the journal must hold a proof for this role. Lua: manual.hold_verified."""
+    import native_switch as n,pair_auto as pair
+    from failure_diagnosis import profile_identity
+    from failover_plan import streak
+    from recovery_settings import normalized
+    expected=(journal.get('vendor_profiles') or {}).get(hold);profile=resolved.get(hold)
+    if resolved['coordination']['state']!='READY' or profile is None or profile.get('id')!=journal[hold]:return False
+    if expected is None:return not required
+    live=profile_identity(profile)
+    if live==expected:return True
+    if live is None or any(live.get(key)!=expected.get(key) for key in n.RESERVE_STABLE):return False
+    policy=normalized(settings);samples=status.get('samples',[])
+    if streak(samples,profile['id'],policy['failures'],now,age,False,profile):return True
+    if not streak(samples,profile['id'],policy['successes'],now,age,True,profile):return False
+    pair.reserve_rebound(backend,state.get('revision'),settled=True)
+    return True
+
+
+def hold_released(backend,state,journal,settings,status,now):
+    """Finding 7: a held reserve of unknown identity is no reason to stay on it once the automatic rule returns to a stably
+    healthy primary (committed_recovery_decision: min_dwell, max(primary_stable, hold), the model gate, the owner's
+    hold_reserve). The hold ends here; the same tick then takes that guarded return. Lua: manual.hold_released."""
+    import native_switch as n,pair_auto as pair
+    decision=n.committed_recovery_decision(backend,journal,settings,status.get('samples',[]),now,status,hold=pair.ledger_hold(settings,now))
+    if decision['action']!='RESTORE-PRIMARY':return False
+    state.pop('manual_hold',None);pair.save(state)
     return True
 
 
@@ -439,14 +584,14 @@ def held_reserve(backend,state,journal,settings,status):
                 or not state_order_matches(state,journal,backend.order())):raise n.Refused('PAIR-MANUAL-HOLD-UNVERIFIED')
         kernel=backend.attest_policy()
         if kernel.get('verified') is not True:return False
-        from failure_diagnosis import resolve_pair,profile_identity,scoped_samples
+        from failure_diagnosis import resolve_pair,scoped_samples
         from recovery_settings import normalized
         from failover_plan import streak
         now=time.time();age=valid_for(settings)
         resolved=resolve_pair(status,settings,now,age,settle_for(settings))
-        expected=journal.get('vendor_profiles',{}).get(hold);profile=resolved.get(hold)
-        if (resolved['coordination']['state']!='READY' or profile is None or profile.get('id')!=journal[hold]
-                or expected is None or profile_identity(profile)!=expected):
+        profile=resolved.get(hold)
+        if not hold_verified(backend,state,journal,settings,status,hold,resolved,now,age,True):
+            if hold=='target' and hold_released(backend,state,journal,settings,status,now):return False
             n.publish({'state':'BLOCKED','reason':'PROFILE-IDENTITY-CHANGED','blockers':['PROFILE-IDENTITY-CHANGED'],
                        'source':journal['source'],'target':journal['target'],'mode':'continuous-pair','proof_scope':pair.MODE})
             return True
@@ -460,16 +605,14 @@ def held_reserve(backend,state,journal,settings,status):
     if state.get('manual_hold')!='target':return False
     if journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE') or not journal.get('confirmed') or backend.order()!=(journal['after'],journal['hash']):raise n.Refused('PAIR-MANUAL-HOLD-UNVERIFIED')
     from recovery_settings import normalized
-    from failure_diagnosis import scoped_samples,resolve_pair,profile_identity
+    from failure_diagnosis import scoped_samples,resolve_pair
     from failover_plan import streak
     row=next((p for p in status.get('profiles',[]) if p.get('id')==journal['target']),None)
     recovery=normalized(settings);now=time.time()
     age=valid_for(settings)
     resolved=resolve_pair(status,settings,now,age,settle_for(settings))
-    expected=journal.get('vendor_profiles',{}).get('target')
-    verified=(resolved['coordination']['state']=='READY' and resolved['target'] is not None
-              and resolved['target']['id']==journal['target'] and (expected is None or profile_identity(resolved['target'])==expected))
-    if not verified:
+    if not hold_verified(backend,state,journal,settings,status,'target',resolved,now,age,False):
+        if hold_released(backend,state,journal,settings,status,now):return False
         n.publish({'state':'DEGRADED-ON-RESERVE','reason':'RESERVE-IDENTITY-UNKNOWN','manual':True,'transition_source':state.get('manual_hold_source','unknown'),'source':journal['source'],'target':journal['target'],'mode':'continuous-pair','proof_scope':pair.MODE})
         return True
     failed=row and streak(scoped_samples(status.get('samples',[]),row),row['id'],recovery['failures'],now,age,False,row)

@@ -1,0 +1,1499 @@
+{
+ "_comment": "Shared by test_wave3_product.py and lua/test_wave3_product.lua: probe_plan.py == probe_plan.lua. T=interval. ids are in the order of the pass; order/offsets are the start order and the seconds after the pass start.",
+ "plan": [
+  {
+   "name": "T=10, clean idle: reserve first, primary 3 s later (T/K capped)",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "T=30: T/K would be 15 s, the cap holds",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 30,
+    "valid_for": 90,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "dense cadence never spreads",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 4,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": true,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "T=4 without dense (idle): T/K is below the cap",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 4,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    2
+   ]
+  },
+  {
+   "name": "boost never spreads",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": true,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "firmware wait never spreads",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": true,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "failed primary in the last pass: as before",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": false,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "failed reserve in the last pass: as before",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": false,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Auto on the reserve: the primary is not carrying, as before",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "COMMITTED",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Auto off: as before",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "SERVICE-STOPPED",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "no pair: as before",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": null,
+    "target": null,
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "source equals target: as before",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "wireguard:peer_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "probe_spread off: same order rule, no offsets",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {
+    "probe_spread": false
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "three channels: primary last, even phases below the cap",
+   "ids": [
+    "wireguard:peer_1",
+    "x",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "x",
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3,
+    6
+   ]
+  },
+  {
+   "name": "reserve budget off by default: reserve measured every pass",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {},
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget R=60 at T=10: cut to 20 s, the pass after a measurement skips",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [
+    "openvpn:1_1"
+   ],
+   "order": [
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    3
+   ]
+  },
+  {
+   "name": "budget: the second pass measures (age 20 s)",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 980
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget: lateness of a pass does not turn it into every pass",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 988.5
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [
+    "openvpn:1_1"
+   ],
+   "order": [
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    3
+   ]
+  },
+  {
+   "name": "budget: reserve never measured yet",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": null
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget: a stamp from the future does not skip",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 1001
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget: primary suspected or failed last pass: out of turn",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": false,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "budget: dense episode: out of turn",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": true,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "budget: boost: out of turn",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": true,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "budget: firmware wait: out of turn",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": true,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "budget: on the reserve: both every pass",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "COMMITTED",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "offsets": [
+    0,
+    0
+   ]
+  },
+  {
+   "name": "budget: T=30 reaches the full R=60",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 30,
+    "valid_for": 90,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 970
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [
+    "openvpn:1_1"
+   ],
+   "order": [
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    3
+   ]
+  },
+  {
+   "name": "budget: T=30, 60 s old: measured",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 30,
+    "valid_for": 90,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 940
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget: T=60, R is not above T: nothing to skip",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 60,
+    "valid_for": 180,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget: out-of-range R is off",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {
+    "reserve_probe_interval": 19
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget: out-of-range R is off (high)",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 999
+   },
+   "settings": {
+    "reserve_probe_interval": 121
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget: text R from UCI",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {
+    "reserve_probe_interval": "60"
+   },
+   "skip": [
+    "openvpn:1_1"
+   ],
+   "order": [
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    3
+   ]
+  },
+  {
+   "name": "budget: malformed R is off",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {
+    "reserve_probe_interval": "6x"
+   },
+   "skip": [],
+   "order": [
+    "openvpn:1_1",
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0,
+    3
+   ]
+  },
+  {
+   "name": "budget: reserve not in this pass",
+   "ids": [
+    "wireguard:peer_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "skip": [],
+   "order": [
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0
+   ]
+  },
+  {
+   "name": "budget without spreading: no phase at all",
+   "ids": [
+    "wireguard:peer_1",
+    "openvpn:1_1"
+   ],
+   "context": {
+    "interval": 10,
+    "valid_for": 30,
+    "now": 1000,
+    "source": "wireguard:peer_1",
+    "target": "openvpn:1_1",
+    "native": "OBSERVING",
+    "dense": false,
+    "boost": false,
+    "waiting": false,
+    "source_clean": true,
+    "target_clean": true,
+    "reserve_time": 990
+   },
+   "settings": {
+    "reserve_probe_interval": 60,
+    "probe_spread": false
+   },
+   "skip": [
+    "openvpn:1_1"
+   ],
+   "order": [
+    "wireguard:peer_1"
+   ],
+   "offsets": [
+    0
+   ]
+  }
+ ],
+ "effective": [
+  {
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "interval": 10,
+   "valid_for": 30,
+   "every": 20
+  },
+  {
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "interval": 15,
+   "valid_for": 45,
+   "every": 30
+  },
+  {
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "interval": 20,
+   "valid_for": 60,
+   "every": 40
+  },
+  {
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "interval": 30,
+   "valid_for": 90,
+   "every": 60
+  },
+  {
+   "settings": {
+    "reserve_probe_interval": 60
+   },
+   "interval": 60,
+   "valid_for": 180,
+   "every": 0
+  },
+  {
+   "settings": {
+    "reserve_probe_interval": 20
+   },
+   "interval": 10,
+   "valid_for": 30,
+   "every": 20
+  },
+  {
+   "settings": {
+    "reserve_probe_interval": 20
+   },
+   "interval": 20,
+   "valid_for": 60,
+   "every": 0
+  },
+  {
+   "settings": {},
+   "interval": 10,
+   "valid_for": 30,
+   "every": 0
+  }
+ ],
+ "next_slot": [
+  {
+   "name": "on time",
+   "slot": 100,
+   "interval": 10,
+   "now": 101.5,
+   "next": 110,
+   "delay": 8.5
+  },
+  {
+   "name": "a late timer does not add up",
+   "slot": 100,
+   "interval": 10,
+   "now": 108.7,
+   "next": 110,
+   "delay": 1.3
+  },
+  {
+   "name": "overran: 1 s rest, new grid",
+   "slot": 100,
+   "interval": 10,
+   "now": 112,
+   "next": 113,
+   "delay": 1
+  },
+  {
+   "name": "just below the rest",
+   "slot": 100,
+   "interval": 10,
+   "now": 109.5,
+   "next": 110.5,
+   "delay": 1
+  },
+  {
+   "name": "dense cadence",
+   "slot": 100,
+   "interval": 4,
+   "now": 101,
+   "next": 104,
+   "delay": 3
+  }
+ ],
+ "begin_slot": [
+  {
+   "name": "first pass",
+   "expected": null,
+   "now": 50,
+   "slot": 50
+  },
+  {
+   "name": "on the grid",
+   "expected": 110,
+   "now": 110.4,
+   "slot": 110
+  },
+  {
+   "name": "a timer 1 s late stays on the grid",
+   "expected": 110,
+   "now": 111.4,
+   "slot": 110
+  },
+  {
+   "name": "an event started it early: the grid moves",
+   "expected": 110,
+   "now": 104,
+   "slot": 104
+  },
+  {
+   "name": "far behind: the grid moves",
+   "expected": 110,
+   "now": 130,
+   "slot": 130
+  }
+ ],
+ "clean": [
+  {
+   "name": "healthy",
+   "row": {
+    "code": null,
+    "dns_ok": true,
+    "https_success": 3,
+    "vendor_state": "SETTLED"
+   },
+   "clean": true
+  },
+  {
+   "name": "two of three is healthy",
+   "row": {
+    "code": null,
+    "dns_ok": true,
+    "https_success": 2,
+    "vendor_state": "SETTLED"
+   },
+   "clean": true
+  },
+  {
+   "name": "one of three",
+   "row": {
+    "code": null,
+    "dns_ok": true,
+    "https_success": 1,
+    "vendor_state": "SETTLED"
+   },
+   "clean": false
+  },
+  {
+   "name": "code",
+   "row": {
+    "code": "VPN-003",
+    "dns_ok": true,
+    "https_success": 3,
+    "vendor_state": "SETTLED"
+   },
+   "clean": false
+  },
+  {
+   "name": "dns",
+   "row": {
+    "code": null,
+    "dns_ok": false,
+    "https_success": 3,
+    "vendor_state": "SETTLED"
+   },
+   "clean": false
+  },
+  {
+   "name": "vendor pending",
+   "row": {
+    "code": null,
+    "dns_ok": true,
+    "https_success": 3,
+    "vendor_state": "PENDING"
+   },
+   "clean": false
+  },
+  {
+   "name": "model suspects",
+   "row": {
+    "code": null,
+    "dns_ok": true,
+    "https_success": 3,
+    "vendor_state": "SETTLED",
+    "failure_model": {
+     "suspect": true
+    }
+   },
+   "clean": false
+  },
+  {
+   "name": "model failed",
+   "row": {
+    "code": null,
+    "dns_ok": true,
+    "https_success": 3,
+    "vendor_state": "SETTLED",
+    "failure_model": {
+     "failed": true
+    }
+   },
+   "clean": false
+  },
+  {
+   "name": "model calm",
+   "row": {
+    "code": null,
+    "dns_ok": true,
+    "https_success": 3,
+    "vendor_state": "SETTLED",
+    "failure_model": {
+     "suspect": false,
+     "failed": false
+    }
+   },
+   "clean": true
+  },
+  {
+   "name": "no row",
+   "row": null,
+   "clean": false
+  }
+ ],
+ "carried": [
+  {
+   "name": "same generation",
+   "row": {
+    "id": "a",
+    "vendor_state": "SETTLED",
+    "vendor_tunnel_id": "t",
+    "vendor_generation": "g1",
+    "vendor_changed_at": 5
+   },
+   "groups": [
+    {
+     "id": "t",
+     "state": "SETTLED",
+     "current_profile": "a",
+     "generation": "g1",
+     "changed_at": 5
+    }
+   ],
+   "kept": true
+  },
+  {
+   "name": "new generation",
+   "row": {
+    "id": "a",
+    "vendor_state": "SETTLED",
+    "vendor_tunnel_id": "t",
+    "vendor_generation": "g1",
+    "vendor_changed_at": 5
+   },
+   "groups": [
+    {
+     "id": "t",
+     "state": "SETTLED",
+     "current_profile": "a",
+     "generation": "g2",
+     "changed_at": 5
+    }
+   ],
+   "kept": false
+  },
+  {
+   "name": "changed_at moved",
+   "row": {
+    "id": "a",
+    "vendor_state": "SETTLED",
+    "vendor_tunnel_id": "t",
+    "vendor_generation": "g1",
+    "vendor_changed_at": 5
+   },
+   "groups": [
+    {
+     "id": "t",
+     "state": "SETTLED",
+     "current_profile": "a",
+     "generation": "g1",
+     "changed_at": 6
+    }
+   ],
+   "kept": false
+  },
+  {
+   "name": "group pending",
+   "row": {
+    "id": "a",
+    "vendor_state": "SETTLED",
+    "vendor_tunnel_id": "t",
+    "vendor_generation": "g1",
+    "vendor_changed_at": 5
+   },
+   "groups": [
+    {
+     "id": "t",
+     "state": "PENDING",
+     "current_profile": "a",
+     "generation": "g1",
+     "changed_at": 5
+    }
+   ],
+   "kept": false
+  },
+  {
+   "name": "another profile on the tunnel",
+   "row": {
+    "id": "a",
+    "vendor_state": "SETTLED",
+    "vendor_tunnel_id": "t",
+    "vendor_generation": "g1",
+    "vendor_changed_at": 5
+   },
+   "groups": [
+    {
+     "id": "t",
+     "state": "SETTLED",
+     "current_profile": "b",
+     "generation": "g1",
+     "changed_at": 5
+    }
+   ],
+   "kept": false
+  },
+  {
+   "name": "tunnel gone",
+   "row": {
+    "id": "a",
+    "vendor_state": "SETTLED",
+    "vendor_tunnel_id": "t",
+    "vendor_generation": "g1",
+    "vendor_changed_at": 5
+   },
+   "groups": [],
+   "kept": false
+  },
+  {
+   "name": "row never settled",
+   "row": {
+    "id": "a",
+    "vendor_state": "PENDING",
+    "vendor_tunnel_id": "t",
+    "vendor_generation": "g1",
+    "vendor_changed_at": 5
+   },
+   "groups": [
+    {
+     "id": "t",
+     "state": "SETTLED",
+     "current_profile": "a",
+     "generation": "g1",
+     "changed_at": 5
+    }
+   ],
+   "kept": false
+  },
+  {
+   "name": "no generation",
+   "row": {
+    "id": "a",
+    "vendor_state": "SETTLED",
+    "vendor_tunnel_id": "t",
+    "vendor_generation": null,
+    "vendor_changed_at": 5
+   },
+   "groups": [
+    {
+     "id": "t",
+     "state": "SETTLED",
+     "current_profile": "a",
+     "generation": null,
+     "changed_at": 5
+    }
+   ],
+   "kept": false
+  }
+ ]
+}

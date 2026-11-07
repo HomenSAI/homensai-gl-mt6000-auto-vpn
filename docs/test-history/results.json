@@ -1,5 +1,5 @@
 {
- "about": "Curated measurements of HomenS.AI Auto VPN. Numbers and outcomes only: no addresses, host names, keys or raw logs. Add new entries at the end of 'results'; scripts/build_test_history.py sorts them and rebuilds docs/TEST-HISTORY.html.",
+ "about": "Curated measurements of HomenS.AI Auto VPN. Numbers and outcomes only: no addresses, host names, keys or raw logs. Add new entries at the end of 'results'; scripts/build_test_history.py sorts them and rebuilds docs/TEST-HISTORY.html. Router measurements per version (a baseline now, later versions added the same way) live in 'router_measurements.versions': append one object with per-run numbers; statistics and Wilson intervals are computed by the builder.",
  "charts": [
   {
    "id": "manual-switch",
@@ -530,6 +530,17 @@
        "stat": "median",
        "value": 21.38,
        "version": "2.1.0-alpha7"
+      },
+      {
+       "max": 27.96,
+       "n": 58,
+       "p95": 26.65,
+       "platform": "router",
+       "ref": "soak-2.1.0-alpha8-primary-drop-63-primary-drop",
+       "source": "soak: Primary drop, 63 cycles (same test as alpha7 and alpha8)",
+       "stat": "median",
+       "value": 20.68,
+       "version": "2.1.0-alpha8"
       }
      ]
     },
@@ -692,6 +703,17 @@
        "stat": "median",
        "value": 7.0,
        "version": "2.1.0-alpha7"
+      },
+      {
+       "max": 8.05,
+       "n": 58,
+       "p95": 7.69,
+       "platform": "router",
+       "ref": "soak-2.1.0-alpha8-primary-drop-63-primary-drop",
+       "source": "soak: Primary drop, 63 cycles (same test as alpha7 and alpha8)",
+       "stat": "median",
+       "value": 5.77,
+       "version": "2.1.0-alpha8"
       }
      ]
     },
@@ -1118,6 +1140,11 @@
    "en": "Approved page (Simple, Console, wizard); HMM failure detector; probe authenticity",
    "ru": "Утверждённая страница («Простой», «Пульт», мастер); детектор сбоя HMM; подлинность проверок",
    "version": "2.1.0-alpha8"
+  },
+  {
+   "en": "Network journal and nightly slider advisor; master slider with chart and 5-step training; honest recovery P95; GL-based sensors (WAN or tunnel down); server-key pinning; per-target probe log; flap damping and Fibonacci retry pauses; fast end of the slider (off by default); signed releases and portable age backups; fixes from the independent review and the code-versus-model trace check",
+   "ru": "Журнал сети и ночной советник ползунка; главный ползунок с графиком и обучением из 5 шагов; честный P95 времени восстановления; датчики GL (WAN или туннель); закрепление ключей серверов; журнал проб по целям; сдерживание дребезга и паузы повторов по Фибоначчи; быстрый край ползунка (по умолчанию выключен); подписанные выпуски и переносимые бэкапы age; исправления независимого ревью и сверки кода с моделью",
+   "version": "2.1.0-alpha9"
   }
  ],
  "issues": [
@@ -1184,6 +1211,14 @@
    "status": "open",
    "title_en": "A failover aborted by the GL vendor worker waits for the cooldown",
    "title_ru": "Переключение, отменённое воркером GL, ждёт паузу между переключениями"
+  },
+  {
+   "evidence": "2.1.0-alpha8, primary-drop soak, 04.11: the GL firmware rebuilt the reserve OpenVPN client while it carried the traffic; for over an hour Auto stayed DEGRADED-ON-RESERVE (reserve identity unknown) with both tunnels healthy, until the owner's Stop and Start. Cycles 13-20 were skipped by the bench (not on the primary).",
+   "id": "I9",
+   "idea": "Fixed in 2.1.0-alpha9 (both runtimes): the same tunnel with a quiet vendor and a healthy streak of the new generation is the same reserve; anything else returns to a stably healthy primary by the planned rule. Router re-check pending (queue job vendor-rebuild-carrying, 5 cycles).",
+   "status": "open",
+   "title_en": "After a vendor rebuild of the reserve, Auto stays on it",
+   "title_ru": "После пересборки резерва вендором Auto остаётся на нём"
   }
  ],
  "matrix": [
@@ -9536,37 +9571,6 @@
   },
   {
    "date": "2026-11-03",
-   "failed": 0,
-   "id": "soak-2.1.0-alpha7-soak-log-a7-mtu-long-primary-mtu-long",
-   "kind": "soak",
-   "leaks": null,
-   "metrics": {
-    "return_s": {
-     "max": 736.2,
-     "median": 735.8,
-     "n": 2,
-     "p95": 736.2
-    },
-    "vendor_blocked_s": {
-     "max": 7.5,
-     "median": 6.8,
-     "n": 2,
-     "p95": 7.5
-    }
-   },
-   "n": 2,
-   "note": "expected: any; switched 0 of 2; the large-packet check did not mark VPN-MTU (firewall-refused sends counted as unavailable; fixed in 2.1.0-alpha8)",
-   "pass": true,
-   "passed": 2,
-   "platform": "GL-MT3000",
-   "run": "soak-2.1.0-alpha7-soak-log-a7-mtu-long",
-   "run_label": "MTU black hole, long",
-   "scenario": "primary-mtu-long",
-   "source": "owner bench soak log (private, numbers only)",
-   "version": "2.1.0-alpha7"
-  },
-  {
-   "date": "2026-11-03",
    "failed": 6,
    "id": "soak-2.1.0-alpha7-soak-log-a7-honest63-primary-drop",
    "kind": "soak",
@@ -9607,7 +9611,895 @@
    "scenario": "primary-drop",
    "source": "owner bench soak log (private, numbers only)",
    "version": "2.1.0-alpha7"
+  },
+  {
+   "date": "2026-11-03",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha7-soak-log-a7-mtu-long-primary-mtu-long",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "return_s": {
+     "max": 736.2,
+     "median": 735.8,
+     "n": 2,
+     "p95": 736.2
+    },
+    "vendor_blocked_s": {
+     "max": 7.5,
+     "median": 6.8,
+     "n": 2,
+     "p95": 7.5
+    }
+   },
+   "n": 2,
+   "note": "expected: any; switched 0 of 2; the large-packet check did not mark VPN-MTU (firewall-refused sends counted as unavailable; fixed in 2.1.0-alpha8)",
+   "pass": true,
+   "passed": 2,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha7-soak-log-a7-mtu-long",
+   "run_label": "MTU black hole, long",
+   "scenario": "primary-mtu-long",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha7"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-phase2-fib-primary-blip-13",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 5.88,
+     "median": 5.74,
+     "n": 3,
+     "p95": 5.88
+    },
+    "return_s": {
+     "max": 35.4,
+     "median": 35.3,
+     "n": 3,
+     "p95": 35.4
+    }
+   },
+   "n": 3,
+   "note": "expected: stay; switched 0 of 3; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase2-fib",
+   "run_label": "Matrix phase 2: detection threshold sweep (Fibonacci blips)",
+   "scenario": "primary-blip-13",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-phase2-fib-primary-blip-21",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 5.75,
+     "median": 5.72,
+     "n": 3,
+     "p95": 5.75
+    },
+    "return_s": {
+     "max": 98.1,
+     "median": 94.5,
+     "n": 3,
+     "p95": 98.1
+    },
+    "traffic_moved_s": {
+     "max": 21.04,
+     "median": 19.37,
+     "n": 3,
+     "p95": 21.04
+    }
+   },
+   "n": 3,
+   "note": "expected: any; switched 3 of 3; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase2-fib",
+   "run_label": "Matrix phase 2: detection threshold sweep (Fibonacci blips)",
+   "scenario": "primary-blip-21",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-phase2-fib-primary-blip-34",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 6.05,
+     "median": 5.68,
+     "n": 3,
+     "p95": 6.05
+    },
+    "return_s": {
+     "max": 98.7,
+     "median": 94.0,
+     "n": 3,
+     "p95": 98.7
+    },
+    "traffic_moved_s": {
+     "max": 22.3,
+     "median": 20.75,
+     "n": 2,
+     "p95": 22.3
+    }
+   },
+   "n": 3,
+   "note": "expected: any; switched 2 of 3; P95 is an estimate, not a bound: n = 2/3 is below 59 (the page shows it as approximate; the maximum covers at least 22/36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase2-fib",
+   "run_label": "Matrix phase 2: detection threshold sweep (Fibonacci blips)",
+   "scenario": "primary-blip-34",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-phase2-fib-primary-blip-5",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 5.86,
+     "median": 5.77,
+     "n": 3,
+     "p95": 5.86
+    },
+    "return_s": {
+     "max": 35.3,
+     "median": 35.1,
+     "n": 3,
+     "p95": 35.3
+    }
+   },
+   "n": 3,
+   "note": "expected: stay; switched 0 of 3; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase2-fib",
+   "run_label": "Matrix phase 2: detection threshold sweep (Fibonacci blips)",
+   "scenario": "primary-blip-5",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-phase2-fib-primary-blip-55",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 5.95,
+     "median": 5.88,
+     "n": 3,
+     "p95": 5.95
+    },
+    "return_s": {
+     "max": 143.5,
+     "median": 132.9,
+     "n": 3,
+     "p95": 143.5
+    },
+    "traffic_moved_s": {
+     "max": 21.13,
+     "median": 20.68,
+     "n": 3,
+     "p95": 21.13
+    }
+   },
+   "n": 3,
+   "note": "expected: any; switched 3 of 3; switch limit active in 2; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase2-fib",
+   "run_label": "Matrix phase 2: detection threshold sweep (Fibonacci blips)",
+   "scenario": "primary-blip-55",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-phase2-fib-primary-blip-8",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 7.16,
+     "median": 7.08,
+     "n": 3,
+     "p95": 7.16
+    },
+    "return_s": {
+     "max": 36.1,
+     "median": 35.7,
+     "n": 3,
+     "p95": 36.1
+    }
+   },
+   "n": 3,
+   "note": "expected: stay; switched 0 of 3; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase2-fib",
+   "run_label": "Matrix phase 2: detection threshold sweep (Fibonacci blips)",
+   "scenario": "primary-blip-8",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-phase2-fib-primary-blip-89",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 5.75,
+     "median": 5.72,
+     "n": 3,
+     "p95": 5.75
+    },
+    "return_s": {
+     "max": 173.8,
+     "median": 173.2,
+     "n": 3,
+     "p95": 173.8
+    },
+    "traffic_moved_s": {
+     "max": 20.78,
+     "median": 20.52,
+     "n": 3,
+     "p95": 20.78
+    }
+   },
+   "n": 3,
+   "note": "expected: any; switched 3 of 3; switch limit active in 2; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase2-fib",
+   "run_label": "Matrix phase 2: detection threshold sweep (Fibonacci blips)",
+   "scenario": "primary-blip-89",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-primary-drop-63-primary-drop",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 8.05,
+     "median": 5.77,
+     "n": 58,
+     "p95": 7.69
+    },
+    "return_s": {
+     "max": 217.9,
+     "median": 205.1,
+     "n": 58,
+     "p95": 214.8
+    },
+    "traffic_moved_s": {
+     "max": 27.96,
+     "median": 20.68,
+     "n": 58,
+     "p95": 26.65
+    }
+   },
+   "n": 58,
+   "note": "expected: switch; switched 58 of 58; settled back on the primary in 58 of 58; switch limit active in 2; 10 skipped (bench not on the primary); 1 further cycle excluded from these figures (see the separate row; the log is kept); queue comparison with alpha7 (same test, 63 cycles, 600 s slots); n = 58 is below 59, so every P95 here is an estimate, not a bound (the page shows it as approximate; the maximum covers at least 94 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 58,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-primary-drop-63",
+   "run_label": "Primary drop, 63 cycles (same test as alpha7 and alpha8)",
+   "scenario": "primary-drop",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-04",
+   "failed": 1,
+   "id": "soak-2.1.0-alpha8-primary-drop-63-primary-drop-excluded-12",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "value": 5.72
+    },
+    "traffic_moved_s": {
+     "value": 20.3
+    }
+   },
+   "n": 1,
+   "note": "not counted above: the cycle ran during a recorded outage of the upstream path and then inside a program fault found on the router (after a vendor rebuild of the reserve, Auto stayed on the reserve for over an hour; fixed in 2.1.0-alpha9, router re-check pending; issue I9). It switched in 20.3 s and did not settle back. Kept as evidence.",
+   "pass": false,
+   "passed": 0,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-primary-drop-63",
+   "run_label": "Primary drop, 63 cycles (same test as alpha7 and alpha8)",
+   "scenario": "primary-drop (excluded cycle 12)",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 2,
+   "id": "soak-2.1.0-alpha8-kill-auto-mid-kill-auto-mid",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 8.66,
+     "median": 5.96,
+     "n": 5,
+     "p95": 8.66
+    },
+    "return_s": {
+     "max": 248.2,
+     "median": 241.3,
+     "n": 3,
+     "p95": 248.2
+    },
+    "traffic_moved_s": {
+     "max": 90.15,
+     "median": 41.07,
+     "n": 5,
+     "p95": 90.15
+    }
+   },
+   "n": 5,
+   "note": "expected: switch; switched 2 of 5; switch limit active in 1; 1 skipped (bench not on the primary); not ok: cycles 0, 4; P95 is an estimate, not a bound: n = 3/5 is below 59 (the page shows it as approximate; the maximum covers at least 36/54 % of cases with 95 % confidence); 2 report segments joined (requeue)",
+   "pass": false,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-kill-auto-mid",
+   "run_label": "Auto process killed in the middle of a switch",
+   "scenario": "kill-auto-mid",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-netem-loss-30-hour-primary-netem-loss-30-hour",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 21.46,
+     "median": 21.46,
+     "n": 1,
+     "p95": 21.46
+    },
+    "return_s": {
+     "max": 3615.7,
+     "median": 3615.7,
+     "n": 1,
+     "p95": 3615.7
+    },
+    "traffic_moved_s": {
+     "max": 166.8,
+     "median": 166.8,
+     "n": 1,
+     "p95": 166.8
+    },
+    "vendor_blocked_s": {
+     "max": 28.5,
+     "median": 28.5,
+     "n": 1,
+     "p95": 28.5
+    }
+   },
+   "n": 1,
+   "note": "expected: any; switched 1 of 1",
+   "pass": true,
+   "passed": 1,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-netem-loss-30-hour",
+   "run_label": "Packet loss 30 % on the primary, one hour",
+   "scenario": "primary-netem-loss-30-hour",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 1,
+   "id": "soak-2.1.0-alpha8-netem-loss-35-40-45-primary-netem-loss-35",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 12.73,
+     "median": 7.09,
+     "n": 3,
+     "p95": 12.73
+    },
+    "return_s": {
+     "max": 199.8,
+     "median": 183.05,
+     "n": 2,
+     "p95": 199.8
+    },
+    "traffic_moved_s": {
+     "max": 72.45,
+     "median": 66.44,
+     "n": 2,
+     "p95": 72.45
+    },
+    "vendor_blocked_s": {
+     "max": 2.7,
+     "median": 2.7,
+     "n": 1,
+     "p95": 2.7
+    }
+   },
+   "n": 3,
+   "note": "expected: any; switched 2 of 3; switch limit active in 2; not ok: cycle 0; P95 is an estimate, not a bound: n = 2/3 is below 59 (the page shows it as approximate; the maximum covers at least 22/36 % of cases with 95 % confidence); 2 report segments joined (requeue)",
+   "pass": false,
+   "passed": 2,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-netem-loss-35-40-45",
+   "run_label": "Packet loss 35/40/45 % on the primary",
+   "scenario": "primary-netem-loss-35",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-netem-loss-35-40-45-primary-netem-loss-40",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 20.56,
+     "median": 8.52,
+     "n": 3,
+     "p95": 20.56
+    },
+    "return_s": {
+     "max": 233.0,
+     "median": 169.5,
+     "n": 3,
+     "p95": 233.0
+    },
+    "traffic_moved_s": {
+     "max": 38.5,
+     "median": 28.87,
+     "n": 3,
+     "p95": 38.5
+    },
+    "vendor_blocked_s": {
+     "max": 3.0,
+     "median": 3.0,
+     "n": 1,
+     "p95": 3.0
+    }
+   },
+   "n": 3,
+   "note": "expected: any; switched 3 of 3; switch limit active in 2; 1 skipped (bench not on the primary); P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence); 2 report segments joined (requeue)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-netem-loss-35-40-45",
+   "run_label": "Packet loss 35/40/45 % on the primary",
+   "scenario": "primary-netem-loss-40",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-netem-loss-35-40-45-primary-netem-loss-45",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 19.66,
+     "median": 14.32,
+     "n": 3,
+     "p95": 19.66
+    },
+    "return_s": {
+     "max": 236.7,
+     "median": 166.2,
+     "n": 3,
+     "p95": 236.7
+    },
+    "traffic_moved_s": {
+     "max": 35.47,
+     "median": 35.24,
+     "n": 3,
+     "p95": 35.47
+    }
+   },
+   "n": 3,
+   "note": "expected: any; switched 3 of 3; switch limit active in 2; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence); 2 report segments joined (requeue)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-netem-loss-35-40-45",
+   "run_label": "Packet loss 35/40/45 % on the primary",
+   "scenario": "primary-netem-loss-45",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-phase3-flaps-primary-flap",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 8.6,
+     "median": 7.3,
+     "n": 2,
+     "p95": 8.6
+    },
+    "return_s": {
+     "max": 659.3,
+     "median": 654.5,
+     "n": 2,
+     "p95": 659.3
+    },
+    "traffic_moved_s": {
+     "max": 162.35,
+     "median": 162.24,
+     "n": 2,
+     "p95": 162.35
+    },
+    "vendor_blocked_s": {
+     "max": 4.1,
+     "median": 3.45,
+     "n": 2,
+     "p95": 4.1
+    }
+   },
+   "n": 2,
+   "note": "expected: any; switched 2 of 2; switch limit active in 2; P95 is an estimate, not a bound: n = 2 is below 59 (the page shows it as approximate; the maximum covers at least 22 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 2,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase3-flaps",
+   "run_label": "Matrix phase 3: primary flap",
+   "scenario": "primary-flap",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 2,
+   "id": "soak-2.1.0-alpha8-phase3-flaps-primary-flap-long",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 8.64,
+     "median": 8.63,
+     "n": 2,
+     "p95": 8.64
+    },
+    "return_s": {
+     "max": 1827.8,
+     "median": 1825.1,
+     "n": 2,
+     "p95": 1827.8
+    },
+    "traffic_moved_s": {
+     "max": 21.6,
+     "median": 20.75,
+     "n": 2,
+     "p95": 21.6
+    }
+   },
+   "n": 2,
+   "note": "expected: any; switched 2 of 2; switch limit active in 2; not ok: cycles 1, 3; P95 is an estimate, not a bound: n = 2 is below 59 (the page shows it as approximate; the maximum covers at least 22 % of cases with 95 % confidence)",
+   "pass": false,
+   "passed": 0,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-phase3-flaps",
+   "run_label": "Matrix phase 3: primary flap",
+   "scenario": "primary-flap-long",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-primary-mtu-long-primary-mtu-long",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 189.94,
+     "median": 154.5,
+     "n": 2,
+     "p95": 189.94
+    },
+    "return_s": {
+     "max": 775.3,
+     "median": 755.8,
+     "n": 2,
+     "p95": 775.3
+    },
+    "traffic_moved_s": {
+     "max": 207.52,
+     "median": 174.97,
+     "n": 2,
+     "p95": 207.52
+    },
+    "vendor_blocked_s": {
+     "max": 5.5,
+     "median": 4.15,
+     "n": 2,
+     "p95": 5.5
+    }
+   },
+   "n": 2,
+   "note": "expected: any; switched 2 of 2; P95 is an estimate, not a bound: n = 2 is below 59 (the page shows it as approximate; the maximum covers at least 22 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 2,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-primary-mtu-long",
+   "run_label": "MTU black hole on the primary, long",
+   "scenario": "primary-mtu-long",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-reserve-drop-carrying-long-reserve-drop-carrying-long",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 30.29,
+     "median": 30.0,
+     "n": 3,
+     "p95": 30.29
+    },
+    "on_reserve_s": {
+     "max": 24.6,
+     "median": 23.96,
+     "n": 3,
+     "p95": 24.6
+    },
+    "return_s": {
+     "max": 187.1,
+     "median": 184.4,
+     "n": 3,
+     "p95": 187.1
+    },
+    "traffic_moved_s": {
+     "max": 21.55,
+     "median": 21.15,
+     "n": 3,
+     "p95": 21.55
+    }
+   },
+   "n": 3,
+   "note": "expected: switch; switched 3 of 3; switch limit active in 1; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-reserve-drop-carrying-long",
+   "run_label": "Reserve dropped while it carries the traffic, long",
+   "scenario": "reserve-drop-carrying-long",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-reserve-drop-carrying-reserve-drop-carrying",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 37.18,
+     "median": 30.72,
+     "n": 3,
+     "p95": 37.18
+    },
+    "on_reserve_s": {
+     "max": 31.73,
+     "median": 24.66,
+     "n": 3,
+     "p95": 31.73
+    },
+    "return_s": {
+     "max": 207.4,
+     "median": 193.9,
+     "n": 3,
+     "p95": 207.4
+    },
+    "traffic_moved_s": {
+     "max": 28.56,
+     "median": 21.97,
+     "n": 3,
+     "p95": 28.56
+    }
+   },
+   "n": 3,
+   "note": "expected: switch; switched 3 of 3; switch limit active in 1; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-reserve-drop-carrying",
+   "run_label": "Reserve dropped while it carries the traffic",
+   "scenario": "reserve-drop-carrying",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-vendor-abort-long-vendor-abort-long",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 7.54,
+     "median": 6.19,
+     "n": 3,
+     "p95": 7.54
+    },
+    "return_s": {
+     "max": 355.0,
+     "median": 352.8,
+     "n": 3,
+     "p95": 355.0
+    },
+    "traffic_moved_s": {
+     "max": 151.27,
+     "median": 144.81,
+     "n": 3,
+     "p95": 151.27
+    },
+    "vendor_blocked_s": {
+     "max": 125.3,
+     "median": 122.4,
+     "n": 3,
+     "p95": 125.3
+    }
+   },
+   "n": 3,
+   "note": "expected: switch; switched 3 of 3; P95 is an estimate, not a bound: n = 3 is below 59 (the page shows it as approximate; the maximum covers at least 36 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 3,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-vendor-abort-long",
+   "run_label": "GL vendor worker lock held 120 s",
+   "scenario": "vendor-abort-long",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
+  },
+  {
+   "date": "2026-11-05",
+   "failed": 0,
+   "id": "soak-2.1.0-alpha8-vendor-abort-vendor-abort",
+   "kind": "soak",
+   "leaks": null,
+   "metrics": {
+    "detect_s": {
+     "max": 9.11,
+     "median": 6.17,
+     "n": 5,
+     "p95": 9.11
+    },
+    "return_s": {
+     "max": 214.8,
+     "median": 208.8,
+     "n": 5,
+     "p95": 214.8
+    },
+    "traffic_moved_s": {
+     "max": 37.43,
+     "median": 32.64,
+     "n": 5,
+     "p95": 37.43
+    },
+    "vendor_blocked_s": {
+     "max": 12.0,
+     "median": 7.3,
+     "n": 5,
+     "p95": 12.0
+    }
+   },
+   "n": 5,
+   "note": "expected: switch; switched 5 of 5; switch limit active in 3; P95 is an estimate, not a bound: n = 5 is below 59 (the page shows it as approximate; the maximum covers at least 54 % of cases with 95 % confidence)",
+   "pass": true,
+   "passed": 5,
+   "platform": "GL-MT3000",
+   "run": "soak-2.1.0-alpha8-vendor-abort",
+   "run_label": "Switch aborted by a busy GL vendor worker",
+   "scenario": "vendor-abort",
+   "source": "owner bench soak log (private, numbers only)",
+   "version": "2.1.0-alpha8"
   }
  ],
+ "router_measurements": {
+  "intro_en": "Measurements on the dedicated GL-MT3000 test router: cut of the primary tunnel, move to the reserve and return. One entry per version; run rows hold numbers only (no addresses, server names or logs).",
+  "intro_ru": "Замеры на выделенном тестовом роутере GL-MT3000: обрыв туннеля основного канала, переход на резерв и возврат. Одна запись на версию; строки прогонов — только числа (без адресов, имён серверов и журналов).",
+  "versions": [
+   {
+    "date": "2026-11-07",
+    "fault_s": 120,
+    "note": "Baseline for comparing later versions. The cut table was removed in all 3 runs. Return begins about 51 s after the cut ends in every run. BLOCKED flicker (a short BLOCKED state during the move) was seen in run 1 only: twice, 3 s and 2 s.",
+    "observe_s": 360,
+    "platform": "GL-MT3000",
+    "role": "baseline / база",
+    "runs": [
+     {
+      "blocked": [
+       {
+        "at_s": 36,
+        "for_s": 3
+       },
+       {
+        "at_s": 210,
+        "for_s": 2
+       }
+      ],
+      "detect_s": 19,
+      "note": "",
+      "on_primary_s": 180,
+      "on_reserve_s": 24,
+      "return_start_s": 171,
+      "run": 1
+     },
+     {
+      "blocked": [],
+      "detect_s": 28,
+      "note": "",
+      "on_primary_s": 179,
+      "on_reserve_s": 33,
+      "return_start_s": 170,
+      "run": 2
+     },
+     {
+      "blocked": [],
+      "detect_s": 18,
+      "note": "reserve held under the pair rate limit from 25 s to 121 s",
+      "on_primary_s": 180,
+      "on_reserve_s": 23,
+      "return_start_s": 171,
+      "run": 3
+     }
+    ],
+    "scenario_en": "WireGuard tunnel cut for 120 s, observed for 360 s",
+    "scenario_ru": "обрыв WireGuard-туннеля на 120 с, наблюдение 360 с",
+    "source": "owner router bench, 3 runs on 2026-11-07 (raw logs kept private, numbers only)",
+    "version": "2.1.0-alpha8"
+   }
+  ]
+ },
  "schema": 1
 }

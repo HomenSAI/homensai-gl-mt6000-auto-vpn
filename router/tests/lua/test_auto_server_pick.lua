@@ -36,6 +36,14 @@ local function world(opts)
   local env=t.env({selection=sel,settings=settings})
   local W={client='2020',config='40354_2020',peer='2002',wgconfig='peer_2002',wg_digest=string.rep('0',64),staged={},exec={},logs={},files={},health={},provider={},ready={}}
   local B=env.backend
+  -- F-27: the route_policy sections as the helper reports them (the Python fixture's shape), following the live uci
+  -- servers; W.foreign_rule is somebody else's edit of the reserve's rule (merged into it while set)
+  W.foreign_rule={}
+  B.sections=function()
+    local reserve={['.name']='cfg0456cd',via='ovpnclient1',via_type='openvpn',group_id='40354',client_id=W.client,tunnel_id='4192'}
+    for k,v in pairs(W.foreign_rule) do reserve[k]=v end
+    return t.route_policy_sections({reserve,{['.name']='cfg0123ab',via='wgclient1',via_type='wireguard',group_id='10004',peer_id=W.peer,tunnel_id='5841'}})
+  end
   B.health=function(id) return W.health[id] end
   B.recovery_ready=function(id) W.ready[#W.ready+1]=id;return W.health[id]==true end
   B.trace_of['wireguard:peer_2002']='198.51.100.1';B.trace_of['openvpn:40354_2020']='203.0.113.5'
@@ -339,6 +347,75 @@ t.test('stage 3: a new primary server that fails the check is rolled back; sessi
   t.eq(pair.read_state(env).server_change,nil);t.eq({W.status().state,W.status().reason},{'COMMITTED','CLIENT-CONFIRMED'})
   no_readopt(env)
   reserve_untouched(W)
+end)
+
+-- F-27 (Python twin: test_pair_server_pick.test_only_the_tunnels_rule_may_change_and_only_its_server_fields)
+t.test('only the tunnel\'s rule may change and only its server fields',function()
+  local function sections(reserve,primary)
+    local r={['.name']='cfg0456cd',via='ovpnclient1',group_id='40354',client_id='2020'};for k,v in pairs(reserve or {}) do r[k]=v end
+    local p={['.name']='cfg0123ab',via='wgclient1',group_id='10004',peer_id='2002'};for k,v in pairs(primary or {}) do p[k]=v end
+    return t.route_policy_sections({r,p})
+  end
+  local before=sections()
+  local own=sections({client_id='2016'})
+  t.eq(S.policy_delta_only(before,own,'cfg0456cd'),true)
+  t.eq(S.policy_delta_only(before,before,'cfg0456cd'),true)
+  t.eq(S.policy_delta_only(before,sections(nil,{peer_id='2000'}),'cfg0456cd'),false,'another profile changed')
+  t.eq(S.policy_delta_only(before,sections({client_id='2016',killswitch='0'}),'cfg0456cd'),false,'a non-server option of our rule changed')
+  local moved=sections({client_id='2016'});moved[2],moved[3]=moved[3],moved[2]
+  t.eq(S.policy_delta_only(before,moved,'cfg0456cd'),false,'order changed')
+  local added=sections({client_id='2016'});added[#added+1]=canon.object({['.name']='x',['.type']='rule'})
+  t.eq(S.policy_delta_only(before,added,'cfg0456cd'),false,'a rule added')
+  t.eq(S.policy_delta_only(before,own,nil),false)
+end)
+
+-- positive control of the F-27 baseline: with the helper's real sections our own change is accepted; server_start
+-- recorded the sections before its first write and the live ones differ from them only in the primary's server field
+t.test('stage 3: the own server change is accepted against the recorded route_policy baseline',function()
+  local env,W,settings=world()
+  on_reserve(env,W,settings);primary_request(W)
+  local baseline=env.backend.policy().sections
+  t.eq(#baseline,3,'the real rules, not an empty list')
+  t.eq(pair.tick(env,settings,env.revision),true)
+  local state=pair.read_state(env)
+  t.eq(canon.encode(state.server_change.policy_before),canon.encode(baseline),'the baseline recorded before the first write')
+  t.eq({state.server_change.phase,state.server_change.rolled_back},{'CONNECTING',nil})
+  t.eq(state.policy_roles.source_id,'wireguard:peer_2000','re-bound to the new server');t.eq(W.peer,'2000')
+  local live=env.backend.policy().sections
+  t.eq(live[3].peer_id,'2000');t.eq(S.policy_delta_only(baseline,live,'cfg0123ab'),true)
+  t.eq(S.policy_delta_only(baseline,live,'cfg0456cd'),false,'the same delta is foreign for the reserve\'s rule')
+  t.eq(t.journal(env).source,'wireguard:peer_2000')
+  for _,line in ipairs(W.logs) do t.truthy(not string.find(line,'^SERVER%-PICK%-FAILED'),line) end
+  reserve_untouched(W);no_readopt(env)
+end)
+
+-- F-27 (Python twin: test_pair_server_pick_stage3.test_a_foreign_edit_of_the_reserve_rule_during_the_change_is_never_
+-- adopted): the reserve's rule changes with our commit (somebody else's edit): neither the change nor its rollback is
+-- explainable against the recorded baseline, so the session and the open journal keep the old server and the normal
+-- checks see the external change
+t.test('stage 3: a foreign edit of the reserve rule during the change is never adopted; the change and its rollback fail',function()
+  local env,W,settings=world()
+  on_reserve(env,W,settings);primary_request(W)
+  local exec=env.server_io.exec
+  env.server_io.exec=function(argv,seconds)
+    local rc,out=exec(argv,seconds)
+    if table.concat(argv,' ')=='uci commit route_policy' and next(W.foreign_rule)==nil then W.foreign_rule={client_id='9'} end
+    return rc,out
+  end
+  local before=pair.read_state(env);local jb=t.journal(env)
+  t.eq(pair.tick(env,settings,env.revision),true)
+  local state=pair.read_state(env);local j=t.journal(env)
+  t.eq(state.policy_roles.source_id,'wireguard:peer_2002','not rebound to the new server');t.eq(state.order,before.order)
+  t.eq(state.policy_hash,before.policy_hash);t.eq(state.network_identity,before.network_identity);t.eq(state.protected,before.protected)
+  t.eq({j.phase,j.source,j.hash,j.after},{jb.phase,jb.source,jb.hash,jb.after},'the open journal is not re-bound')
+  t.eq(state.server_change.rolled_back,true);t.eq(state.server_change.phase,'SETTLING')
+  local last=W.logs[#W.logs]
+  t.truthy(string.find(last,'^SERVER%-PICK%-FAILED:'),last);t.truthy(string.find(last,'rollback failed$'),last)
+  t.eq(canon.decode(W.files[env.runtime..'/'..S.EVENT]).tunnels[1].code,S.FAILED)
+  t.eq(W.peer,'2002','uci itself holds the old server again');t.eq(W.wgconfig,'peer_2002')
+  t.eq(env.backend.policy().sections[2].client_id,'9','the foreign edit is left as it is (never reverted or adopted)')
+  t.eq(env.backend.kernel,{'r2','r1'},'the reserve carried the whole time')
+  reserve_untouched(W);no_readopt(env)
 end)
 
 t.test('stage 3: a power cut between the uci commits and the session write; the boot restores the unverified old server',function()

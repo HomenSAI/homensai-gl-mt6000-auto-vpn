@@ -2,12 +2,22 @@
 """Whitelisted own-configuration setup. VPN keys/routes are never edited."""
 import hashlib
 import json
+import os
 import re
 import subprocess
 import unicodedata
 from uci_result import failure_code
 from agent import inventory
 from auto_control import control_lock
+
+
+CONFIG='/etc/config/homensai_vpn'
+
+
+def harden_config(path=None):
+    """The UCI file holds the Telegram token: keep it root-only (0600) after every confirmed write."""
+    try:os.chmod(path or CONFIG,0o600)
+    except OSError:pass
 
 
 def integer(value, low, high):
@@ -72,17 +82,41 @@ def server_rows(servers, profiles):
     return rows
 
 
+def telegram_destination(value):
+    """Forgiving and still safe (owner 05.11.2026): spaces around a pasted ID go, and the answer of @userinfobot, «Id: 123456789»
+    (or its whole text), gives its digits. The exact check of telegram_payload still decides what is saved. The page: tgChatClean."""
+    if not isinstance(value,str):return value
+    text=value.strip();found=re.search(r'(?:^|\s)id\s*[:=]?\s*(-?[0-9]{1,20})[ \t]*(?:\r?\n|$)',text,re.I)
+    return found.group(1) if found else text
+
+
+def destination_kept(sent):
+    """Review F-14 (06.11.2026): the page sends the reader's mask of the stored destination back when the owner
+    leaves it as it is. Only the mask of the destination stored right now keeps it; anything else is a format error."""
+    from agent import masked_destination
+    from telegram_report import option
+    if not isinstance(sent,str) or not sent:return False
+    try:stored=option('telegram_chat')
+    except (OSError,ValueError,subprocess.SubprocessError):stored=''
+    return bool(stored) and masked_destination(stored)==sent
+
+
 def telegram_payload(arguments):
+    from agent import TELEGRAM_MASK
     if not {'token','chat','enabled','interval'}<=set(arguments) or set(arguments)-{'token','chat','enabled','interval','schedule','hour','weekly','monthly','items'} or type(arguments['enabled']) is not bool:
         raise ValueError('TELEGRAM-SETUP-FIELDS')
-    token=arguments['token'];chat=arguments['chat']
+    token=arguments['token'];chat=telegram_destination(arguments['chat'])
     if not isinstance(token,str) or (token and not re.fullmatch(r'[0-9]{6,15}:[A-Za-z0-9_-]{30,100}',token)):
         raise ValueError('TELEGRAM-TOKEN-FORMAT')
+    # The reader's mask (inventory telegram_destination) means "keep the stored destination": no telegram_chat is
+    # written, and save() checks under the lock that it is the mask of the destination stored right now.
+    keep=isinstance(chat,str) and TELEGRAM_MASK in chat
     # Private/group/channel numeric IDs or a public channel username.
-    if not isinstance(chat,str) or not re.fullmatch(r'(?:-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})',chat):
+    if not keep and (not isinstance(chat,str) or not re.fullmatch(r'(?:-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})',chat)):
         raise ValueError('TELEGRAM-DESTINATION-FORMAT')
-    main={'telegram_chat':chat,'telegram_enabled':'1' if arguments['enabled'] else '0',
+    main={'telegram_enabled':'1' if arguments['enabled'] else '0',
           'telegram_interval':integer(arguments['interval'],5,10080)}
+    if not keep:main['telegram_chat']=chat
     if 'schedule' in arguments:
         if arguments['schedule'] not in ('interval','daily'):raise ValueError('TELEGRAM-SCHEDULE')
         main['telegram_schedule']=arguments['schedule']
@@ -126,9 +160,9 @@ def response_payload(arguments):
     from probe_policy import PING_INTERVAL_MIN,PING_INTERVAL_MAX,PING_INTERVAL_STEP
     from server_pick import MODELS as PICK_MODELS
     if (not isinstance(arguments,dict) or 'metric' not in arguments or not set(arguments)<={'metric','compare','fast_switch','ping_interval','server_pick','server_pick_model'}
-            or arguments['metric'] not in RESPONSE_METRICS
+            or not isinstance(arguments['metric'],str) or arguments['metric'] not in RESPONSE_METRICS
             or any(key in arguments and type(arguments[key]) is not bool for key in ('compare','fast_switch','server_pick'))
-            or 'server_pick_model' in arguments and arguments['server_pick_model'] not in PICK_MODELS):
+            or 'server_pick_model' in arguments and (not isinstance(arguments['server_pick_model'],str) or arguments['server_pick_model'] not in PICK_MODELS)):
         raise ValueError('RESPONSE-METRIC-INVALID')
     # Owner ping cadence: whole seconds 10..300 in steps of 10 (probe_policy.ping_interval reads it back).
     if 'ping_interval' in arguments and (type(arguments['ping_interval']) is not int
@@ -143,6 +177,35 @@ def response_payload(arguments):
     if 'server_pick' in arguments:main['server_pick']='1' if arguments['server_pick'] else '0'
     # How the pick decides (server_pick.MODELS, option server_pick_model): 'simple' (default) or 'bayes' (expert setting).
     if 'server_pick_model' in arguments:main['server_pick_model']=arguments['server_pick_model']
+    return {'main':main,'servers':[]}
+
+
+# The expert group "Detector and sensors" of the page (2.1.0-alpha9). Any subset of these options, at least one; the
+# defaults are the ones of inventory.lua (nothing here changes a default: writing "1" for an option that is on unless
+# "0" is the same as leaving it out). DETECTOR_STOP: the options of the Auto loop (read by the supervisor, native_policy.lua /
+# probe_policy), changed only with Auto off like the rules (configuration_guard, CONFIG-STOP-AUTO-FIRST); the sensors of
+# the monitor are read again at its next pass. The flap damping is written by setup_recovery (recovery_settings.FLAP_FIELDS).
+DETECTOR_BOOL=('probe_spread','parallel_recheck','auto_event_wake','wan_sensor','wg_events','stall_sensor','stall_veto','heartbeat_quorum','probe_target_log')
+DETECTOR_ENUM={'retry_backoff':('fibonacci','fixed'),'server_key_pin':('warn','enforce','off')}
+DETECTOR_INT={'reserve_probe_interval':(20,120,0),'wan_recover_grace':(0,120,None)}  # (low, high, extra allowed value)
+DETECTOR_STOP=('retry_backoff','parallel_recheck','auto_event_wake')
+
+
+def detector_payload(arguments):
+    if not isinstance(arguments,dict) or not arguments or not set(arguments)<=set(DETECTOR_BOOL)|set(DETECTOR_ENUM)|set(DETECTOR_INT):
+        raise ValueError('SETUP-FIELDS')
+    main={}
+    for key,value in arguments.items():
+        if key in DETECTOR_BOOL:
+            if type(value) is not bool:raise ValueError('SETUP-RANGE')
+            main[key]='1' if value else '0'
+        elif key in DETECTOR_ENUM:
+            if value not in DETECTOR_ENUM[key]:raise ValueError('SETUP-RANGE')
+            main[key]=value
+        else:
+            low,high,extra=DETECTOR_INT[key]
+            if type(value) is not int or not (low<=value<=high or value==extra):raise ValueError('SETUP-RANGE')
+            main[key]=str(value)
     return {'main':main,'servers':[]}
 
 
@@ -200,7 +263,7 @@ def onboarding_payload(arguments, profiles, existing=None):
         fields={key:value for key,value in telegram.items() if key!='configure'}
         # An optional, disabled destination may be left empty. Never invent one,
         # clear a stored secret, or allow a new token with no destination.
-        empty_destination=fields['enabled'] is False and fields['chat']=='' and fields['token']==''
+        empty_destination=fields['enabled'] is False and telegram_destination(fields['chat'])=='' and fields['token']==''
         if empty_destination:fields['chat']='0'
         main.update(telegram_payload(fields)['main'])
         if empty_destination:main['telegram_chat']=''
@@ -226,6 +289,8 @@ def save_onboarding(arguments):
             from device_profile import detect, validate
             validate(payload['main']['router_model'], detect())
         telegram=arguments['telegram']
+        if telegram['configure'] and 'telegram_chat' not in payload['main'] and not destination_kept(telegram_destination(telegram['chat'])):
+            return {'saved':False,'code':'TELEGRAM-DESTINATION-FORMAT'}
         if telegram['configure'] and telegram['enabled'] and not telegram['token']:
             from telegram_report import option
             try:existing=option('telegram_token')
@@ -241,18 +306,39 @@ def save_onboarding(arguments):
             return {'saved':False,'code':'SETUP-SAVE-UNCONFIRMED'}
         if result.returncode or result.stdout.strip()!=b'OK':
             return {'saved':False,'code':failure_code(result,'SETUP-SAVE-UNCONFIRMED')}
+    harden_config()
     return {'saved':True,'onboarding_complete':True,'onboarding_version':1,
             'mode':'monitor','requires_lan_certification':True}
 
 
+def skip_onboarding(arguments):
+    """The wizard's exit (owner 04.11.2026): only marks the first run as done, with the settings as they are, so it needs
+    no Auto stop and works with Auto running or stopped. It writes nothing else: no terms, no Auto, no pair."""
+    if arguments:raise ValueError('RPC-UNEXPECTED-ARGS')
+    with control_lock():
+        from rpc_throttle import allow
+        if not allow('setup:onboarding',2):return {'saved':False,'code':'RPC-RATE-LIMIT'}
+        payload={'main':{'onboarding_version':'1','onboarding_complete':'1'},'servers':[]}
+        try:
+            result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
+                input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        except (OSError,subprocess.SubprocessError):
+            return {'saved':False,'code':'SETUP-SAVE-UNCONFIRMED'}
+        if result.returncode or result.stdout.strip()!=b'OK':
+            return {'saved':False,'code':failure_code(result,'SETUP-SAVE-UNCONFIRMED')}
+    return {'saved':True,'onboarding_complete':True,'onboarding_version':1}
+
+
 def save(arguments, kind):
     if kind=='onboarding':return save_onboarding(arguments)
+    if kind=='onboarding_skip':return skip_onboarding(arguments)
     if kind=='system':payload=None  # derive profile/channel anchors from a fresh snapshot inside the lock
     elif kind=='telegram':payload=telegram_payload(arguments)
     elif kind=='speed':payload=speed_payload(arguments)
     elif kind=='monitor':payload=monitor_payload(arguments)
     elif kind=='probe':payload=probe_payload(arguments)
     elif kind=='response':payload=response_payload(arguments)
+    elif kind=='detector':payload=detector_payload(arguments)
     elif kind=='terms':
         from agent import TERMS_VERSION
         import time
@@ -283,10 +369,12 @@ def save(arguments, kind):
             try:phase=journal_read().get('phase')
             except Refused:return {'saved':False,'code':'CONFIG-RECOVERY-UNVERIFIED'}
             if phase in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):return {'saved':False,'code':'PROBE-SETTINGS-BUSY'}
-        if kind in ('recovery','monitor'):
+        if kind in ('recovery','monitor') or (kind=='detector' and set(arguments)&set(DETECTOR_STOP)):
             from configuration_guard import blocked
             reason=blocked(inventory().get('settings',{}))
             if reason:return {'saved':False,'code':reason}
+        if kind=='telegram' and 'telegram_chat' not in payload['main'] and not destination_kept(telegram_destination(arguments['chat'])):
+            return {'saved':False,'code':'TELEGRAM-DESTINATION-FORMAT'}
         if kind=='telegram' and not arguments['token']:
             from telegram_report import option
             if not re.fullmatch(r'[0-9]+:[A-Za-z0-9_-]+',option('telegram_token')):
@@ -300,6 +388,12 @@ def save(arguments, kind):
             except Refused:return {'saved':False,'code':'CONFIG-RECOVERY-UNVERIFIED'}
             if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'):
                 return {'saved':False,'code':'SETUP-STOP-FIRST'}
+            # Review F-13 (06.11.2026): the pair and plan settings also pass the common recovery guard, inside the
+            # same control lock: a queued native_start (intent on), a RELEASE-PENDING journal, a closed guard or a
+            # pair session that is not terminal refuse the write like every other guarded setting.
+            from configuration_guard import blocked
+            reason=blocked(current.get('settings',{}))
+            if reason:return {'saved':False,'code':reason}
         from rpc_throttle import allow
         if not allow('setup:'+kind,2):return {'saved':False,'code':'RPC-RATE-LIMIT'}
         # A hung or killed writer may or may not have committed: say so instead of failing without an answer.
@@ -310,6 +404,7 @@ def save(arguments, kind):
             return {'saved':False,'code':'SETUP-SAVE-UNCONFIRMED'}
         if result.returncode or result.stdout.strip()!=b'OK':
             return {'saved':False,'code':failure_code(result,'SETUP-SAVE-FAILED')}
+    harden_config()
     if kind=='speed' and not arguments['enabled']:
         from speed_test import cancel
         try:cancel()

@@ -125,6 +125,12 @@ function H.selected_bindings(c) return identity.selected_bindings(c.sections,lua
 function H.applied(c) return identity.applied(c.sections,none(c.bindings)) end
 function H.roles(c) return identity.roles(c.settings) end
 function H.valid_record(c) return deps.valid_record(c.record) end
+function H.key_gate(c)
+  local B=backend_for(c.world)
+  local a,b=c.profiles[1],c.profiles[2]
+  return canon.array({B.key_unaccepted({a}) or NULL,B.key_unaccepted({b}) or NULL,
+    canon.array(B.key_blockers({},canon.object({source=canon.object({id=a}),target=canon.object({id=b})})))})
+end
 function H.diagnostic(c)
   local B=backend_for(c.world)
   local saved=platform.assess

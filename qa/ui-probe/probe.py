@@ -45,6 +45,12 @@ class H(prev.Handler):
             body=("<!doctype html><meta charset=utf-8><body style='margin:0'><iframe id=f style='border:0;width:%spx;height:%spx'></iframe><pre id=result></pre><script>var CFG=%s;%s</script>"%(w,h,json.dumps(dict(design=d,tab=tab,theme=theme,lang=lang,w=int(w),h=int(h),id=self.path.split('/')[-1] if False else qid)),js)).encode()
             self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8');self.send_header('Content-Length',str(len(body)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(body);return
         return super().do_GET()
+# The original A/B/C harness remains an explicit historical mode. The current
+# gate owns its ephemeral port, immutable snapshot and one browser process.
+if __name__=='__main__' and len(sys.argv)>1 and sys.argv[1]=='gate':
+    from current_gate import main as current_main
+    sys.argv.pop(1)
+    raise SystemExit(current_main())
 srv=ThreadingHTTPServer(('127.0.0.1',PORT),H);threading.Thread(target=srv.serve_forever,daemon=True).start()
 EDGE=r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
 def run(kind,d,tab,theme,lang,w,h=900,budget=0,timeout=240):
@@ -126,7 +132,7 @@ def fool(part,workers=2):
 
 if __name__=='__main__':
     mode=sys.argv[1]
-    if mode=='gate':gate()
+    if mode=='legacy-gate':gate()
     if mode=='fool':
         import argparse
         parser=argparse.ArgumentParser();parser.add_argument('part',nargs='?',default='0-49');parser.add_argument('--workers',type=int,choices=(1,2),default=2)

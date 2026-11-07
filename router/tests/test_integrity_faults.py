@@ -4,6 +4,7 @@
 2. /usr/sbin/homensai-vpn-integrity: verify / snapshot / boot / restore against damaged, missing and re-moded files,
    a damaged manifest, a damaged or foreign pristine copy, the restore-loop limits and an opkg run; the owner's
    config, terms, journal and history are never written. Needs sh, sha256sum, tar, `stat -c`, awk.
+   `recheck` (safety review F-02): the check deferred while opkg ran is done once opkg ends (INTEGRITY-RECHECK-NOTE.md).
 3. The init script: the mode the tool returns decides the procd instances (normal, no-c, python, stopped); a damaged
    tool is put back from the pristine copy; without a tool the service starts as before.
 4. The status fields (agent.py and the Lua monitor read RUNTIME/integrity.json).
@@ -112,8 +113,27 @@ class ManifestTest(unittest.TestCase):
         from package_hooks import scripts
         post = scripts()['postinst']
         snap = post.index('/usr/sbin/homensai-vpn-integrity snapshot')
-        self.assertLess(snap, post.index('/etc/init.d/homensai-vpn restart'))
-        self.assertIn('|| echo INTEGRITY-SNAPSHOT-REFUSED', post, 'a refused copy never fails the installation')
+        self.assertLess(snap, post.rindex('/etc/init.d/homensai-vpn restart'))
+        # A refused copy (no space, permissions only) is a warning; a damaged unpacked payload stops before the restart
+        # (audit 06.11.2026, F-19: every snapshot failure used to be a warning).
+        # R4-07b (night2 N3-lifecycle 2): only the documented storage refusal (7) is a warning; an unexpected helper exit
+        # (2 usage, 126/127 missing or damaged helper, anything else) aborts before enable/restart.
+        self.assertIn('7) echo INTEGRITY-SNAPSHOT-REFUSED >&2; rm -f /etc/homensai-vpn/upgrade-result.json ;;', post)
+        self.assertIn('0) rm -f /etc/homensai-vpn/upgrade-result.json ;;', post)   # a good install clears the old reason
+        self.assertNotIn('*) echo INTEGRITY-SNAPSHOT-REFUSED', post)
+        # Owner decision 07.11.2026: both refusals roll back to the previous working version (rollback_and_start, which
+        # always ends with exit 1) instead of only stopping; the plain enable/restart of a good install comes after.
+        enable = post.rindex('\n/etc/init.d/homensai-vpn enable\n')
+        begin = post.index('rollback_and_start() {')
+        function = post[begin:post.index('\n    exit 1\n}\n', begin)+len('\n    exit 1')]
+        self.assertTrue(function.rstrip().endswith('exit 1'), function[-200:])
+        self.assertLess(begin, post.index('/usr/sbin/homensai-vpn-integrity snapshot'))
+        unexpected = post.index('*) echo "INTEGRITY-HELPER-FAILED')
+        self.assertIn('rollback_and_start INTEGRITY-HELPER-FAILED ;;', post[unexpected:post.index('\n', unexpected)])
+        self.assertLess(unexpected, enable)
+        damaged = post.index('8) echo INTEGRITY-PAYLOAD-DAMAGED')
+        self.assertLess(damaged, enable)
+        self.assertIn('rollback_and_start INTEGRITY-PAYLOAD-DAMAGED ;;', post[damaged:post.index('\n', damaged)])
         self.assertIn('/usr/sbin/homensai-vpn-integrity snapshot', (ROUTER/'package-hooks.mk').read_text())
 
 
@@ -128,13 +148,38 @@ class ToolCase(unittest.TestCase):
         install(self.root, self.ipk)
         self.persist = self.root/'etc'/'homensai-vpn'
         self.runtime = self.tmp/'run'
+        # the deferred recheck polls every second here and never reaches the real init script of the host
         self.env = dict(os.environ, HOMENSAI_INTEGRITY_ROOT=str(self.root), HOMENSAI_INTEGRITY_RUNTIME=str(self.runtime),
                         HOMENSAI_INTEGRITY_PERSIST=str(self.persist), HOMENSAI_INTEGRITY_OPKG_LOCK=str(self.tmp/'opkg.lock'),
+                        HOMENSAI_INTEGRITY_INIT=str(self.tmp/'no-init'), HOMENSAI_INTEGRITY_RECHECK_EVERY='1',
                         TMPDIR=str(self.tmp))
         self.pristine = self.persist/'pristine'/'payload.tar.gz'
+        self.recheck_lock = self.runtime/'integrity-recheck.pid'
 
     def tearDown(self):
+        self.stop_recheck()
         shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def stop_recheck(self):
+        """A detached recheck a deferred boot launched must not outlive the test."""
+        try:
+            os.kill(int(os.readlink(self.recheck_lock)), 15)
+        except (OSError, ValueError):
+            pass
+
+    def wait_for(self, predicate, timeout=30.0):
+        deadline = time.monotonic()+timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return True
+            time.sleep(0.1)
+        return predicate()
+
+    def report_code(self):
+        try:
+            return json.loads((self.runtime/'integrity.json').read_text())['code']
+        except (OSError, ValueError, KeyError):
+            return None
 
     def run_tool(self, *args):
         result = subprocess.run(['sh', str(TOOL)]+list(args), capture_output=True, text=True, env=self.env, timeout=120)
@@ -229,9 +274,44 @@ class SnapshotTest(ToolCase):
         before = self.pristine.read_bytes()
         self.path('usr/lib/homensai-vpn/agent.py').write_bytes(b'damaged')
         rc, out = self.run_tool('snapshot')
-        self.assertEqual(rc, 7)
+        self.assertEqual(rc, 8, 'a damaged payload is not a space refusal: postinst must not start it')
         self.assertIn('INTEGRITY-SNAPSHOT-REFUSED INTEGRITY-FILE-DAMAGED /usr/lib/homensai-vpn/agent.py', out)
+        self.assertIn('INTEGRITY-PAYLOAD-DAMAGED', out)
         self.assertEqual(self.pristine.read_bytes(), before)
+
+    def test_missing_file_is_a_damaged_payload(self):
+        self.snapshot()
+        before = self.pristine.read_bytes()
+        self.path('usr/lib/homensai-vpn/agent.py').unlink()
+        rc, out = self.run_tool('snapshot')
+        self.assertEqual(rc, 8, out)
+        self.assertIn('INTEGRITY-SNAPSHOT-REFUSED INTEGRITY-FILE-MISSING /usr/lib/homensai-vpn/agent.py', out)
+        self.assertIn('INTEGRITY-PAYLOAD-DAMAGED', out)
+        self.assertEqual(self.pristine.read_bytes(), before)
+
+    def test_failed_publication_of_the_copy_is_refused_not_made(self):
+        # F-19: the rename chain failing used to fall through to INTEGRITY-SNAPSHOT-MADE and exit 0.
+        self.snapshot()
+        before = self.pristine.read_bytes()
+        # mv fails as a shell function in front of the sourced tool (the tool calls mv by name). A fake mv file on PATH
+        # cannot run in the offline CI: its tmpfs is mounted noexec, the shell skips the unexecutable fake and the real mv
+        # succeeds (INTEGRITY-SNAPSHOT-MADE, exit 0) - a test artefact, not a product fault (router/tests/CI-FIX-NOTE.md).
+        result = subprocess.run(['sh', '-c', 'mv() { return 1; }; . "$0"', str(TOOL), 'snapshot'],
+                                capture_output=True, text=True, env=self.env, timeout=120)
+        rc, out = result.returncode, result.stdout
+        self.assertEqual(rc, 7, out)
+        self.assertIn('INTEGRITY-SNAPSHOT-REFUSED publish', out)
+        self.assertNotIn('INTEGRITY-SNAPSHOT-MADE', out)
+        self.assertEqual(self.pristine.read_bytes(), before)
+        self.assertFalse(Path(str(self.pristine)+'.new').exists())
+
+    def test_permission_only_difference_is_a_refusal_not_damage(self):
+        self.path('usr/lib/homensai-vpn/agent.py').chmod(0o600)
+        rc, out = self.run_tool('snapshot')
+        if 'INTEGRITY-FILE-MODE' not in out:
+            self.skipTest('this file system does not keep POSIX modes')
+        self.assertEqual(rc, 7, out)
+        self.assertNotIn('INTEGRITY-PAYLOAD-DAMAGED', out)
 
 
 @unittest.skipUnless(HAVE_SH, 'needs sh, sha256sum, tar, stat -c, awk, cmp')
@@ -344,6 +424,12 @@ class BootTest(ToolCase):
         self.assertEqual((mode, report['code']), ('normal', 'INTEGRITY-DEFERRED'))
         self.assertEqual(self.path('usr/lib/homensai-vpn/lua/canon.lua').read_bytes(), b'')
         (self.tmp/'opkg.lock').unlink()
+        # F-02: the detached recheck then checks; no service runs here, so nothing is restored or started
+        self.assertTrue(self.wait_for(lambda: self.report_code() not in (None, 'INTEGRITY-DEFERRED') and not os.path.lexists(self.recheck_lock)))
+        report = json.loads((self.runtime/'integrity.json').read_text())
+        self.assertEqual((report['code'], report['mode'], report['files']),
+                         ('INTEGRITY-RECHECK-DAMAGED', 'python', ['/usr/lib/homensai-vpn/lua/canon.lua']))
+        self.assertEqual(self.path('usr/lib/homensai-vpn/lua/canon.lua').read_bytes(), b'')
         shutil.rmtree(self.pristine.parent)
         self.path(MANIFEST).unlink()
         mode, report, _ = self.boot()
@@ -361,6 +447,362 @@ class BootTest(ToolCase):
         self.assert_owner_data_untouched()
         sha.write_text('0'*64+'\n')
         self.assertEqual(self.run_tool('restore', str(ipk), str(sha), str(self.root))[0], 5)
+
+
+RUNNING = 'ubus() { echo \'{"homensai-vpn": {"instances": {"monitor": {"running": true, "pid": 4242}}}}\'; }\n'
+NOT_RUNNING = 'ubus() { echo \'{"homensai-vpn": {}}\'; }\n'
+# The init script as a shell function (the CI tmpfs is noexec: no fake executable). `restart` runs what the real init's
+# start_service runs: the boot self-check, now without the opkg lock.
+FAKE_INIT = ('fake_init() { echo "$1" >>"$QA_CALLS"; case "$1" in enabled) return "${QA_ENABLED:-0}" ;;'
+             ' restart) sh "$QA_TOOL" boot >/dev/null 2>&1 ;; esac; }\n')
+
+
+@unittest.skipUnless(HAVE_SH, 'needs sh, sha256sum, tar, stat -c, awk, cmp, readlink')
+class RecheckTest(ToolCase):
+    """Safety review F-02 (07.11.2026): postinst restarts the service while opkg still holds its lock, so `boot` answers
+    INTEGRITY-DEFERRED; `recheck` waits for opkg to end, verifies read-only and writes the real result. Damaged content
+    restarts only a running, enabled service (the boot path then restores and decides); it never starts a stopped one."""
+
+    def setUp(self):
+        super().setUp()
+        self.snapshot()
+        self.owner = b"config main 'main'\n\toption terms_version '2'\n\toption enabled '1'\n"
+        self.path('etc/config/homensai_vpn').write_bytes(self.owner)
+        self.journal = self.persist/'native-transaction.json'
+        self.journal.write_bytes(b'{"journal stays"}')
+        self.calls = self.tmp/'calls'
+        self.env.update(HOMENSAI_INTEGRITY_INIT='fake_init', QA_CALLS=str(self.calls), QA_TOOL=str(TOOL))
+        self.deferred()
+
+    def deferred(self):
+        """The record a deferred boot leaves (written directly: a real deferred boot launches its own recheck)."""
+        self.runtime.mkdir(parents=True, exist_ok=True)
+        (self.runtime/'integrity.json').write_text('{"code":"INTEGRITY-DEFERRED","mode":"normal","restored":0,"files":[],'
+                                                   '"version":"%s","time":1}\n' % build_ipk.VERSION)
+
+    def recheck(self, stubs=RUNNING, **env):
+        result = subprocess.run(['sh', '-c', stubs+FAKE_INIT+'. "$0"', str(TOOL), 'recheck'], capture_output=True,
+                                text=True, env=dict(self.env, **env), timeout=120)
+        report = json.loads((self.runtime/'integrity.json').read_text())
+        return result.returncode, report, result.stdout
+
+    def init_calls(self):
+        return self.calls.read_text().split() if self.calls.exists() else []
+
+    def assert_owner_data_untouched(self):
+        self.assertEqual(self.path('etc/config/homensai_vpn').read_bytes(), self.owner)
+        self.assertEqual(self.journal.read_bytes(), b'{"journal stays"}')
+
+    def test_clean_files_are_reported_ok_and_the_monitor_is_not_restarted(self):
+        rc, report, out = self.recheck()
+        self.assertEqual((rc, report['code'], report['mode'], report['files']), (0, 'INTEGRITY-OK', 'normal', []))
+        self.assertEqual(report['version'], build_ipk.VERSION)
+        self.assertLessEqual(abs(report['time']-time.time()), 60)
+        self.assertIn('INTEGRITY-RECHECKED INTEGRITY-OK', out)
+        self.assertEqual(self.init_calls(), [], 'nothing to restore: no restart')
+        self.assertFalse(os.path.lexists(self.recheck_lock))
+
+    def test_permissions_only_or_nothing_to_compare_never_restart(self):
+        os.chmod(self.path('etc/init.d/homensai-vpn'), 0o644)
+        rc, report, out = self.recheck()
+        if report['code'] == 'INTEGRITY-OK':
+            self.skipTest('this file system does not keep POSIX modes')
+        self.assertEqual((rc, report['code'], report['mode'], report['files']),
+                         (0, 'INTEGRITY-MODE-DIFFERS', 'normal', ['/etc/init.d/homensai-vpn']))
+        self.deferred()
+        shutil.rmtree(self.pristine.parent)
+        self.path(MANIFEST).unlink()
+        rc, report, out = self.recheck()
+        self.assertEqual((rc, report['code'], report['mode']), (0, 'INTEGRITY-UNVERIFIED', 'normal'))
+        self.assertEqual(self.init_calls(), [])
+
+    def test_damage_restarts_a_running_service_and_the_boot_path_restores(self):
+        canon = self.path('usr/lib/homensai-vpn/lua/canon.lua')
+        good = canon.read_bytes()
+        canon.write_bytes(b'')
+        rc, report, out = self.recheck()
+        self.assertEqual(rc, 0, out)
+        self.assertIn('INTEGRITY-FILE-DAMAGED /usr/lib/homensai-vpn/lua/canon.lua', out)
+        self.assertIn('INTEGRITY-RECHECK-DAMAGED: files damaged after the installation; the service restarts', out)
+        self.assertEqual(self.init_calls(), ['enabled', 'restart'])
+        # the result is the one the restarted service's boot self-check wrote, with the existing consequences
+        self.assertEqual((report['code'], report['mode'], report['restored'], report['files']),
+                         ('INTEGRITY-RESTORED', 'normal', 1, ['/usr/lib/homensai-vpn/lua/canon.lua']))
+        self.assertEqual(canon.read_bytes(), good)
+        self.assert_owner_data_untouched()
+        self.assertFalse(os.path.lexists(self.recheck_lock))
+
+    def test_damage_never_starts_a_stopped_or_disabled_service(self):
+        for name in ('usr/lib/homensai-vpn/lua/canon.lua', 'usr/lib/homensai-vpn/agent.py'):
+            self.path(name).write_bytes(b'damaged')
+        for label, stubs, env, calls in (('not running', NOT_RUNNING, {}, ['enabled']),
+                                         ('disabled', RUNNING, {'QA_ENABLED': '1'}, ['enabled']),
+                                         ('no init script', RUNNING, {'HOMENSAI_INTEGRITY_INIT': str(self.tmp/'none')}, [])):
+            with self.subTest(label):
+                self.deferred()
+                self.calls.unlink(missing_ok=True)
+                rc, report, out = self.recheck(stubs, **env)
+                self.assertEqual(rc, 0, out)
+                self.assertEqual(self.init_calls(), calls, 'no restart, no start')
+                self.assertEqual((report['code'], report['mode'], report['restored']), ('INTEGRITY-RECHECK-DAMAGED', 'stopped', 0))
+                self.assertEqual(sorted(report['files']), ['/usr/lib/homensai-vpn/agent.py', '/usr/lib/homensai-vpn/lua/canon.lua'])
+                self.assertEqual(self.path('usr/lib/homensai-vpn/agent.py').read_bytes(), b'damaged', 'read-only')
+                self.assert_owner_data_untouched()
+        # the mode reaches the existing Start refusal (BH-04, both twins read only `mode`)
+        sys.path.insert(0, str(ROUTER/'files'/'usr'/'lib'/'homensai-vpn'))
+        import auto_control
+        self.assertEqual(auto_control.integrity_blocker(self.runtime), 'INTEGRITY-AUTO-BLOCKED')
+
+    def test_a_real_result_written_meanwhile_is_never_overwritten(self):
+        self.path('usr/lib/homensai-vpn/lua/canon.lua').write_bytes(b'')
+        later = '{"code":"INTEGRITY-RESTORE-LIMIT","mode":"python","restored":0,"files":[],"version":"x","time":2}\n'
+        (self.runtime/'integrity.json').write_text(later)
+        rc, _, _ = self.recheck()
+        self.assertEqual(rc, 0)
+        self.assertEqual((self.runtime/'integrity.json').read_text(), later)
+        self.assertEqual(self.init_calls(), [], 'a later service start already decided')
+
+    def test_one_recheck_at_a_time_and_a_dead_holder_is_replaced(self):
+        os.symlink(str(os.getpid()), self.recheck_lock)               # a live recheck already waits
+        rc, report, _ = self.recheck()
+        self.assertEqual((rc, report['code']), (0, 'INTEGRITY-DEFERRED'))
+        self.assertEqual(os.readlink(self.recheck_lock), str(os.getpid()))
+        os.unlink(self.recheck_lock)
+        dead = subprocess.Popen(['sh', '-c', 'exit 0'])
+        dead.wait()
+        for holder in (str(dead.pid), 'garbage'):
+            with self.subTest(holder=holder):
+                self.deferred()
+                os.symlink(holder, self.recheck_lock)
+                rc, report, _ = self.recheck()
+                self.assertEqual((rc, report['code']), (0, 'INTEGRITY-OK'))
+                self.assertFalse(os.path.lexists(self.recheck_lock))
+
+    def test_it_waits_for_opkg_and_gives_up_after_the_limit(self):
+        lock = self.tmp/'opkg.lock'
+        lock.write_text('')
+        started = time.monotonic()
+        rc, report, out = self.recheck(HOMENSAI_INTEGRITY_RECHECK_LIMIT='2')
+        self.assertGreaterEqual(time.monotonic()-started, 1.5)
+        self.assertEqual((rc, report['code'], report['mode']), (0, 'INTEGRITY-RECHECK-TIMEOUT', 'normal'))
+        self.assertIn('INTEGRITY-RECHECK-TIMEOUT: opkg still holds its lock after 2 s', out)
+        self.assertEqual(self.init_calls(), [])
+        # waiting: nothing is decided while the lock is held, the check runs as soon as it is gone
+        self.deferred()
+        waiting = subprocess.Popen(['sh', '-c', RUNNING+FAKE_INIT+'. "$0"', str(TOOL), 'recheck'], env=self.env,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            time.sleep(2.5)
+            self.assertIsNone(waiting.poll())
+            self.assertEqual(self.report_code(), 'INTEGRITY-DEFERRED')
+            lock.unlink()
+            self.assertEqual(waiting.wait(timeout=30), 0)
+        finally:
+            if waiting.poll() is None:
+                waiting.kill()
+        self.assertEqual(self.report_code(), 'INTEGRITY-OK')
+
+    def test_a_deferred_boot_launches_the_recheck_detached(self):
+        lock = self.tmp/'opkg.lock'
+        lock.write_text('')
+        self.env['HOMENSAI_INTEGRITY_INIT'] = str(self.tmp/'none')     # a launched recheck has no shell stubs
+        started = time.monotonic()
+        mode, report, _ = self.boot()
+        self.assertLess(time.monotonic()-started, 20, 'the init does not wait for the recheck')
+        self.assertEqual((mode, report['code']), ('normal', 'INTEGRITY-DEFERRED'))
+        self.assertTrue(self.wait_for(lambda: os.path.lexists(self.recheck_lock)), 'the recheck waits for opkg')
+        time.sleep(1.5)
+        self.assertEqual(self.report_code(), 'INTEGRITY-DEFERRED')
+        lock.unlink()
+        self.assertTrue(self.wait_for(lambda: self.report_code() == 'INTEGRITY-OK' and not os.path.lexists(self.recheck_lock)))
+        # a second deferred boot while one recheck waits starts no second one
+        lock.write_text('')
+        self.boot()
+        self.assertTrue(self.wait_for(lambda: os.path.lexists(self.recheck_lock)))
+        first = os.readlink(self.recheck_lock)
+        self.boot()
+        time.sleep(1.5)
+        self.assertEqual(os.readlink(self.recheck_lock), first)
+        lock.unlink()
+        self.assertTrue(self.wait_for(lambda: self.report_code() == 'INTEGRITY-OK' and not os.path.lexists(self.recheck_lock)))
+
+    def test_the_launch_is_detached_and_documented(self):
+        text = TOOL.read_text()
+        self.assertIn('sh "$SELF" recheck </dev/null >/dev/null 2>&1 &', text)
+        self.assertIn('| boot | recheck |', text)
+
+
+@unittest.skipUnless(HAVE_SH, 'needs sh, sha256sum, tar, awk, cmp')
+class UpgradeRollbackTest(ToolCase):
+    """Owner decision 07.11.2026: a damaged or unverified package on upgrade rolls back to the previous working version
+    (the pristine copy the last good installation saved), starts it and records the reason for the page; without a
+    previous copy the service stays off with the reason. The owner's config, journal and history are never written."""
+    NEW = '9.9.9-alpha99'
+
+    def setUp(self):
+        super().setUp()
+        self.snapshot()                                   # the previous, working version keeps its pristine copy
+        self.old_files = {name: payload for name, payload, _ in self.files()}
+        self.old_manifest = self.path(MANIFEST).read_bytes()
+        newer = [(name, payload + b'# new\n' if name.endswith('.py') else payload, mode) for name, payload, mode in self.files()]
+        newer.append(('usr/lib/homensai-vpn/lua/only_new.lua', b'return 2\n', 0o644))
+        install(self.root, make_ipk(newer, self.NEW))     # opkg unpacks the new version over it
+        self.owner = b"config main 'main'\n\toption terms_version '2'\n\toption enabled '1'\n"
+        self.path('etc/config/homensai_vpn').write_bytes(self.owner)
+        self.journal = self.persist/'native-transaction.json'
+        self.journal.write_bytes(b'{"journal stays"}')
+        self.env.update(HOMENSAI_ROLLBACK_ROOT=str(self.root), HOMENSAI_ROLLBACK_PERSIST=str(self.persist))
+        # BH-02: preinst recorded the version that was running before this upgrade (the previous one)
+        (self.persist/'upgrade-from').write_text(build_ipk.VERSION+'\n')
+
+    def rollback(self, reason='INTEGRITY-PAYLOAD-DAMAGED'):
+        from package_hooks import ROLLBACK_SCRIPT
+        result = subprocess.run(['sh', '-s', reason], input=ROLLBACK_SCRIPT, capture_output=True, text=True, env=self.env, timeout=120)
+        record = self.persist/'upgrade-result.json'
+        return result.returncode, (json.loads(record.read_text()) if record.exists() else None)
+
+    def assert_owner_data_untouched(self):
+        self.assertEqual(self.path('etc/config/homensai_vpn').read_bytes(), self.owner)
+        self.assertEqual(self.journal.read_bytes(), b'{"journal stays"}')
+
+    def test_a_damaged_new_version_rolls_back_to_the_previous_one(self):
+        self.path('usr/lib/homensai-vpn/lua/canon.lua').write_bytes(b'')          # the damage the snapshot found
+        rc, record = self.rollback()
+        self.assertEqual(rc, 0)
+        self.assertEqual({k: record[k] for k in ('code', 'reason', 'from', 'to')},
+                         {'code': 'UPGRADE-ROLLED-BACK', 'reason': 'INTEGRITY-PAYLOAD-DAMAGED', 'from': self.NEW, 'to': build_ipk.VERSION})
+        for name, payload in self.old_files.items():
+            if name != 'etc/config/homensai_vpn':
+                self.assertEqual(self.path(name).read_bytes(), payload, name)
+        self.assertEqual(self.path(MANIFEST).read_bytes(), self.old_manifest)
+        self.assertEqual(oct(self.path('etc/init.d/homensai-vpn').stat().st_mode & 0o777), '0o755')
+        self.assertEqual(self.run_tool('verify', str(self.root)), (0, ''), 'the previous version verifies as installed')
+        self.assert_owner_data_untouched()
+        self.assertFalse(list(self.root.rglob('*.rollback-new')))
+
+    def test_an_unverified_helper_rolls_back_the_same_way(self):
+        self.path('usr/lib/homensai-vpn/agent.py').unlink()
+        rc, record = self.rollback('INTEGRITY-HELPER-FAILED')
+        self.assertEqual((rc, record['code'], record['reason']), (0, 'UPGRADE-ROLLED-BACK', 'INTEGRITY-HELPER-FAILED'))
+        self.assertEqual(self.path('usr/lib/homensai-vpn/agent.py').read_bytes(), self.old_files['usr/lib/homensai-vpn/agent.py'])
+        rc, record = self.rollback('$(reboot)')                                      # an unknown reason is never echoed
+        self.assertEqual(record['reason'], 'INTEGRITY-HELPER-FAILED')
+
+    def test_without_a_previous_copy_nothing_is_touched_and_the_reason_is_recorded(self):
+        before = self.path('usr/lib/homensai-vpn/agent.py').read_bytes()
+        self.pristine.unlink()
+        rc, record = self.rollback()
+        self.assertEqual((rc, record['code'], record['to']), (5, 'UPGRADE-ROLLBACK-UNAVAILABLE', ''))
+        self.assertEqual(self.path('usr/lib/homensai-vpn/agent.py').read_bytes(), before)
+        self.assert_owner_data_untouched()
+
+    def test_a_damaged_previous_copy_is_never_used(self):
+        before = self.path('usr/lib/homensai-vpn/agent.py').read_bytes()
+        data = bytearray(self.pristine.read_bytes())
+        data[len(data)//2] ^= 0xff
+        self.pristine.write_bytes(bytes(data))
+        rc, record = self.rollback()
+        self.assertEqual((rc, record['code']), (5, 'UPGRADE-ROLLBACK-UNAVAILABLE'))
+        self.assertEqual(self.path('usr/lib/homensai-vpn/agent.py').read_bytes(), before)
+
+    def test_bh02_only_the_version_that_was_running_is_restored(self):
+        # bug hunt 07.11.2026: a pristine copy older than the running version (snapshot exit 7 kept it) is never used
+        before = self.path('usr/lib/homensai-vpn/agent.py').read_bytes()
+        for recorded in ('2.0.0-alpha1-1\n', None, '$(reboot)\n'):
+            with self.subTest(recorded=recorded):
+                if recorded is None:(self.persist/'upgrade-from').unlink()
+                else:(self.persist/'upgrade-from').write_text(recorded)
+                rc, record = self.rollback()
+                self.assertEqual((rc, record['code'], record['to']), (5, 'UPGRADE-ROLLBACK-UNAVAILABLE', ''))
+                self.assertEqual(self.path('usr/lib/homensai-vpn/agent.py').read_bytes(), before, 'nothing copied')
+                self.assert_owner_data_untouched()
+
+    def hook_part(self, name, end, tail):
+        """The first part of a hook with its absolute paths moved into the fake root."""
+        from package_hooks import scripts
+        body = scripts()[name]
+        body = body[:body.index(end)] if end else body
+        return (body.replace('/usr/lib/homensai-vpn/integrity.sha256', str(self.path(MANIFEST)))
+                .replace('/etc/homensai-vpn', str(self.persist)).replace('/etc/config/homensai_vpn', str(self.tmp/'no-config'))
+                .replace('[ -x /usr/bin/python3 ]', '[ -x /bin/sh ]').replace('/usr/bin/python3', 'true')+tail)
+
+    def test_bh02_preinst_records_the_running_version(self):
+        (self.persist/'upgrade-from').unlink()
+        self.path(MANIFEST).write_text('# homensai-auto-vpn payload manifest v1\n# version 2.1.0-alpha8-1\n')
+        result = subprocess.run(['sh', '-c', self.hook_part('preinst', None, '')], capture_output=True, text=True, timeout=30,
+                                env=dict(self.env, IPKG_INSTROOT=''))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.persist/'upgrade-from').read_text(), '2.1.0-alpha8-1\n')
+        self.path(MANIFEST).unlink()                           # a first install: nothing to roll back to
+        subprocess.run(['sh', '-c', self.hook_part('preinst', None, '')], check=True, timeout=30, env=dict(self.env, IPKG_INSTROOT=''))
+        self.assertFalse((self.persist/'upgrade-from').exists())
+
+    def test_bh03_a_later_postinst_run_over_the_rolled_back_files_refuses(self):
+        # bug hunt 07.11.2026: opkg keeps the rolled-back package unpacked; a later configure runs its postinst again
+        from package_hooks import package_version
+        new = package_version()
+        trap_marker = self.persist/'maintenance.json'
+        def run(installed, result):
+            self.path(MANIFEST).write_text('# homensai-auto-vpn payload manifest v1\n# version %s\n' % installed)
+            record = self.persist/'upgrade-result.json'
+            if result is None:
+                if record.exists():record.unlink()
+            else:record.write_text(json.dumps(result, separators=(',', ':')))
+            trap_marker.write_text('{}')
+            body = self.hook_part('postinst', '/usr/bin/python3 - prepare', 'echo PASSED\n')
+            return subprocess.run(['sh', '-c', body], capture_output=True, text=True, timeout=30, env=dict(self.env, IPKG_INSTROOT=''))
+        rolled = {'code': 'UPGRADE-ROLLED-BACK', 'reason': 'INTEGRITY-PAYLOAD-DAMAGED', 'from': new, 'to': '2.1.0-alpha8-1', 'time': 1}
+        result = run('2.1.0-alpha8-1', rolled)
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn('PASSED', result.stdout)
+        self.assertIn('UPGRADE-NOT-INSTALLED', result.stderr)
+        self.assertEqual(json.loads((self.persist/'upgrade-result.json').read_text()), rolled, 'the reason stays for the page')
+        self.assertFalse(trap_marker.exists(), 'the maintenance marker still ends with postinst')
+        # opkg install --force-reinstall unpacked the new files again; another package was rolled back; no record
+        for installed, record in ((new, rolled), ('2.1.0-alpha8-1', dict(rolled, **{'from': '9.9.9-alpha1-1'})),
+                                  ('2.1.0-alpha8-1', None), ('2.1.0-alpha8-1', dict(rolled, code='UPGRADE-ROLLBACK-FAILED'))):
+            with self.subTest(installed=installed, record=record):
+                result = run(installed, record)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('PASSED', result.stdout)
+
+    def test_bh03_the_sdk_hooks_carry_the_make_version_not_a_literal(self):
+        from package_hooks import sdk_fragment
+        text = sdk_fragment()
+        self.assertIn("package_version='$(PKG_VERSION)-$(PKG_RELEASE)'", text)
+        self.assertNotIn(build_ipk.VERSION, text)
+        self.assertIn('lifecycle_scripts(VERSION)', (ROUTER/'build_ipk.py').read_text())
+
+    def postinst_rollback(self, reason):
+        """postinst's rollback_and_start with the init script, rpcd and luci_cache replaced by a recorder."""
+        from package_hooks import scripts
+        post = scripts()['postinst']
+        start = post.index('rollback_and_start() {')
+        end = '\n    exit 1\n}\n'
+        function = post[start:post.index(end, start)+len(end)]
+        calls = self.tmp/'calls'
+        function = (function.replace('/etc/init.d/homensai-vpn ', 'rec init ').replace('/etc/init.d/rpcd ', 'rec rpcd ')
+                    .replace('/usr/bin/python3 ', 'rec python3 '))
+        body = 'set -eu\nrec() { echo "$*" >>"%s"; }\n%s\nrollback_and_start %s\necho NOT-REACHED\n' % (calls, function, reason)
+        result = subprocess.run(['sh', '-c', body], capture_output=True, text=True, env=self.env, timeout=120)
+        return result, (calls.read_text().splitlines() if calls.exists() else [])
+
+    def test_postinst_starts_the_rolled_back_version_and_reports_failure(self):
+        result, calls = self.postinst_rollback('INTEGRITY-PAYLOAD-DAMAGED')
+        self.assertEqual(result.returncode, 1, 'the new package is not installed: the operation fails')
+        self.assertNotIn('NOT-REACHED', result.stdout)
+        self.assertIn('UPGRADE-ROLLED-BACK', result.stderr)
+        self.assertEqual(calls, ['init enable', 'init restart', 'rpcd reload', 'python3 /usr/lib/homensai-vpn/luci_cache.py'])
+        # nothing in the rollback touches the Auto intent: Auto resumes only from an owner-started intent on disk
+        from package_hooks import ROLLBACK_SCRIPT
+        for word in ('auto-control', 'native_start', 'native-stop', 'pair-auto'):
+            self.assertNotIn(word, ROLLBACK_SCRIPT)
+
+    def test_postinst_without_a_previous_copy_keeps_the_service_off(self):
+        self.pristine.unlink()
+        result, calls = self.postinst_rollback('INTEGRITY-PAYLOAD-DAMAGED')
+        self.assertEqual((result.returncode, calls), (1, []))
+        self.assertIn('UPGRADE-ROLLBACK-UNAVAILABLE', result.stderr)
 
 
 @unittest.skipUnless(HAVE_SH, 'needs sh, sha256sum, tar, stat -c, awk, cmp')
@@ -409,7 +851,7 @@ class InitGateTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def start(self, tool_text=None, manifest=None, pristine=None):
+    def start(self, tool_text=None, manifest=None, pristine=None, core=False):
         script = INIT.read_text()
         tool = self.tmp/'homensai-vpn-integrity'
         if tool_text is not None:
@@ -418,6 +860,9 @@ class InitGateTest(unittest.TestCase):
         body = body.replace('tool=/usr/sbin/homensai-vpn-integrity', 'tool=%s' % tool)
         body = body.replace('manifest=/usr/lib/homensai-vpn/integrity.sha256', 'manifest=%s' % (manifest or self.tmp/'none'))
         body = body.replace('pristine=/etc/homensai-vpn/pristine/payload.tar.gz', 'pristine=%s' % (pristine or self.tmp/'none.tar.gz'))
+        body = body.replace('report=/var/run/homensai-vpn/integrity.json', 'report=%s' % (self.tmp/'run'/'integrity.json'))
+        if core:
+            body = body.replace('${CONFIG_main_lua_core_process:-0}', '1')
         # every Lua file and /usr/bin/lua present, as on the router
         body = re.sub(r'\[ -f /usr/lib/homensai-vpn/lua/[a-z_]+\.lua \]', '[ -f /bin/sh ]', body.replace('[ -x /usr/bin/lua ]', '[ -x /bin/sh ]'))
         body = body.replace('rm -f /var/run/homensai-vpn/lua-monitor.ready', ':')
@@ -445,10 +890,26 @@ class InitGateTest(unittest.TestCase):
         self.assertIn('lua/auto.lua daemon', self.command(instances, 'native'))
         self.assertFalse(any('HOMENSAI_CANON_C' in p for ps in instances.values() for p in ps))
 
-    def test_without_the_tool_the_service_starts_as_before_and_says_so(self):
+    def test_without_the_tool_monitoring_runs_but_auto_is_not_started(self):
+        """Owner decision 07.11.2026: a missing self-check tool means an unverified installation. The page and the
+        monitor keep working; no Auto supervisor (Lua or Python native instance, nor hv-core) is started; the reason is
+        logged and published for the page with the fix."""
         instances, err = self.start(None)
+        self.assertEqual(sorted(instances), ['monitor'])
         self.assertIn('lua/monitor.lua daemon', self.command(instances, 'monitor'))
         self.assertIn('INTEGRITY-TOOL-MISSING', err)
+        self.assertIn('Auto is not started; reinstall the package', err)
+        report = json.loads((self.tmp/'run'/'integrity.json').read_text())
+        self.assertEqual((report['code'], report['mode'], report['files']),
+                         ('INTEGRITY-TOOL-MISSING', 'no-auto', ['/usr/sbin/homensai-vpn-integrity']))
+        # hv-core would run the Auto supervisor inside the monitor process: the plain Lua monitor runs instead
+        instances, _ = self.start(None, core=True)
+        self.assertEqual(sorted(instances), ['monitor'])
+        self.assertIn('lua/monitor.lua daemon', self.command(instances, 'monitor'))
+        # with the tool present hv-core is still chosen as before (the stub proves the switch is reachable)
+        instances, _ = self.start(self.fake('normal'), core=True)
+        self.assertIn('hv_core.lua daemon', self.command(instances, 'monitor'))
+        self.assertIn('hv_core.lua standby', self.command(instances, 'native'))
 
     def test_python_mode_runs_both_python_layers(self):
         instances, _ = self.start(self.fake('python'))
@@ -465,9 +926,19 @@ class InitGateTest(unittest.TestCase):
         self.assertEqual(instances, {})
         self.assertIn('INTEGRITY-SERVICE-STOPPED', err)
 
-    def test_a_crashing_tool_never_blocks_the_start(self):
-        instances, _ = self.start('#!/bin/sh\nexit 3\n')
-        self.assertIn('lua/monitor.lua daemon', self.command(instances, 'monitor'))
+    def test_a_crashing_tool_never_blocks_the_monitor_but_never_starts_auto(self):
+        # BH-01 (bug hunt 07.11.2026): no usable answer is not a verified installation: monitoring only, the reason published
+        for tool in ('#!/bin/sh\nexit 3\n', '#!/bin/sh\necho mode=weird\n', '#!/bin/sh\necho hello\n'):
+            with self.subTest(tool=tool):
+                instances, err = self.start(tool)
+                self.assertEqual(sorted(instances), ['monitor'])
+                self.assertIn('lua/monitor.lua daemon', self.command(instances, 'monitor'))
+                self.assertIn('INTEGRITY-TOOL-FAILED', err)
+                report = json.loads((self.tmp/'run'/'integrity.json').read_text())
+                self.assertEqual((report['code'], report['mode']), ('INTEGRITY-TOOL-FAILED', 'no-auto'))
+        instances, _ = self.start('#!/bin/sh\nexit 3\n', core=True)
+        self.assertEqual(sorted(instances), ['monitor'])
+        self.assertIn('lua/monitor.lua daemon', self.command(instances, 'monitor'), 'no hv-core with the Auto supervisor inside')
 
     def test_a_damaged_tool_is_put_back_from_the_pristine_copy_or_skipped(self):
         good = self.fake('python')
@@ -485,12 +956,16 @@ class InitGateTest(unittest.TestCase):
         self.assertIn('INTEGRITY-FILE-RESTORED', err)
         self.assertEqual((self.tmp/'homensai-vpn-integrity').read_text(), good)
         self.assertIn('python3', self.command(instances, 'monitor'), 'the restored tool decided')
-        # damaged copy: the damaged tool is not run, the service starts as before
+        # damaged copy: the damaged tool is not run; BH-01 (bug hunt 07.11.2026): nothing is verified, so monitoring
+        # only - never the full Auto the old 'normal' answer started - and the reason is published
         (self.tmp/'homensai-vpn-integrity').write_text('#!/bin/sh\necho mode=stopped\n')
         (self.tmp/'payload.tar.gz.sha256').write_text('0'*64+'\n')
         instances, err = self.start(None, manifest, pristine)
+        self.assertEqual(sorted(instances), ['monitor'])
         self.assertIn('lua/monitor.lua daemon', self.command(instances, 'monitor'))
         self.assertEqual((self.tmp/'homensai-vpn-integrity').read_text(), '#!/bin/sh\necho mode=stopped\n')
+        report = json.loads((self.tmp/'run'/'integrity.json').read_text())
+        self.assertEqual((report['code'], report['mode']), ('INTEGRITY-TOOL-DAMAGED', 'no-auto'))
 
 
 class StatusFieldTest(unittest.TestCase):
@@ -499,6 +974,24 @@ class StatusFieldTest(unittest.TestCase):
         self.assertIn("status['integrity']=read_json(RUNTIME/'integrity.json',None)", agent)
         monitor = (LUA_SRC/'monitor.lua').read_text()
         self.assertIn("status.integrity=self:read_json(self.runtime..'/integrity.json',NULL)", monitor)
+        # the persistent upgrade outcome (rolled back / refused) is published by both twins for the red reason line
+        self.assertIn("status['upgrade_result']=read_json(PERSIST/'upgrade-result.json',None)", agent)
+        self.assertIn("status.upgrade_result=self:read_json(self.persist..'/upgrade-result.json',NULL)", monitor)
+
+    def test_every_upgrade_code_has_a_bilingual_row_and_the_page_shows_it_red(self):
+        from package_hooks import ROLLBACK_SCRIPT, scripts
+        codes = set(re.findall(r'(?<![A-Z-])UPGRADE-[A-Z]+(?:-[A-Z]+)*', ROLLBACK_SCRIPT+scripts()['postinst']))  # not LIFECYCLE-UPGRADE-READY
+        self.assertEqual(codes, {'UPGRADE-ROLLED-BACK', 'UPGRADE-ROLLBACK-UNAVAILABLE', 'UPGRADE-ROLLBACK-FAILED',
+                                 'UPGRADE-ROLLBACK-VERSION', 'UPGRADE-NOT-INSTALLED'})  # BH-02, BH-03
+        table = (ROUTER/'error_table.inc.js').read_text(encoding='utf8')
+        for code in codes | {'INTEGRITY-TOOL-MISSING'}:
+            row = re.search(r"\['%s','service','([^']+)','([^']+)','([^']+)','([^']+)','([^']+)','([^']+)'\]" % code, table)
+            self.assertIsNotNone(row, code)
+            self.assertRegex(row.group(2)+row.group(4)+row.group(6), '[а-я]', code+': Russian text')
+        self.assertIn('reinstall the package', table.split("['INTEGRITY-TOOL-MISSING'", 1)[1].split('\n', 1)[0].lower())
+        views = (ROUTER/'ui'/'views.js').read_text(encoding='utf8')
+        self.assertIn('function integrityBanner()', views)
+        self.assertIn('upgrade_result', views)
 
     def test_every_code_of_the_tool_has_a_row_in_the_error_table(self):
         codes = set(re.findall(r'INTEGRITY-[A-Z]+(?:-[A-Z]+)*', TOOL.read_text()+INIT.read_text()))

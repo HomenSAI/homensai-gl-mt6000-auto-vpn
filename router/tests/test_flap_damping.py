@@ -64,7 +64,7 @@ class Units(Base):
     def test_ledger_hold_reads_the_ledger_and_an_unreadable_one_holds_longest(self):
         self.assertEqual(pair.ledger_hold({},5000),120,'default primary_stable 120 s since 03.11.2026')
         self.assertEqual(pair.ledger_hold({'recovery_primary_stable':'30'},5000),30)
-        self.ledger([4400,4600,4900]);self.assertEqual(pair.ledger_hold({},5000),240)
+        self.ledger([4600,4900]);self.assertEqual(pair.ledger_hold({},5000),240,'the second failover within the hour (wave 3)')
         self.assertEqual(pair.ledger_hold({'recovery_primary_stable':'30'},5000),60)
         self.ledger([-1]);self.assertEqual(pair.ledger_hold({},5000),pair.HOLD_CAP)
 
@@ -219,7 +219,7 @@ class FlapSimulation(Base):
         self.assertFalse(self.on_reserve(sim,sim['now']),'returned after the flaps stopped')
 
     def test_strictest_limit_still_leaves_every_outage_and_keeps_the_ledger_bounded(self):
-        sim=self.run_flaps({'recovery_attempt_limit':'1'})
+        sim=self.run_flaps({'recovery_flap_limit':'1'})
         for down in self.outages():
             with self.subTest(outage=down-self.START):
                 self.assertTrue(all(self.on_reserve(sim,t) for t in range(int(down)+40,int(down)+self.DOWN,10)))

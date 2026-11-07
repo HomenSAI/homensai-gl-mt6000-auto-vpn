@@ -25,11 +25,15 @@ class TelegramItemTests(unittest.TestCase):
         self.assertEqual(items.parse('events,servers,bogus'), ('servers', 'events'))
         self.assertEqual(items.encode('events,servers'), 'servers,events')
         self.assertEqual(items.encode('none'), 'none')
+        self.assertEqual(items.parse('brief'), ('brief',))
+        self.assertEqual(items.encode('brief'), 'brief')
+        self.assertNotIn('brief', items.parse(None))
+        with self.assertRaises(ValueError):items.encode('brief,servers')
         for bad in ('', 'servers,servers', 'x', 'servers,;rm', 5, 'a'*300):
             with self.assertRaises(ValueError):items.encode(bad)
 
     def test_presets_are_known_items(self):
-        for preset in items.PRESETS.values():self.assertTrue(set(preset) <= set(items.ITEMS))
+        for preset in items.PRESETS.values():self.assertTrue(set(preset) <= set(items.ITEMS) | {'brief'})
         self.assertLess(len(items.PRESETS['minimum']), len(items.PRESETS['standard']))
         self.assertLessEqual(len(items.PRESETS['standard']), len(items.PRESETS['maximum']))
 
@@ -61,6 +65,7 @@ class TelegramItemTests(unittest.TestCase):
         self.assertEqual(setup_config.telegram_payload(dict(base, items='events,servers'))['main']['telegram_items'], 'servers,events')
         self.assertEqual(setup_config.telegram_payload(dict(base, items='none'))['main']['telegram_items'], 'none')
         self.assertNotIn('telegram_items', setup_config.telegram_payload(base)['main'])
+        self.assertEqual(setup_config.telegram_payload(dict(base, items='brief'))['main']['telegram_items'], 'brief')
         with self.assertRaises(ValueError):setup_config.telegram_payload(dict(base, items='servers,drop'))
 
 

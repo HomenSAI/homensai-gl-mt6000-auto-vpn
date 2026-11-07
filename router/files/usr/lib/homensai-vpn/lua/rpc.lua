@@ -29,10 +29,14 @@ M.CONTROL={'native_start','native_stop','fault_start','fault_cancel'}  -- plan i
 -- plan item 7: speed test (speed.lua) and Telegram retry (telegram.lua) in the monitor; agent.py on FALLBACK (control
 -- lock busy). telegram_test sends synchronously (up to 15 s): the rpcd dispatcher runs `lua telegram.lua call` for it.
 M.SPEED={'speed_start','speed_cancel','speed_live','telegram_retry'}
+-- the read-only per-target probe log (probe_target_log.lua); agent.py answers the same from the same RAM files on FALLBACK
+M.PROBE_LOG={'probe_targets'}
 M.FORWARD={'native_return','native_trial_start','native_confirm','setup_monitor','setup_system',
   'setup_telegram','setup_speed','setup_recovery','setup_onboarding','setup_check','stats_reset',
   'statistics','telegram_test','telegram_forget','terms_accept',
-  'manual_switch','monitor_control','scan','priority_preview','priority_apply','preparation_preview','preparation_apply'}
+  'manual_switch','monitor_control','scan','priority_preview','priority_apply','preparation_preview','preparation_apply',
+  'advisor','advisor_apply','advisor_settings','server_key_accept','setup_onboarding_skip','setup_detector',
+  'telegram_destination'}  -- review F-14 (06.11.2026): the full stored destination for the settings page (write ACL)
 M.PAGE_SAMPLE_OMIT={vendor_generation=true,vendor_tunnel_id=true,interface=true}
 M.STATUS_DEFAULT=function(version) return canon.object({version=version,mode='monitor',error='SERVICE-STOPPED'}) end
 M.FALLBACK=setmetatable({},{__tostring=function() return 'FALLBACK' end})
@@ -40,6 +44,7 @@ M.FALLBACK=setmetatable({},{__tostring=function() return 'FALLBACK' end})
 local function is_set(list) local s={};for _,v in ipairs(list) do s[v]=true end;return s end
 local READ_SET,NATIVE_SET,FORWARD_SET,CONTROL_SET,SPEED_SET=is_set(M.READ),is_set(M.NATIVE),is_set(M.FORWARD),is_set(M.CONTROL),is_set(M.SPEED)
 M.READ_SET,M.NATIVE_SET,M.FORWARD_SET,M.CONTROL_SET,M.SPEED_SET=READ_SET,NATIVE_SET,FORWARD_SET,CONTROL_SET,SPEED_SET
+local PROBE_LOG_SET=is_set(M.PROBE_LOG)
 
 local function fail(code) error({code=code},0) end
 local function code_of(err)
@@ -79,7 +84,7 @@ function M.decode_request(request)
       if not ok then
         local text=tostring(value)
         if string.find(text,'duplicate field',1,true) then fail('RPC-DUPLICATE-FIELD') end
-        if string.find(text,'nesting limit',1,true) then fail('RPC-INPUT-COMPLEXITY') end  -- Python parses 65 levels, its walker refuses
+        if string.find(text,'nesting limit',1,true) then fail('RPC-INPUT-COMPLEXITY') end  -- Python: its walker (65+ levels) or RecursionError, the same code (BH2-04)
         if string.find(text,'nonfinite',1,true) then fail('RPC-NONFINITE-NUMBER') end
         fail('RPC-INPUT-INVALID')
       end
@@ -130,7 +135,11 @@ local function shallow(t) local out={};for k,v in pairs(t) do out[k]=v end;retur
 --   inventory=function(), native_history=function(), extras=function(status) (page fields, mutates the copy),
 --   live_extras=function(result,native,clean), setup=function(method,arguments) -> reply | FALLBACK,
 --   polled=function() (the page asked: bridge refresh), pair_manual=function(arguments) -> reply | FALLBACK,
---   control=function(method,arguments) -> reply | FALLBACK (native_start/native_stop/fault_start/fault_cancel)}
+--   control=function(method,arguments) -> reply | FALLBACK (native_start/native_stop/fault_start/fault_cancel),
+--   probe_targets=function(arguments) -> reply (the per-target probe log; raises RPC-INPUT-OBJECT / RPC-UNEXPECTED-ARGS / RPC-INPUT-INVALID)}
+-- Seconds after which a bridge message is dropped unread (the dispatcher's ubus call waits 15 s; BH3-02).
+M.BRIDGE_STALE=12
+
 function M.new(state,runner)
   local self={state=state,runner=runner}
   local runtime=(runner and runner.RUNTIME) or '/var/run/homensai-vpn'
@@ -240,6 +249,19 @@ function M.new(state,runner)
   -- One call: a JSON object or M.FALLBACK; never a traceback; input problems become RPC-* codes like agent.call().
   function self.handle(method,request)
     local ok,reply=pcall(function()
+      if method=='monitor_control' then
+        -- Owner main rule 07.11.2026 (monitor_control.py is the twin): monitoring ALWAYS runs. A stop request is refused here
+        -- too, with Auto on or off, before any lock, file, config or service is touched. A start and anything malformed go to
+        -- agent.py as before (recovery of an error stop; MONITOR-INVALID; IR-01: MAINTENANCE-IN-PROGRESS while a package
+        -- operation holds the maintenance marker, monitor_control.py checks it under the control lock).
+        local asked=M.decode_request(request)
+        local keys=0
+        for _ in pairs(asked) do keys=keys+1 end
+        if keys==1 and asked.enabled==false then
+          return canon.object({accepted=false,code='MONITOR-ALWAYS-ON',configured=true,auto_started=false})
+        end
+        return M.FALLBACK
+      end
       if FORWARD_SET[method] then return M.FALLBACK end
       local arguments=M.decode_request(request)
       if READ_SET[method] then
@@ -248,6 +270,10 @@ function M.new(state,runner)
         elseif method=='history' then return self.history_reply()
         elseif method=='auto_live' then return self.auto_live_reply()
         else return self.inventory_reply() end
+      end
+      if PROBE_LOG_SET[method] then
+        if not state.probe_targets then return M.FALLBACK end
+        return state.probe_targets(arguments)
       end
       if method=='pair_manual' then
         if not state.pair_manual then return M.FALLBACK end
@@ -277,6 +303,15 @@ function M.new(state,runner)
        or not string.find(reply_file,bridge_pattern) or string.find(request_file,'..',1,true) or string.find(reply_file,'..',1,true) then
       return {error='RPC-BRIDGE-PATH'}
     end
+    -- BH3-02: the dispatcher stamps the message with the /proc/uptime second it was sent. A message handled later than
+    -- BRIDGE_STALE seconds (a stalled loop) is dropped unread: by then the dispatcher's ubus -t 15 has given up (a button
+    -- answered RPC-BRIDGE-UNCONFIRMED and the page re-reads the state, a read ran agent.py), so acting now would be an
+    -- unseen second action of one click. Without a stamp (older dispatcher) or a clock the message is handled as before.
+    local sent=msg.sent
+    if type(sent)=='number' and sent==sent and runner and type(runner.clock)=='function' then
+      local okc,now=pcall(runner.clock)
+      if okc and type(now)=='number' and now==now and now-sent>M.BRIDGE_STALE then return {error='RPC-BRIDGE-STALE'} end
+    end
     local okr,text=pcall(runner.read_file,request_file)
     if not okr or text==nil then return {error='RPC-BRIDGE-PATH'} end
     if #text>65537 then text=string.sub(text,1,65537) end
@@ -301,8 +336,9 @@ function M.new(state,runner)
     for _,name in ipairs(M.NATIVE) do bind(name) end
     for _,name in ipairs(M.MANUAL) do bind(name) end
     for _,name in ipairs(M.CONTROL) do bind(name) end
+    for _,name in ipairs(M.PROBE_LOG) do bind(name) end
     methods.rpc={function(req,msg) conn:reply(req,self.bridge_call(msg or {})) end,
-      {method=ubus.STRING,request_file=ubus.STRING,reply_file=ubus.STRING}}
+      {method=ubus.STRING,request_file=ubus.STRING,reply_file=ubus.STRING,sent=ubus.INT32}}
     return {[M.OBJECT]=methods}
   end
 

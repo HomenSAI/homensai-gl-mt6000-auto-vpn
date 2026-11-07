@@ -18,6 +18,13 @@ assert.equal(c.recoverySummary(rows,20,30).success_ratio,null);
 rows=c.retainedTransitions({events:[e(1,10,'APPLYING'),e(3,14,'COMMITTED')]});assert.equal(rows[0].outcome,'unknown');
 rows=c.retainedTransitions({events:[e(1,10,'APPLYING'),e(2,11,'COMMITTED',{target:'c'})]});assert.equal(rows[0].outcome,'unknown');
 rows=c.retainedTransitions({events:[e(1,10,'APPLYING'),e(2,9,'COMMITTED')]});assert.equal(rows[0].outcome,'unknown');
+// review F-56: the router stores APPLYING 1000 -> COMMITTED at wall 990 as 1000, 1000 with clock_stepped_back. The outcome
+// stays committed; the duration is unknown (null), not a fabricated 0 s, and is left out of median/P95/worst.
+rows=c.retainedTransitions({events:[e(1,1000,'APPLYING'),e(2,1000,'WAIT-CLIENT',{clock_stepped_back:true}),e(3,1000,'COMMITTED',{clock_stepped_back:true}),
+  e(4,1100,'APPLYING'),e(5,1102,'WAIT-CLIENT'),e(6,1105,'COMMITTED')]});
+assert.equal(rows.length,2);assert.equal(rows[0].outcome,'committed');assert.equal(rows[0].duration,null);assert.equal(rows[1].duration,5);
+s=c.recoverySummary(rows,0,2000);assert.equal(s.committed,2);assert.equal(s.known_outcomes,2);assert.equal(s.recovered_samples,1);
+assert.equal(s.median,5);assert.equal(s.p95,5);assert.equal(s.worst,5);
 rows=c.retainedTransitions({events:[e(1,10,'APPLYING'),e(2,11,'APPLYING'),e(3,12,'ROLLED-BACK')]});assert.equal(rows.length,2);assert.equal(rows[0].outcome,'unknown');assert.equal(rows[1].outcome,'rolled_back');
 const samples=Array.from({length:20},(_,i)=>({start:i,end:i+1,target:'b',outcome:i<18?'committed':'rolled_back',duration:i+1}));
 s=c.recoverySummary(samples,0,100);assert.equal(s.median,10.5);assert.equal(s.p95,19);assert.equal(s.worst,20);assert.equal(s.max_consecutive_failures,2);assert.equal(s.success_ratio,.9);
@@ -81,3 +88,39 @@ c.E=(tag,attrs={},children=[])=>({tag,attrs,children});
 const visual=c.renderTransitionBadge({sequence:1},{1:{from:2,to:1,confirmed:true}});
 assert.equal(visual.children[0].children,'M');assert.equal(visual.children[2].children,'R');assert.equal(visual.children[1].children,'←');assert(visual.children[0].attrs.class.includes('working'));
 console.log('PASS: older controller-event table uses the same M/R renderer and confirmed reverse colours');
+
+// ---------- Honest P95 (same rule as scripts/honest_stats.py on feat/honest-p95-formal-ci-20261103): n >= 59 or "≈P95 ... мало данных" ----------
+{
+  c.bi=(en)=>en;
+  assert.equal(c.P95_MIN_N,59);assert.equal(c.p95Honest(58),false);assert.equal(c.p95Honest(59),true);
+  // 0.95^59 = 0.0485 < 0.05 <= 0.95^58: the smallest sample count at which the maximum bounds the P95 with 95 % confidence
+  assert(Math.pow(.95,59)<.05&&Math.pow(.95,58)>.05);
+  // coverage of the sample maximum with 95 % confidence = floor(100 * 0.05^(1/n)); the same numbers as scripts/honest_stats.py coverage_percent
+  assert.deepEqual([1,4,14,20,58,59,100].map(c.p95MaxCoverage),[5,47,80,86,94,95,97]);
+  assert.equal(c.p95MaxCoverage(0),0);
+  const fmt=v=>v.toFixed(1);
+  assert.equal(c.p95Text(null,0,fmt),'—');
+  assert.equal(c.p95Text(8,4,fmt),'≈8.0 (too few samples: n=4, needs ≥59)');
+  assert.equal(c.p95Text(58,59,fmt),'58.0','from n >= 59 the P95 estimate row drops the few-data note (it stays an estimate; the bound is a separate row)');
+  assert.equal(c.p95MaxText(20,20,fmt),'20.0 (≥86 %)');assert.equal(c.p95MaxText(60,59,fmt),'60.0');
+  assert.equal(c.p95MaxClaim(8,4,fmt),'max 8.0: with 95 % confidence ≥47 % of cases are no slower than the max');
+  assert.equal(c.p95MaxClaim(60,59,fmt),'');
+  c.bi=(_en,ru)=>ru;
+  assert.equal(c.p95Text(8,4,fmt),'≈8.0 (мало данных: n=4, нужно ≥59)');
+  assert.equal(c.p95MaxClaim(8,4,fmt),'max 8.0: с 95 % уверенностью ≥47 % случаев не медленнее max');
+  c.bi=(en)=>en;
+  // the summary carries the facts the panel prints; p95 itself keeps its meaning (the empirical quantile), only its presentation is honest
+  const few=Array.from({length:20},(_,i)=>({start:i,end:i+1,target:'b',outcome:'committed',duration:i+1}));
+  let h=c.recoverySummary(few,0,100);assert.equal(h.p95,19);assert.equal(h.recovered_samples,20);assert.equal(h.p95_honest,false);assert.equal(h.p95_max_coverage,86);
+  const many=Array.from({length:59},(_,i)=>({start:i,end:i+1,target:'b',outcome:'committed',duration:i+1}));
+  h=c.recoverySummary(many,0,100);assert.equal(h.p95,57);assert.equal(h.p95_honest,true);assert.equal(h.p95_max_coverage,95);
+  const g=c.recoveryGroups(few,[{id:'b',channel:'x',protocol:'openvpn'}],0,100);assert.equal(g.server[0].metrics.p95_honest,false);
+  // the panel prints P95 only through the honest helpers (no bare toFixed of a P95 left)
+  const panel=fs.readFileSync('router/analytics_panel.inc.js','utf8');
+  assert(panel.includes('p95Text(s.p95,s.recovered_samples,fmt)')&&panel.includes('p95Text(m.p95,m.recovered_samples,'));
+  assert(!/fmt\(s\.p95\)|m\.p95\.toFixed/.test(panel),'no unqualified P95 cell');
+  assert(panel.includes('p95MaxText(s.worst,s.recovered_samples,fmt)')&&panel.includes('p95MaxClaim(s.worst,s.recovered_samples,fmt)'));
+  assert(panel.includes('«≈P95» — мало данных')&&panel.includes('Отдельная строка «верхняя граница P95» появляется от 59 измерений'),'the legend explains ≈P95 and the separate upper bound in Russian (F-59)');
+  assert(panel.includes('“≈P95” means too few samples')&&panel.includes('The separate “P95 upper bound” appears from 59 samples'),'and in English');
+}
+console.log('PASS: P95 of recovery time is an estimate at every n: n >= 59 without the few-data note (bound is a separate row), otherwise "≈P95 … мало данных" and the maximum with its 95 %-confidence coverage (RU/EN)');

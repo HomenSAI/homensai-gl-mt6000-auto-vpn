@@ -172,34 +172,61 @@ class Budget:
             amount=min(maximum,self.remaining);self.remaining-=amount;return amount
 
 
+class SpeedWindow(SpeedError):
+    """The measurement window ended inside a request (normal expiry, not cancellation). `transferred` is the payload
+    this request moved before the deadline; it was already reported to live progress and is counted once (F-49)."""
+
+    def __init__(self,transferred):
+        self.transferred=transferred
+        super().__init__('SPEED-WINDOW')
+
+
 def request(binding,address,direction,amount,deadline,cancelled,progress=None):
-    with connect(binding,address,HOST,deadline) as sock:
-        path='/__up' if direction=='upload' else '/__down?bytes='+str(amount)
-        method='POST' if direction=='upload' else 'GET'
-        headers='%s %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\nCache-Control: no-cache\r\n' % (method,path,HOST)
-        if direction=='upload':headers+='Content-Type: application/octet-stream\r\nContent-Length: '+str(amount)+'\r\n'
-        sock.sendall((headers+'\r\n').encode('ascii'))
-        sent=0
-        while direction=='upload' and sent<amount:
-            if cancelled() or time.monotonic()>=deadline:raise SpeedError('SPEED-CANCELLED')
-            block=b'\0'*min(65536,amount-sent);sock.sendall(block);sent+=len(block)
-            if progress:progress(len(block))
-        response=http.client.HTTPResponse(sock);response.begin()
-        if response.status!=200:raise SpeedError('SPEED-HTTP')
-        received=0
-        if direction=='upload':
-            if len(response.read(8193))>8192:raise SpeedError('SPEED-RESPONSE-LIMIT')
-            return sent
-        while received<amount:
-            if cancelled() or time.monotonic()>=deadline:raise SpeedError('SPEED-CANCELLED')
-            block=response.read(min(65536,amount-received))
-            if not block:raise SpeedError('SPEED-SHORT-RESPONSE')
-            received+=len(block)
-            if progress:progress(len(block))
-        return received
+    moved=0
+
+    def bounded(sock):
+        # Every blocking step waits at most until the deadline (F-50): a read that started before the deadline cannot
+        # stretch the stage. The time is never capped afterwards, which would inflate the rate.
+        if cancelled():raise SpeedError('SPEED-CANCELLED')
+        left=deadline-time.monotonic()
+        if left<=0:raise SpeedWindow(moved)
+        sock.settimeout(left)
+
+    try:
+        with connect(binding,address,HOST,deadline) as sock:
+            path='/__up' if direction=='upload' else '/__down?bytes='+str(amount)
+            method='POST' if direction=='upload' else 'GET'
+            headers='%s %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\nCache-Control: no-cache\r\n' % (method,path,HOST)
+            if direction=='upload':headers+='Content-Type: application/octet-stream\r\nContent-Length: '+str(amount)+'\r\n'
+            bounded(sock);sock.sendall((headers+'\r\n').encode('ascii'))
+            while direction=='upload' and moved<amount:
+                bounded(sock)
+                block=b'\0'*min(65536,amount-moved);sock.sendall(block);moved+=len(block)
+                if progress:progress(len(block))
+            bounded(sock)
+            response=http.client.HTTPResponse(sock);response.begin()
+            if response.status!=200:raise SpeedError('SPEED-HTTP')
+            if direction=='upload':
+                bounded(sock)
+                if len(response.read(8193))>8192:raise SpeedError('SPEED-RESPONSE-LIMIT')
+                return moved
+            while moved<amount:
+                bounded(sock)
+                # read1: at most one receive, so bytes that arrived before a timeout are returned and counted, not lost
+                block=response.read1(min(65536,amount-moved))
+                if not block:raise SpeedError('SPEED-SHORT-RESPONSE')
+                moved+=len(block)
+                if progress:progress(len(block))
+            return moved
+    except (OSError,http.client.HTTPException):
+        # A timeout or transport error at the end of the window is the normal expiry, with the payload moved so far.
+        if not cancelled() and time.monotonic()>=deadline:raise SpeedWindow(moved)
+        raise
 
 
 def stage(binding,address,direction,budget,duration,streams,cancelled,transport=None,progress=None):
+    """Payload goodput of one direction. Mbps = 8 * payload bytes moved inside the window / (1e6 * stage seconds):
+    complete requests plus the part of each request cut by the window end, every byte counted once (F-49)."""
     transport=transport or request
     quota=Budget(budget);started=time.monotonic();deadline=started+duration
     sample_lock=threading.Lock();observed=0;last_bytes=0;last_at=started
@@ -218,9 +245,12 @@ def stage(binding,address,direction,budget,duration,streams,cancelled,transport=
             if not amount:break
             try:
                 total+=transport(binding,address,direction,amount,deadline,cancelled,progress=report) if progress else transport(binding,address,direction,amount,deadline,cancelled)
+            except SpeedWindow as window:
+                if cancelled():raise SpeedError('SPEED-CANCELLED')
+                total+=window.transferred;break
             except (SpeedError,OSError) as error:
-                # An elapsed measurement window is normal. Retain only fully
-                # completed HTTP payloads; real cancellation still wins below.
+                # An elapsed measurement window is normal; a transport that cannot tell its partial payload adds
+                # nothing. Real cancellation still wins below.
                 if time.monotonic()>=deadline and not cancelled()and (
                         isinstance(error,OSError)or error.code=='SPEED-CANCELLED'):break
                 raise
@@ -250,7 +280,10 @@ def measure(profile,options,cancelled,live=None):
         if live:live.phase(profile['id'],'latency')
         latencies=[]
         for _ in range(3):
-            start=time.monotonic();request(binding,address,'download',0,start+3,cancelled);latencies.append((time.monotonic()-start)*1000)
+            start=time.monotonic()
+            try:request(binding,address,'download',0,start+3,cancelled)
+            except SpeedWindow:raise SpeedError('SPEED-NETWORK')  # an unanswered latency probe, as before
+            latencies.append((time.monotonic()-start)*1000)
         row['latency_ms']=round(sorted(latencies)[1],1)
         budget=options['budget_mib']*MIB;down=budget*3//4
         for direction,amount in (('download',down),('upload',budget-down)):

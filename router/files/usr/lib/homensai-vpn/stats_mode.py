@@ -42,8 +42,11 @@ def options(config=None):
 
 
 def until(config=None):
-    try:value=float((options(config) or {}).get('stats_until') or 0)
-    except ValueError:return 0.0
+    # BH2-01 (bug hunt 07.11.2026): one strict grammar with lua/accounting.lua stats.until_time: decimal digits with an
+    # optional fraction. float() also read 'inf', 'nan', '1_0' and '1e9', Lua's tonumber '0x10': the twins differed.
+    raw=(options(config) or {}).get('stats_until') or '0'
+    if not re.fullmatch(r'[0-9]{1,12}(\.[0-9]{0,6})?',raw):return 0.0
+    value=float(raw)
     return value if value>0 else 0.0
 
 

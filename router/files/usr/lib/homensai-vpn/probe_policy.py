@@ -43,9 +43,19 @@ WAIT_BLOCKERS=('VENDOR-SETTLING','PROFILE-IDENTITY-CHANGED','VENDOR-WORKER-BUSY'
 # Dense confirmation after a passive suspicion. Start-to-start spacing of full checks:
 # three failed checks still span at least 2*DENSE_INTERVAL seconds of real outage.
 DENSE_INTERVAL=4;DENSE_MAX=60;DENSE_GOOD=2
+TURBO_DENSE=3      # the expert opt-in only (dense_interval)
 SUSPICION_REST=30  # per channel after an episode; doubles after each false alarm up to BOOST_HOLD
-SUSPICION_REASONS=('rx-stall','wg-handshake-stale','link-missing')
-CARRIED=('dense','suspicion_rest','streaks')  # survive the end of a boost episode
+# 'wg-rekey' (wg_events.py) and 'wan-ok-tunnel-down' (wan_diag.py hasten): GL-SENSORS-2026-11-04, dense checks only
+# 'cusum-loss' (cusum.py, heartbeat of the Lua monitor): dense checks only, see REST_BYPASS
+SUSPICION_REASONS=('rx-stall','wg-handshake-stale','link-missing','wg-rekey','wan-ok-tunnel-down','cusum-loss')
+# CUSUM-TRIGGER-2026-11-04.ru.md: at persistent partial loss an episode ends as a false alarm, the rest doubles 30 -> 600 s
+# and the dense checks stop exactly when they are needed. These reasons pass a running rest, bounded by what the dense
+# checks found (nothing else stops them on an ICMP-limited channel): state cusum_at {profile: {'at': end of the last such
+# episode, 'clean': such episodes in a row in which no check failed}}. A failed dense check clears 'clean'; with
+# clean <= CUSUM_FREE there is no gap, then CUSUM_GAP*2^(clean-CUSUM_FREE-1) seconds, at most CUSUM_GAP_MAX.
+REST_BYPASS=('cusum-loss',)
+CUSUM_FREE=2;CUSUM_GAP=60;CUSUM_GAP_MAX=600
+CARRIED=('dense','suspicion_rest','streaks','cusum_at')  # survive the end of a boost episode
 
 
 def _int(value,low,high):
@@ -111,9 +121,32 @@ def response_metric(settings):
     return value if value in RESPONSE_METRICS else DEFAULT_RESPONSE
 
 
+def dense_interval(settings):
+    """DENSE_INTERVAL, or TURBO_DENSE with the expert opt-in (channel_model.heartbeat_k)."""
+    from channel_model import heartbeat_k
+    return TURBO_DENSE if heartbeat_k(settings) is not None else DENSE_INTERVAL
+
+
+def wake_row(settings,rows,pair,now):
+    """L1, event-driven wake (FAST-SWITCH-2026-11-04.ru.md): the row the monitor leaves in RAM right after it published a
+    failed sample of an Auto channel, or None. Only a hint that a tick is worth running now: the tick reads and proves
+    everything itself. Option auto_event_wake '0' turns it off (the 2 s tick stays)."""
+    if isinstance(settings,dict) and settings.get('auto_event_wake') in (False,'0'):return None
+    if not isinstance(pair,dict) or not isinstance(rows,list):return None
+    ids=[pair.get(role) for role in ('source','target') if isinstance(pair.get(role),str)]
+    for row in rows:
+        if isinstance(row,dict) and row.get('id') in ids and failing(row):return {'reason':'sample','time':float(now),'id':row['id']}
+    return None
+
+
 def failing(row):
     return (row.get('code') is not None or row.get('dns_ok') is False
             or not isinstance(row.get('https_success'),int) or row['https_success']<2)
+
+
+def cusum_gap(clean):
+    """Seconds a REST_BYPASS reason waits after the end of the last such episode."""
+    return 0 if clean<=CUSUM_FREE else min(CUSUM_GAP*2**(clean-CUSUM_FREE-1),CUSUM_GAP_MAX)
 
 
 def firmware_wait(settings,observation,pair,native,now):
@@ -172,7 +205,7 @@ class Booster:
 
     def interval(self,settings,now=None):
         normal=_int(settings.get('interval'),10,300) or 10
-        if self.dense(now):return min(normal,DENSE_INTERVAL)
+        if self.dense(now):return min(normal,dense_interval(settings))
         if self.waiting(now):return min(normal,WAIT_INTERVAL)
         return min(normal,BOOST_INTERVAL) if self.active() else normal
 
@@ -246,13 +279,14 @@ class Booster:
         return self.record(dict({'kind':kind,'level':level(settings),'interval':_int(settings.get('interval'),10,300) or 10,
             'measure_interval':measure_interval(settings),'boost_enabled':boost_enabled(settings),
             'profile':episode.get('profile'),'role':episode.get('role'),'reason':episode.get('reason'),
-            'dense_interval':DENSE_INTERVAL},**fields),now)
+            'dense_interval':dense_interval(settings)},**fields),now)
 
-    def suspect(self,settings,suspicions,pair,native_state,now=None):
+    def suspect(self,settings,suspicions,pair,native_state,now=None,models=None):
         """A passive suspicion asks for an immediate full check and dense confirmation.
 
         Returns True when a new episode started (the caller then starts a full pass at once).
         It never records a failure and never changes what Auto needs to switch.
+        models: as in observe(); a REST_BYPASS reason adds nothing once the failure model decided.
         """
         now=time.time() if now is None else now
         if self.dense(now) or native_state not in WATCHING or not isinstance(pair,dict):return False
@@ -264,19 +298,40 @@ class Booster:
             profile=item.get('profile')
             if profile is None or profile not in roles:continue
             held=rest.get(profile) if isinstance(rest.get(profile),dict) else {}
-            if now<held.get('until',0):continue
+            bypass=item['reason'] in REST_BYPASS
+            if bypass:
+                view=models.get(profile) if isinstance(models,dict) else None
+                if isinstance(view,dict) and view.get('failed') is True:continue
+                last=self._forced(profile)
+                bypass=now>=last['at']+cusum_gap(last['clean']) or now<last['at']
+            if now<held.get('until',0) and not bypass:continue
             # Already proven failed by full checks: a suspicion adds nothing; the boost keeps watching it.
             if int((streaks.get(profile) or {}).get('failures',0))>=CONFIRM_FAILURES:continue
-            evidence={k:v for k,v in (item.get('evidence') or {}).items() if k in ('stalled_s','tx_packets','handshake_age_s')}
+            evidence={k:v for k,v in (item.get('evidence') or {}).items() if k in ('stalled_s','tx_packets','handshake_age_s','losses','cause','event')}
             episode={'profile':profile,'role':roles[profile],'reason':item['reason'],'evidence':evidence,
                      'started':now,'until':now+DENSE_MAX,'native_state':native_state,
                      'checks':0,'failures':0,'good':0,'reserve_good':0,'last_code':None}
             self.state['dense']=episode
+            if item['reason'] in REST_BYPASS:self._note_forced(profile,at=now,ids=roles)
             self._row(settings,'suspicion-start',episode,now,evidence=evidence,code=None,result='started')
             try:self.atomic_json(self.runtime/STATE_NAME,self.state)
             except (OSError,ValueError):pass
             return True
         return False
+
+    def _forced(self,profile):
+        """The channel's record of REST_BYPASS episodes (a damaged one counts as none)."""
+        forced=self.state.get('cusum_at');record=forced.get(profile) if isinstance(forced,dict) else None
+        at=record.get('at') if isinstance(record,dict) else None;clean=record.get('clean') if isinstance(record,dict) else None
+        if type(at) not in (int,float) or type(clean) is not int or clean<0:return {'at':-math.inf,'clean':0}
+        return {'at':at,'clean':clean}
+
+    def _note_forced(self,profile,at=None,clean=None,ids=None):
+        forced=self.state.get('cusum_at') if isinstance(self.state.get('cusum_at'),dict) else {}
+        kept={key:value for key,value in forced.items() if ids is None or key in ids}
+        last=self._forced(profile)
+        kept[profile]={'at':last['at'] if at is None else at,'clean':last['clean'] if clean is None else clean}
+        self.state['cusum_at']=kept
 
     def _model_suspect(self,settings,pair,native_state,now,models):
         """The failure model's suspicion of the channel carrying traffic starts a dense episode (reason 'model')."""
@@ -312,8 +367,9 @@ class Booster:
         if row is not None:
             episode['checks']+=1
             if failing(row):
-                episode['failures']+=1;episode['good']=0
+                episode['failures']+=1;episode['good']=0;episode['bad']=True
                 episode['last_code']=row.get('code') or ('DNS-001' if row.get('dns_ok') is False else 'VPN-003')
+                if self._forced(suspect)['clean']:self._note_forced(suspect,clean=0)
             else:
                 episode['good']+=1;episode['failures']=0
         if other is not None:episode['reserve_good']=0 if failing(other) else episode['reserve_good']+1
@@ -340,6 +396,8 @@ class Booster:
         alarms=int(held.get('false_alarms',0))+1 if result=='false-alarm' else 0
         pause=min(SUSPICION_REST*2**max(0,alarms-1),BOOST_HOLD)
         rest[suspect]={'until':now+pause,'false_alarms':alarms}
+        if episode.get('reason') in REST_BYPASS:
+            self._note_forced(suspect,at=now,clean=self._forced(suspect)['clean']+(0 if episode.get('bad') else 1))
         self.state['suspicion_rest']={key:value for key,value in rest.items() if key in ids}
         self.state.pop('dense',None)
         recorded.append(self._row(settings,'suspicion-end',episode,now,result=result,code=episode.get('last_code'),
@@ -358,7 +416,7 @@ class Booster:
                 'ping_interval':ping_interval(settings),'ping_valid_for':ping_valid_for(settings),
                 'effective_ping_interval':max(ping_interval(settings),self.interval(settings,now)),
                 'suspicion':({k:self.dense(now).get(k) for k in ('profile','role','reason','started','until')}
-                             if self.dense(now) else None),'dense_interval':DENSE_INTERVAL,
+                             if self.dense(now) else None),'dense_interval':dense_interval(settings),
                 'boost_interval':BOOST_INTERVAL,'boost_hold':BOOST_HOLD,'levels':{str(k):list(v) for k,v in LEVELS.items()}}
 
 

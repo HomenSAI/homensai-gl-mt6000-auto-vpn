@@ -172,8 +172,9 @@ function M.new(io_)
 
   -- measure(profile[, seconds]) -> result, trace_body (the valid trace body of this very probe, never published).
   -- seconds: a shorter wait for every HTTPS and the DNS check (pair.late_recheck: RECHECK_SECONDS); default the
-  -- usual HTTP_SECONDS / DNS_SECONDS.
-  local function measure(profile,seconds)
+  -- usual HTTP_SECONDS / DNS_SECONDS. Three parts: open() (route binding, requests), the checks (io_.probe_io, or
+  -- io_.probe_begin / probe_finish with other work beside them: pair.recheck_begin), conclude() (verdict, binding again).
+  local function open(profile,seconds)
     local http_seconds,dns_seconds=M.HTTP_SECONDS,M.DNS_SECONDS
     if type(seconds)=='number' and seconds%1==0 and seconds>=1 and seconds<M.HTTP_SECONDS then http_seconds=seconds;dns_seconds=math.min(seconds,M.DNS_SECONDS) end
     local result=canon.object({id=profile.id,time=canon.float(io_.wall()),code='CHECK-001',scope='router-originated',lan_path_verified=false})
@@ -181,7 +182,7 @@ function M.new(io_)
     if administrative_state==nil then administrative_state='unknown' end
     if type(administrative_state)=='string' and ADMIN[administrative_state] then result.administrative_state=administrative_state end
     if not truthy(profile.interface) or administrative_state=='disabled' then result.code='PROFILE-INACTIVE';return result,nil end
-    local trace_body=nil
+    local ctx=nil
     local ok,err=pcall(function()
       local binding=io_.route_binding(profile.interface)
       for k,v in pairs(binding) do result[k]=v end
@@ -201,10 +202,23 @@ function M.new(io_)
         requests[i]={address=target[1],hostname=target[2],path=path,seconds=http_seconds,agent=agents[i]}
       end
       local token,packet,question=probe.dns_question(io_)
-      local wall_start,clock_start=io_.wall(),io_.clock()
-      local answers,dns_data=io_.probe_io(binding.device,requests,not doh and {host='9.9.9.9',port=53,packet=packet,seconds=dns_seconds,
-        accept=function(data) return type(data)=='string' and string.sub(data,1,2)==token end} or nil)
-      local wall_end,elapsed=io_.wall(),io_.clock()-clock_start
+      ctx={profile=profile,result=result,binding=binding,requests=requests,tokens=tokens,agents=agents,doh=doh,token=token,question=question,
+        dns=not doh and {host='9.9.9.9',port=53,packet=packet,seconds=dns_seconds,
+          accept=function(data) return type(data)=='string' and string.sub(data,1,2)==token end} or nil,
+        wall_start=io_.wall(),clock_start=io_.clock()}
+    end)
+    if not ok then
+      if not coded(err) then error(err,0) end  -- a Lua fault, not a router answer: the caller falls back to Python
+      result.code='SYSTEM-001'  -- Python: OSError/ValueError/SubprocessError
+      return result,nil
+    end
+    return result,ctx
+  end
+  local function conclude(ctx,answers,dns_data)
+    local result,profile,binding,tokens,agents,doh,token,question=ctx.result,ctx.profile,ctx.binding,ctx.tokens,ctx.agents,ctx.doh,ctx.token,ctx.question
+    local trace_body=nil
+    local ok,err=pcall(function()
+      local wall_start,wall_end,elapsed=ctx.wall_start,io_.wall(),io_.clock()-ctx.clock_start
       local times,checks,sum=0,canon.array({}),0
       for i,target in ipairs(TARGETS) do
         local answer=answers[i]
@@ -246,6 +260,17 @@ function M.new(io_)
     end
     return result,trace_body
   end
+  local function measure(profile,seconds)
+    local result,ctx=open(profile,seconds)
+    if not ctx then return result,nil end
+    local ok,answers,dns_data=pcall(io_.probe_io,ctx.binding.device,ctx.requests,ctx.dns)
+    if not ok then
+      if not coded(answers) then error(answers,0) end
+      result.code='SYSTEM-001'
+      return result,nil
+    end
+    return conclude(ctx,answers,dns_data)
+  end
 
   -- probe(profile, keep[, seconds]): keep=true remembers a passing result for one following trace() of the same
   -- profile; seconds: the shorter wait of measure()
@@ -255,6 +280,20 @@ function M.new(io_)
     if keep and isnone(result.code) and result.dns_ok==true and (result.https_success or 0)>=2 and trace_body then
       kept[profile.id]={clock=io_.clock(),interface=profile.interface,trace_body=trace_body}
     end
+    return result
+  end
+
+  -- probe_begin(profile, seconds) / probe_finish(pending): L.probe with the caller's work between the two halves
+  function L.probe_begin(profile,seconds)
+    local result,ctx=open(profile,seconds)
+    if ctx then ctx.pending=io_.probe_begin(ctx.binding.device,ctx.requests,ctx.dns) end
+    return {result=result,ctx=ctx}
+  end
+  function L.probe_finish(row)
+    kept[row.result.id]=nil
+    if not row.ctx then return row.result end
+    local answers,dns_data=io_.probe_finish(row.ctx.pending)
+    local result=conclude(row.ctx,answers,dns_data)
     return result
   end
 

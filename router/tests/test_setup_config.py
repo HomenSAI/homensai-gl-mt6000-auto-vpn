@@ -60,6 +60,23 @@ class SetupTests(unittest.TestCase):
             with self.assertRaises(ValueError):setup.telegram_payload({'token':'','chat':chat,'enabled':True,'interval':60})
         with self.assertRaises(ValueError):setup.telegram_payload({'token':'secret-invalid','chat':'123','enabled':True,'interval':60})
 
+    def test_a_pasted_destination_is_forgiven_and_stays_exact(self):
+        # owner 05.11.2026: what is saved is only ever digits or @name
+        for pasted,saved in ((' 123456789 ','123456789'),('123456789\n','123456789'),('\u00a0123456789\u00a0','123456789'),('Id: 123456789','123456789'),
+                             ('id:123456789','123456789'),('ID = 123456789','123456789'),('  Id: 123456789  ','123456789'),('Id: -1001234567','-1001234567'),
+                             ('@some_user\nId: 123456789\nFirst: Serhii\nLang: ru','123456789'),(' @example_channel ','@example_channel')):
+            payload=setup.telegram_payload({'token':'','chat':pasted,'enabled':True,'interval':60})
+            self.assertEqual(payload['main']['telegram_chat'],saved,pasted)
+
+    def test_forgiveness_lets_nothing_unsafe_through(self):
+        for chat in ('Id: abc','Id: 12 34','12 34','Id: 123;rm','https://example.com/?id=123','paid: 123','id: 123456789012345678901',' ','Id:',None,5):
+            with self.assertRaises(ValueError,msg=chat):setup.telegram_payload({'token':'','chat':chat,'enabled':True,'interval':60})
+
+    def test_the_wizard_path_forgives_the_same_way(self):
+        self.assertEqual(setup.telegram_destination(' Id: 77 '),'77');self.assertEqual(setup.telegram_destination('   '),'')
+        source=(Path(setup.__file__)).read_text(encoding='utf-8')
+        self.assertIn("empty_destination=fields['enabled'] is False and telegram_destination(fields['chat'])==''",source)
+
     def test_pending_delta_is_explicit_and_arbitrary_output_is_redacted(self):
         from contextlib import nullcontext
         from types import SimpleNamespace

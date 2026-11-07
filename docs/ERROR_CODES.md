@@ -167,13 +167,13 @@ VPN отклонил вход / VPN login rejected
 
 Запрос Auto остался без ответа / Auto request got no answer
 
-**RU:** Роутер вообще не ответил на запрос «Включить» или «Выключить».
+**RU:** Роутер не ответил на запрос «Включить» или «Выключить». Страница перечитала состояние роутера: если бы команда сработала, она сказала бы «готово»; сама она команду не повторяет.
 
-**EN:** The router did not answer the Start or Stop request at all.
+**EN:** The router did not answer the Start or Stop request. The page re-read the router state: had the command taken effect it would say “done”; it is never sent again by itself.
 
 **Что делать:** Обновите страницу и проверьте лампу «Службы мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»). Если роутер недоступен, используйте аварийный возврат из «Помощи» (тема «У меня пропал интернет»).
 
-**Action:** Reload the page and check the Monitoring service lamp (Settings → System and diagnostics; Console: System tab). If the router is unreachable, use the emergency return in Help (topic “I have no internet”).
+**Action:** Press Retry when the router answers again. Reload the page and check the Monitoring service lamp (Settings → System and diagnostics; Console: System tab). If the router is unreachable, use the emergency return in Help (topic “I have no internet”).
 
 ## AUTO-START-REFUSED
 
@@ -283,29 +283,17 @@ VPN отклонил вход / VPN login rejected
 
 **Action:** Wait up to a minute for fresh data; the traffic light turns green.
 
-## MONITOR-STOP-REQUESTED
+## MONITOR-ALWAYS-ON
 
-Остановка запрошена / Stop requested
+Мониторинг работает всегда / Monitoring always runs
 
-**RU:** Мониторингу отправлена команда остановиться.
+**RU:** Мониторинг работает всегда и не выключается. Запрос на остановку отклонён, независимо от того, включён Auto или нет; остановка Auto мониторинг не останавливает.
 
-**EN:** The monitor was asked to stop.
+**EN:** Monitoring always runs and cannot be turned off. A stop request is refused, with Auto on or off; Stop Auto never stops monitoring.
 
-**Что делать:** Делать ничего не нужно. Это не значит, что интернет восстановился.
+**Что делать:** Делать ничего не нужно: мониторинг продолжает работать. Если страница пишет, что мониторинг не работает, это ошибка: нажмите «Восстановить мониторинг»; если он не вернулся, переустановите пакет.
 
-**Action:** Nothing to do. It does not mean the internet recovered.
-
-## MONITOR-STOP-AUTO-FIRST
-
-Сначала остановите Auto / Stop Auto first
-
-**RU:** Auto или удерживаемый резерв мешают остановить мониторинг.
-
-**EN:** Auto or a retained reserve prevents stopping the monitor.
-
-**Что делать:** Выключите Auto переключателем, дождитесь возврата на основной, затем остановите мониторинг.
-
-**Action:** Turn Auto off with the Auto switch, wait until it returns to the primary, then stop the monitor.
+**Action:** Nothing to do: monitoring keeps running. If the page says monitoring is not running, that is an error: press Restore monitoring; if it does not come back, reinstall the package.
 
 ## MONITOR-JOURNAL-UNVERIFIED
 
@@ -595,6 +583,282 @@ Auto меняет сервер незанятого канала / Auto is chang
 
 **Action:** Switch on "Pick the best server" in Settings → Channels: primary and reserve (Console: Servers tab) if you want it.
 
+## SERVER-KEY-PINNED
+
+Ключ сервера запомнен / Server key remembered
+
+**RU:** Первая удачная проверка этого сервера (профиль плюс его настроенное имя хоста, но не IP-адрес) запомнила его ключ: публичный ключ пира WireGuard или SHA-256 сертификата CA OpenVPN. Дальше монитор сверяет ключ не чаще раза в 10 минут и при каждой смене адреса сервера. Если пул провайдера даёт профилю другой сервер (NordVPN), это новый сервер, он тоже просто запоминается.
+
+**EN:** The first healthy check of this server (profile plus its configured host name, never the IP address) remembered its key: the WireGuard peer public key, or the SHA-256 of the OpenVPN CA certificate. From now on the monitor compares the key at most every 10 minutes and whenever the server address changes. A provider pool that gives the profile another server (NordVPN) is a new server and is simply remembered too.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-KEY-CHANGED
+
+Ключ сервера изменился / Server key changed
+
+**RU:** Тот же сервер (профиль и имя хоста) показывает другой ключ, чем запомненный при первом использовании. Провайдер может сменить ключи, но так же выглядит и подменённый или перехваченный сервер. При server_key_pin enforce Auto не запускается, если этот ключ у канала, который понесёт трафик (ключ только у другого канала запуск не останавливает), и отказывается переходить на этот канал, пока смену не примут, а уйти с него можно всегда; при warn (по умолчанию) только предупреждает. Сам туннель GL остаётся как настроен.
+
+**EN:** The same server (profile and host name) now presents another key than the one remembered at first use. A provider can rotate keys, but a changed key is also what a substituted or intercepted server looks like. With server_key_pin enforce Auto does not start when the channel that will carry the traffic has this key (a key only on the other channel does not stop the start) and refuses a move onto this channel until the change is accepted, while leaving the channel stays allowed; with warn (default) it only warns. GL keeps the tunnel itself as configured.
+
+**Что делать:** Сверьте новый ключ (homensai-vpn-server-key list) с провайдером (список серверов или заново скачанный конфиг). Если верный: homensai-vpn-server-key accept <профиль>. Если нет: выключите профиль и свяжитесь с провайдером.
+
+**Action:** Compare the new key (homensai-vpn-server-key list) with the provider (server list or a freshly downloaded config). If it is right: homensai-vpn-server-key accept <profile>. If not: switch the profile off and contact the provider.
+
+## SERVER-KEY-ACCEPTED
+
+Новый ключ сервера принят / New server key accepted
+
+**RU:** Администратор принял ключ, который теперь показывает сервер со сменившимся ключом (homensai-vpn-server-key accept). Теперь запомнен он, и Auto снова может использовать канал.
+
+**EN:** The administrator accepted the key now presented by a server whose key had changed (homensai-vpn-server-key accept). It is the remembered key from now on and the channel can be used by Auto again.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-KEY-FORGOTTEN
+
+Запомненный ключ сервера удалён / Remembered server key removed
+
+**RU:** Администратор удалил запомненные ключи профиля (homensai-vpn-server-key forget). Следующая удачная проверка снова запомнит ключ как первое использование, без сравнения со старым.
+
+**EN:** The administrator removed the remembered keys of a profile (homensai-vpn-server-key forget). Its next healthy check remembers the key again as a first use, without comparing it with the old one.
+
+**Что делать:** Используйте forget только после намеренной замены профиля (новый провайдер, новый конфиг).
+
+**Action:** Use forget only after the profile was replaced on purpose (new provider, new config).
+
+## SERVER-KEY-UNACCEPTED
+
+Сменившийся ключ сервера не принят / Changed server key not accepted
+
+**RU:** Включена опция server_key_pin enforce, а у канала пары Auto есть сервер со сменившимся и ещё не принятым ключом. Auto не запускается, если такой ключ у канала, который понесёт трафик. Если ключ только у другого канала, Auto запускается и на этот канал не переходит: уход, возврат или ручное переключение на него отклоняются. Уйти с такого канала можно всегда, а Stop и откат от ключей не зависят.
+
+**EN:** Option server_key_pin is enforce and a channel of the Auto pair has a server whose key changed and was not accepted yet. Auto does not start when the channel that will carry the traffic has such a key. With the key only on the other channel Auto starts and stays off that channel: a failover, a return or a manual switch onto it is refused. Leaving that channel stays allowed, and a Stop or a rollback never depend on keys.
+
+**Что делать:** Сверьте именно этот ключ сервера с данными провайдера по известному вам каналу связи. Принимайте его только после подтверждения, что замена ожидаема. Если проверить ключ нельзя, оставьте этот канал неиспользуемым. Не ослабляйте проверку ключей ради исчезновения предупреждения; Stop и откат не требуют принятия ключа.
+
+**Action:** Compare this exact server key with the provider through a known contact or source. Accept it only after confirming that the change is expected. If you cannot verify the key, leave this channel unused. Do not weaken key checking merely to remove the warning; Stop and rollback do not require accepting the key.
+
+## SERVER-KEY-STATE-CORRUPT
+
+Запомненные ключи серверов не читаются / Remembered server keys unreadable
+
+**RU:** Файл запомненных ключей серверов (server-keys.json) повреждён. Копия сохранена в /var/run/homensai-vpn/server-keys.corrupt.json, запоминание начинается заново: каждый сервер снова первое использование, поэтому смену ключа за это время у них не заметить.
+
+**EN:** The file of remembered server keys (server-keys.json) was damaged. A copy was kept in /var/run/homensai-vpn/server-keys.corrupt.json and remembering starts afresh: every server is a first use again, so a key change made meanwhile cannot be noticed for those servers.
+
+**Что делать:** Если повторяется, проверьте флеш-память (Диагностика) и пришлите копию.
+
+**Action:** If it repeats, check the flash storage (Diagnostics) and report the copy.
+
+## SERVER-KEY-PROFILE-INVALID
+
+Запрос по ключу сервера не понят / Server key request not understood
+
+**RU:** В запросе на принятие ключа сервера нет верного профиля (wireguard:<секция> или openvpn:<секция>) или ключа. Ничего не изменено.
+
+**EN:** The request to accept a server key named no valid profile (wireguard:<section> or openvpn:<section>) or no key. Nothing was changed.
+
+**Что делать:** Обновите страницу и нажмите кнопку снова.
+
+**Action:** Reload the page and press the button again.
+
+## SERVER-KEY-NOT-CHANGED
+
+Такой смены ключа нет / No such key change to accept
+
+**RU:** Страница попросила принять ключ сервера, но на роутере уже нет этой непринятой смены именно с этим ключом: её уже приняли, профиль забыт или сервер теперь показывает ещё один ключ. Ничего не принято.
+
+**EN:** The page asked to accept a server key, but the router no longer has this unaccepted change with exactly this key: it was accepted already, the profile was forgotten, or the server shows yet another key now. Nothing was accepted.
+
+**Что делать:** Дождитесь обновления состояния, сверьте показанный теперь ключ с провайдером и, если он верный, примите его снова.
+
+**Action:** Wait for the next status update, check the key now shown with the provider and accept it again if it is right.
+
+## KEYPAIR-CREATED
+
+Рукопожатие WireGuard выполнено / WireGuard handshake completed
+
+**RU:** Туннель ответил на рукопожатие (новые ключи сессии). Диагностика WAN считает это признаком того, что туннель и интернет работают.
+
+**EN:** The tunnel answered a handshake (new session keys). The WAN diagnosis takes it as evidence that the tunnel and the internet work.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## REKEY-TIMEOUT
+
+Рукопожатие WireGuard без ответа / WireGuard handshake not answered
+
+**RU:** Сервер не ответил вовремя на обновление ключей. Так бывает и от одного потерянного пакета, поэтому монитор лишь чаще проверяет этот канал; само по себе это не переключает.
+
+**EN:** The server did not answer a key renewal in time. One lost packet causes it too, so it only makes the monitor check this channel more often; it never switches by itself.
+
+**Что делать:** Ничего делать не нужно, если проверки канала проходят.
+
+**Action:** Nothing to do unless the channel checks fail too.
+
+## REKEY-GIVEUP
+
+WireGuard перестал повторять рукопожатие / WireGuard stopped retrying the handshake
+
+**RU:** WireGuard прекратил обновление ключей после повторных таймаутов. Монитор часто проверяет этот канал; Auto по-прежнему решает только по своим проверкам.
+
+**EN:** WireGuard gave up the key renewal after repeated timeouts. The monitor checks this channel densely; Auto still decides only by its own checks.
+
+**Что делать:** Если повторяется, проверьте сервер и WAN роутера.
+
+**Action:** If it repeats, check the server and the WAN of the router.
+
+## ADVISOR-BUSY-OUTAGE
+
+Не сейчас: идёт обрыв / Not now: an outage is in progress
+
+**RU:** Настройки ползунка не меняются, пока в журнале сети открыт обрыв канала: текущее решение доводится по своим правилам.
+
+**EN:** The slider settings are never changed while a channel outage is still open in the network journal, so the running decision keeps its rules.
+
+**Что делать:** Повторите, когда каналы снова здоровы.
+
+**Action:** Try again when the channels are healthy.
+
+## ADVISOR-BUSY-SWITCH
+
+Не сейчас: идёт переключение / Not now: a switch is in progress
+
+**RU:** Настройки ползунка не меняются, пока Auto переключает или возвращает канал (или маршрут недоступен): переключение никогда не идёт с наполовину изменёнными правилами.
+
+**EN:** The slider settings are never changed while Auto is switching or returning (or the route is down), so a switch never runs with half-changed rules.
+
+**Что делать:** Повторите через минуту.
+
+**Action:** Try again in a minute.
+
+## ADVISOR-CALM-UNKNOWN
+
+Спокойствие не подтверждено / Calm state not confirmed
+
+**RU:** Роутер не смог прочитать свежие данные о том, что обрыва и переключения нет, а нет подтверждения — значит, нет и спокойствия. Ничего не изменено.
+
+**EN:** The router could not read fresh evidence that no outage or switch is in progress, and no evidence of calm counts as no calm. Nothing was changed.
+
+**Что делать:** Проверьте, что мониторинг работает («Система»), и повторите.
+
+**Action:** Check that monitoring runs (System), then try again.
+
+## ADVISOR-MODEL-CONSECUTIVE
+
+Ползунок не действует на этот детектор / Slider does not apply to this detector
+
+**RU:** Детектор сбоя — прежнее правило «ошибки подряд». Ползунок и советчик настраивают только детектор HMM, поэтому ничего не меняется.
+
+**EN:** The failure detector is the previous rule "failures in a row". The slider and the advisor tune the HMM detector only, so nothing is changed.
+
+**Что делать:** Если нужен ползунок, выберите стандартный или быстрый детектор HMM («Эксперт: детектор сбоя»).
+
+**Action:** Choose the standard or fast HMM detector (Expert: failure detector) if you want to use the slider.
+
+## ADVISOR-NO-RECOMMENDATION
+
+Нет рекомендации для применения / No recommendation to apply
+
+**RU:** Свежей рекомендации сдвинуть ползунок нет: мало событий за окно, текущее положение уже лучшее или ночной расчёт ещё не выполнялся.
+
+**EN:** There is no fresh recommendation to move the slider: too few events in the window, the current position is already the best, or the nightly calculation has not run yet.
+
+**Что делать:** Ничего делать не нужно; или сдвиньте ползунок сами.
+
+**Action:** Nothing to do; or move the slider yourself.
+
+## ADVISOR-OUT-OF-BOUNDS
+
+Значение вне безопасного диапазона / Value outside the safe range
+
+**RU:** Значение вне безопасного диапазона (порог θ и P(G) 0,50–0,99, длина «короткого обрыва» 1–15 с, стабильность основного 30–600 с, возврат после отказа резерва 0–60 с). Ничего не изменено.
+
+**EN:** A value is outside its safe range (threshold θ and P(G) 0.50–0.99, short-outage length 1–15 s, primary stability 30–600 s, return after a failed reserve 0–60 s). Nothing was changed.
+
+**Что делать:** Выберите значение внутри диапазона.
+
+**Action:** Choose a value inside the range.
+
+## ADVISOR-PG-BELOW-THETA
+
+Порог возврата ниже порога ухода / Return threshold below leave threshold
+
+**RU:** P(G) — уверенность, нужная для возврата на основной, — не может быть ниже θ, уверенности для ухода с него; иначе Auto мог бы вернуться на канал, с которого тут же снова ушёл бы.
+
+**EN:** P(G), the confidence needed to return to the primary, must not be lower than θ, the confidence needed to leave it; otherwise Auto could return to a channel it would leave again at once.
+
+**Что делать:** Поднимите P(G) не ниже θ.
+
+**Action:** Raise P(G) to at least θ.
+
+## ADVISOR-RESCUE-ABOVE-STABLE
+
+Возврат после отказа резерва дольше стабильности / Rescue return longer than primary stability
+
+**RU:** Возврат после отказа резерва не может ждать дольше обычной стабильности основного.
+
+**EN:** The return after a failed reserve must not wait longer than the normal primary stability.
+
+**Что делать:** Уменьшите время возврата после отказа резерва или увеличьте стабильность основного («Настройки → Как быстро переключать»).
+
+**Action:** Lower the rescue time or raise the primary stability (Settings → How fast to switch).
+
+## ADVISOR-RIDE-NOT-BELOW-LEAVE
+
+Такая настройка не уйдёт с мёртвого канала / This setting would never leave a dead channel
+
+**RU:** С такими значениями детектора обрыв, который модель пережидает, не короче времени, нужного для ухода, и с мёртвого основного канала можно не уйти никогда. Роутер такую настройку не принимает.
+
+**EN:** With these detector values the outage the model rides out is not shorter than the time it needs to leave, so a dead primary might never be left. The router refuses such a setting.
+
+**Что делать:** Уменьшите θ или длину «короткого обрыва».
+
+**Action:** Lower θ or the short-outage length.
+
+## ADVISOR-RANGE
+
+Значение ползунка не принято / Slider value not accepted
+
+**RU:** Положение или значение со страницы — не число в своём диапазоне, или режим/окно неизвестны. Ничего не изменено.
+
+**EN:** The position or a value sent by the page is not a number in its range, or the mode/window is unknown. Nothing was changed.
+
+**Что делать:** Обновите страницу и повторите.
+
+**Action:** Reload the page and try again.
+
+## ADVISOR-ONCE-A-DAY
+
+Автоподстройка сегодня уже двигала / Auto-adaptation already moved today
+
+**RU:** В режиме «Авто» ползунок сдвигается не больше чем на один шаг (0,1) в сутки, чтобы один плохой день не раскачал настройки.
+
+**EN:** In mode Auto the slider moves by at most one step (0.1) a day, so a single bad day cannot swing the settings.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## ADVISOR-UNAVAILABLE
+
+Состояние автоподстройки недоступно / Auto-adaptation status unavailable
+
+**RU:** Монитор не смог собрать состояние советчика в этом проходе (нет файла кривой, журнал не читается или внутренняя ошибка). На само переключение это не влияет.
+
+**EN:** The monitor could not build the advisor status in this pass (no curve file, an unreadable journal or an internal error). Switching itself is not affected.
+
+**Что делать:** Если не проходит — переустановите пакет.
+
+**Action:** If it stays, reinstall the package.
+
 ## AUTO-RESUME-PENDING
 
 Auto возвращается после перезапуска / Auto is coming back after a restart
@@ -702,6 +966,30 @@ Auto возвращается после перезапуска / Auto is coming
 **Что делать:** Делать ничего не нужно. Если повторяется, проверьте питание.
 
 **Action:** Nothing to do. Check the power supply if it repeats.
+
+## RESTART-PLANNED-REBOOT
+
+Плановая перезагрузка / Planned reboot
+
+**RU:** Роутер перезагружен собственным таймером (GL: Система → Перезагрузка по расписанию, gl_timer). Служба остановлена штатно; это не прерывание и не отключение питания.
+
+**EN:** The router was rebooted by its own timer (GL: System → Scheduled reboot, gl_timer). The service stopped properly; this is neither an interruption nor a power cut.
+
+**Что делать:** Делать ничего не нужно. Auto, включённый владельцем, вернётся сам.
+
+**Action:** Nothing to do. Auto that the owner switched on comes back by itself.
+
+## RESTART-KERNEL-CRASH
+
+Сбой ядра роутера / Router kernel crash
+
+**RU:** Прошлая работа закончилась сбоем ядра роутера: в журнале сбоев GL появилась новая запись (pstore / mtdoops, /tmp/log/crash_log). Это не отключение питания. Восстановление доводит незавершённое переключение, как после любого прерывания.
+
+**EN:** The previous run ended with a crash of the router's kernel: a new record appeared in the GL crash log (pstore / mtdoops, /tmp/log/crash_log). Not a power cut. The recovery puts an unfinished switch right as after any interruption.
+
+**Что делать:** Один раз — редко, но бывает. Если повторяется, сохраните /tmp/log/crash_log (или выполните homensai-vpn-diag) и пришлите разработчику.
+
+**Action:** Once is rare but possible. If it repeats, save /tmp/log/crash_log (or run homensai-vpn-diag) and send it to the maintainer.
 
 ## STATUS-STALE
 
@@ -1119,9 +1407,9 @@ ID чата выглядит неверно / Chat ID looks wrong
 
 **EN:** The change is not allowed while Auto is running.
 
-**Что делать:** Остановите Auto, дождитесь возврата на основной и меняйте настройки.
+**Что делать:** Остановите Auto штатным переключателем и дождитесь подтверждения. Проверьте текущий канал и разрешает ли программа менять эту настройку. При сохранённом резерве часть настроек может оставаться недоступной. Не меняйте правила маршрутизации вручную ради снятия блокировки; завершите предложенное восстановление, когда нужный канал доступен.
 
-**Action:** Stop Auto, wait for the return to the primary, then change the settings.
+**Action:** Stop Auto with its normal control and wait for confirmation. Check the current channel and whether the app permits this setting to be changed. A retained reserve may keep some settings unavailable. Do not edit routing rules by hand to bypass the block; complete the offered recovery when the required channel is available.
 
 ## SETUP-SAVE-UNCONFIRMED
 
@@ -1703,13 +1991,49 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 Проверка отложена на время установки / Check postponed during installation
 
-**RU:** Шла установка пакета, поэтому файлы не проверялись; по окончании установка перезапустит службу.
+**RU:** Шла установка пакета, поэтому файлы ещё не проверялись. Проверка запустится сама, как только установка закончится (ожидание до 10 минут).
 
-**EN:** A package installation was running, so the files were not checked; the installation restarts the service when it ends.
+**EN:** A package installation was running, so the files were not checked yet. The check runs again by itself as soon as the installation ends (it waits up to 10 minutes).
 
-**Что делать:** Ничего делать не нужно.
+**Что делать:** Ничего делать не нужно; через несколько минут здесь появится результат проверки.
 
-**Action:** Nothing to do.
+**Action:** Nothing to do; the result replaces this line within a few minutes.
+
+## INTEGRITY-RECHECKED
+
+Отложенная проверка выполнена / Postponed check done
+
+**RU:** Самопроверка, отложенная на время установки, выполнена после её окончания; код после неё — результат (например, INTEGRITY-OK).
+
+**EN:** The self-check postponed during the installation ran after the installation ended; the code after it is the result (for example INTEGRITY-OK).
+
+**Что делать:** Ничего делать не нужно, если результат не показывает проблему.
+
+**Action:** Nothing to do unless the result shows a problem.
+
+## INTEGRITY-RECHECK-DAMAGED
+
+После установки найдены повреждённые файлы / Damaged files found after installation
+
+**RU:** Отложенная самопроверка после установки нашла повреждённые или отсутствующие файлы программы. Работающая служба один раз перезапускается, чтобы самопроверка восстановила их из эталонной копии; Auto при этом не запускается. Остановленная служба не запускается; файлы восстановит её следующий запуск.
+
+**EN:** The postponed self-check found damaged or missing program files after the installation. A running service is restarted once so the self-check restores them from the pristine copy; Auto is not started by this. A stopped service is not started; its next start restores the files.
+
+**Что делать:** Проверьте строку результата после перезапуска; если файлы остались повреждёнными, переустановите ту же версию пакета.
+
+**Action:** Check the result line after the restart; if files stay damaged, reinstall the same package version.
+
+## INTEGRITY-RECHECK-TIMEOUT
+
+Отложенная проверка не дождалась установки / Postponed check timed out
+
+**RU:** Через 10 минут после запуска службы операция с пакетами всё ещё держала блокировку opkg, поэтому отложенная самопроверка не выполнилась. Служба работает как раньше.
+
+**EN:** A package operation still held the opkg lock 10 minutes after the service started, so the postponed self-check did not run. The service keeps running as before.
+
+**Что делать:** Когда операций с пакетами больше нет, перезапустите службу (/etc/init.d/homensai-vpn restart) или перезагрузите роутер; если /var/lock/opkg.lock остаётся без работающего opkg — перезагрузите роутер.
+
+**Action:** When no package operation runs any more, restart the service (/etc/init.d/homensai-vpn restart) or reboot the router; if /var/lock/opkg.lock stays without a running opkg, reboot.
 
 ## INTEGRITY-SNAPSHOT-MADE
 
@@ -1735,6 +2059,126 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **Action:** Reinstall the package; check the system log.
 
+## INTEGRITY-PAYLOAD-DAMAGED
+
+Установленные файлы повреждены, служба не запущена / Installed files damaged, service not started
+
+**RU:** При установке только что распакованные файлы программы не совпали со списком контрольных сумм пакета (файл повреждён или отсутствует либо повреждён сам список). Эталонная копия не сохранена. Если сохранена предыдущая рабочая версия, она автоматически восстанавливается и запускается (UPGRADE-ROLLED-BACK); иначе служба остаётся выключенной.
+
+**EN:** During the installation the freshly unpacked program files did not match the checksum list of the package (a file damaged or missing, or the list itself damaged). No pristine copy was saved. When the previous working version is kept, it is restored and started automatically (UPGRADE-ROLLED-BACK); otherwise the service stays off.
+
+**Что делать:** Скачайте пакет заново, сверьте его контрольную сумму и установите ещё раз; проверьте свободное место на роутере.
+
+**Action:** Download the package again, check its checksum and install it again; check the free space on the router.
+
+## INTEGRITY-HELPER-FAILED
+
+Сбой инструмента проверки файлов, служба не запущена / File check tool failed, service not started
+
+**RU:** При установке сам инструмент проверки файлов завершился неожиданно (отсутствует, не запускается или упал), поэтому установка не подтверждена. Если сохранена предыдущая рабочая версия, она автоматически восстанавливается и запускается (UPGRADE-ROLLED-BACK); иначе служба остаётся выключенной.
+
+**EN:** During the installation the file check tool itself ended with an unexpected result (missing, not executable or crashed), so the installation is not verified. When the previous working version is kept, it is restored and started automatically (UPGRADE-ROLLED-BACK); otherwise the service stays off.
+
+**Что делать:** Установите тот же пакет ещё раз; если повторяется, сохраните вывод установки и обратитесь к разработчику.
+
+**Action:** Install the same package again; if it repeats, keep the installation output and ask the maintainer.
+
+## UPGRADE-ROLLED-BACK
+
+Обновление повреждено, восстановлена прежняя версия / Update damaged, previous version restored
+
+**RU:** Новый пакет не прошёл проверку файлов при установке (повреждённые файлы или неподтверждённый инструмент проверки). Прежняя рабочая версия восстановлена из проверенной эталонной копии и запущена; ваши настройки, журнал и история не тронуты. Auto снова работает, только если вы запускали его раньше. Новая версия не установлена.
+
+**EN:** The new package failed its file check during the installation (damaged files or an unverified check tool). The previous working version was restored from its verified pristine copy and started; your settings, journal and history were not touched. Auto runs again only if you had started it before. The new version is not installed.
+
+**Что делать:** Скачайте новый пакет заново, сверьте контрольную сумму и установите ещё раз; эта строка исчезнет после успешной установки.
+
+**Action:** Download the new package again, check its checksum and install it again; this line disappears after a successful installation.
+
+## UPGRADE-ROLLBACK-UNAVAILABLE
+
+Обновление повреждено, прежней версии для восстановления нет / Update damaged, no previous version to restore
+
+**RU:** Новый пакет не прошёл проверку файлов при установке, а проверенной копии именно той версии, что работала до обновления, на роутере нет (нет совсем, повреждена или более старая), поэтому ничего не восстановлено и служба остаётся выключенной.
+
+**EN:** The new package failed its file check during the installation, and no verified copy of exactly the version that was running before was kept on the router (none, damaged or an older one), so nothing was restored and the service stays off.
+
+**Что делать:** Скачайте пакет заново, сверьте контрольную сумму и установите ещё раз; проверьте свободное место на роутере.
+
+**Action:** Download the package again, check its checksum and install it again; check the free space on the router.
+
+## UPGRADE-ROLLBACK-FAILED
+
+Обновление повреждено, восстановить прежнюю версию не удалось / Update damaged, restoring the previous version failed
+
+**RU:** Новый пакет не прошёл проверку файлов, а прежняя версия, скопированная из эталонной копии, после этого тоже не прошла проверку (например, флеш заполнен или только для чтения). Служба остаётся выключенной.
+
+**EN:** The new package failed its file check, and the previous version copied back from its pristine copy did not pass the check afterwards (for example the flash is full or read-only). The service stays off.
+
+**Что делать:** Освободите место на флеше и установите пакет с проверенной контрольной суммой; если повторяется, сохраните вывод установки и обратитесь к разработчику.
+
+**Action:** Free flash space, then install a package whose checksum you have verified; if it repeats, keep the installation output and ask the maintainer.
+
+## UPGRADE-ROLLBACK-VERSION
+
+Сохранённая копия другой версии / Kept copy is another version
+
+**RU:** Проверенная эталонная копия содержит не ту версию, что работала до обновления (например, более старую, оставшуюся, когда новую копию сохранить не удалось), поэтому она не восстанавливается: старая программа может неверно прочитать более новые настройки и записи.
+
+**EN:** The verified pristine copy holds another version than the one that was running before the update (for example an older one, kept when a later copy could not be saved), so it is not restored: an older program could misread newer settings and records.
+
+**Что делать:** Установите проверенный пакет нужной версии; до этого служба остаётся выключенной.
+
+**Action:** Install a verified package of the version you want; the service stays off until then.
+
+## UPGRADE-NOT-INSTALLED
+
+Откаченное обновление не установлено / Rolled-back update not installed
+
+**RU:** Менеджер пакетов снова запустил шаг установки обновления, которое уже было откачено. Его файлов на роутере нет (работает прежняя версия), поэтому шаг отклонён и пакет остаётся ненастроенным.
+
+**EN:** The package manager ran the installation step of an update that was already rolled back. Its files are not on the router (the previous version runs), so the step is refused and the package stays not configured.
+
+**Что делать:** Установите проверенный пакет заново командой opkg install --force-reinstall; до этого работает прежняя версия.
+
+**Action:** Install a verified package again with opkg install --force-reinstall; until then the previous version keeps running.
+
+## MAINTENANCE-IN-PROGRESS
+
+Идёт обновление пакета / Package update in progress
+
+**RU:** Идёт установка, обновление или удаление пакета. Пока оно не закончится, Auto ничего нового не запускает, а кнопки, которые могут переключить канал или нагрузить линию (Старт, ручное переключение, возврат, тест отказа, тест скорости), отклоняются; Стоп работает всегда. Отметка снимается вместе с операцией, самое позднее через 15 минут или при следующей загрузке.
+
+**EN:** A package installation, upgrade or removal is running. Until it ends, Auto starts nothing new and the buttons that could switch a channel or load the line (Start, manual switch, return, failure test, speed test) are refused; Stop always works. The mark ends with the operation, at the latest after 15 minutes or at the next boot.
+
+**Что делать:** Дождитесь окончания установки и обновите страницу.
+
+**Action:** Wait until the installation finishes and reload the page.
+
+## MAINTENANCE-INTERRUPTED
+
+Обновление пакета не завершилось / Package update did not finish
+
+**RU:** Установка, обновление или удаление пакета не завершилось (например, пропало питание или установку прервали). Его отметка больше ничего не блокирует. Установленная версия может быть неполной.
+
+**EN:** A package installation, upgrade or removal did not finish (for example a power cut or a stopped installation). Its mark no longer blocks anything. The installed version may be incomplete.
+
+**Что делать:** Установите пакет ещё раз; эта строка исчезнет после успешной установки.
+
+**Action:** Install the package again; this line disappears after a successful installation.
+
+## MAINTENANCE-CLEAR-FAILED
+
+Отметка прерванной установки не снята / Interrupted package mark not cleared
+
+**RU:** При запуске службы отметку прерванной операции с пакетом не удалось перенести в отчёт (флеш заполнен или только для чтения). Она ничего не блокирует; страница по-прежнему показывает прерванную операцию.
+
+**EN:** At the service start a mark left by an interrupted package operation could not be moved into the report (flash full or read-only). It blocks nothing; the page still shows the interrupted operation.
+
+**Что делать:** Освободите место на флеше и установите пакет ещё раз.
+
+**Action:** Free flash space and install the package again.
+
 ## INTEGRITY-SNAPSHOT-NO-SPACE
 
 Нет места для эталонной копии / No space for the pristine copy
@@ -1749,27 +2193,183 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 ## INTEGRITY-TOOL-MISSING
 
-Нет инструмента самопроверки / Self-check tool missing
+Нет инструмента самопроверки, Auto не запущен / Self-check tool missing, Auto not started
 
-**RU:** Инструмент самопроверки не установлен, поэтому файлы не проверены.
+**RU:** Инструмент самопроверки не установлен, поэтому файлы программы нельзя проверить. Страница и наблюдение за каналами работают, но Auto не запускается, пока установка снова не будет проверена.
 
-**EN:** The self-check tool is not installed, so the files were not checked.
+**EN:** The self-check tool is not installed, so the program files cannot be verified. The page and the channel monitoring keep working, but Auto is not started until the installation is verified again.
 
-**Что делать:** Переустановите пакет.
+**Что делать:** Переустановите пакет (подойдёт та же версия); Auto вернётся сам, если вы его запускали.
 
-**Action:** Reinstall the package.
+**Action:** Reinstall the package (the same version is enough); Auto comes back by itself if you had started it.
 
 ## INTEGRITY-TOOL-DAMAGED
 
 Инструмент самопроверки повреждён / Self-check tool damaged
 
-**RU:** Сам инструмент самопроверки не совпадает с контрольной суммой. Он возвращается из эталонной копии, если она цела; иначе файлы не проверяются.
+**RU:** Сам инструмент самопроверки не совпадает со своей контрольной суммой. Он восстанавливается из эталонной копии, если она цела; иначе файлы проверить нельзя, поэтому страница и мониторинг каналов работают, но Auto не запускается.
 
-**EN:** The self-check tool itself does not match its checksum. It is put back from the pristine copy when that copy is intact; otherwise the files are not checked.
+**EN:** The self-check tool itself does not match its checksum. It is put back from the pristine copy when that copy is intact; otherwise the files cannot be verified, so the page and the channel monitoring keep working but Auto is not started.
 
-**Что делать:** Переустановите пакет.
+**Что делать:** Переустановите пакет; после этого Auto можно снова запустить.
 
-**Action:** Reinstall the package.
+**Action:** Reinstall the package; Auto can then be started again.
+
+## INTEGRITY-TOOL-FAILED
+
+Самопроверка не ответила, Auto не запущен / Self-check gave no answer, Auto not started
+
+**RU:** Инструмент самопроверки упал или не дал понятного ответа при запуске службы, поэтому файлы программы не проверены. Страница и мониторинг каналов работают, но Auto не запускается.
+
+**EN:** The self-check tool crashed or gave no usable answer at the service start, so the program files are not verified. The page and the channel monitoring keep working, but Auto is not started.
+
+**Что делать:** Переустановите пакет; если повторяется, сохраните системный журнал и обратитесь к разработчику.
+
+**Action:** Reinstall the package; if it repeats, keep the system log and ask the maintainer.
+
+## INTEGRITY-NO-AUTO
+
+Установка не проверена, Auto не запущен / Installation not verified, Auto not started
+
+**RU:** Инструмент самопроверки отсутствует, повреждён или не ответил, поэтому установку проверить нельзя. Страница и мониторинг каналов работают, но Auto не запускается.
+
+**EN:** The self-check tool is missing, damaged or gave no answer, so the installation cannot be verified. The page and the channel monitoring keep working, but Auto is not started.
+
+**Что делать:** Переустановите пакет; после этого Auto можно снова запустить.
+
+**Action:** Reinstall the package; Auto can then be started again.
+
+## INTEGRITY-AUTO-BLOCKED
+
+Старт отклонён: самопроверка файлов запрещает Auto / Start refused: the file self-check forbids Auto
+
+**RU:** Самопроверка при запуске службы нашла установку непроверенной или повреждённой, поэтому Auto не работает. Старт отклоняется, а не ставится в очередь на потом.
+
+**EN:** The self-check at the service start found the installation unverified or damaged, so no Auto supervisor runs. Start is refused instead of being queued for later.
+
+**Что делать:** Переустановите пакет (подойдёт та же версия), затем снова нажмите Старт.
+
+**Action:** Reinstall the package (the same version is enough), then press Start again.
+
+## SERVICE-AUTO-OFF
+
+Старт отклонён: служба Auto выключена / Start refused: the Auto service is switched off
+
+**RU:** Мониторинг работает (он запускается всегда), но параметр службы enabled не равен 1 (его оставила старая версия, остановившая мониторинг, его изменили вручную, или конфиг не прочитался), поэтому Auto не запущен. Старт отклоняется, а не ставится в очередь на потом.
+
+**EN:** Monitoring runs (it always starts), but the service option enabled is not 1 (left by an older version that stopped the monitor, changed by hand, or the config could not be read), so no Auto supervisor was started. Start is refused instead of being queued for later.
+
+**Что делать:** Нажмите «Включить службу Auto» в блоке «Мониторинг» (Обзор или Настройки → Система и диагностика) или по SSH: uci set homensai_vpn.main.enabled=1; uci commit homensai_vpn. Само по себе это Auto не запускает; затем снова нажмите Старт.
+
+**Action:** Press “Switch the Auto service on” in the Monitoring block (Overview or Settings → System and diagnostics), or over SSH: uci set homensai_vpn.main.enabled=1; uci commit homensai_vpn. This starts no Auto by itself; then press Start again.
+
+## WAN-DOWN
+
+У роутера нет интернета (WAN) / The router has no Internet (WAN)
+
+**RU:** Оба VPN-канала не работают, и доказано, что у самого роутера нет интернета: эхо-запрос роутера через порт WAN, мимо VPN, перестал получать ответ от нескольких адресов, хотя до этого отвечал (или мультиWAN GL сообщает offline, или линк WAN выключен). Переход на другой VPN не поможет, поэтому Auto ждёт: не переключает, не тратит попытки из лимита, паузу и время удержания. Как только WAN снова отвечает, оба канала проверяются сразу.
+
+**EN:** Both VPN channels fail and the router's own uplink is proven down: the router's echo through the WAN port, outside the VPN, got no answer from several addresses after it had answered before (or the GL multi-WAN reports offline, or the WAN link is down). Switching to the other VPN cannot help, so Auto holds: no switch, no attempt from the budget, no cooldown or dwell is used. As soon as the WAN answers again both channels are checked at once.
+
+**Что делать:** Проверьте кабель или Wi-Fi-подключение к провайдеру, модем и провайдера; в Auto ничего нажимать не нужно. Вкл./выкл.: option wan_sensor '0' в /etc/config/homensai_vpn выключает диагностику WAN (прежнее поведение); удаление опции включает.
+
+**Action:** Check the cable or Wi-Fi uplink, the modem and the provider; nothing needs to be pressed in Auto. Off/on: option wan_sensor '0' in /etc/config/homensai_vpn turns the WAN diagnosis off (the previous behaviour); removing it turns it on.
+
+## WAN-RECOVERING
+
+Интернет вернулся, проверка VPN / Internet is back, checking the VPN
+
+**RU:** Интернет самого роутера (WAN) вернулся после WAN-DOWN. Пока основной канал не пройдёт одну проверку после возврата (не дольше wan_recover_grace секунд, по умолчанию 30), Auto не переключает: резерв, который переподключился на несколько секунд раньше основного, — не причина менять канал.
+
+**EN:** The router's own Internet (WAN) came back after WAN-DOWN. Until the main channel passes one check after the return (at most wan_recover_grace seconds, 30 by default) Auto does not switch: a reserve that reconnects a few seconds earlier than the main channel is no reason to change the channel.
+
+**Что делать:** Делать ничего не нужно. option wan_recover_grace '0'..'120' задаёт ожидание (0 — без ожидания). Вкл./выкл.: option wan_sensor '0' в /etc/config/homensai_vpn выключает диагностику WAN (прежнее поведение); удаление опции включает.
+
+**Action:** Nothing to do. option wan_recover_grace '0'..'120' sets the wait (0 = no wait). Off/on: option wan_sensor '0' in /etc/config/homensai_vpn turns the WAN diagnosis off (the previous behaviour); removing it turns it on.
+
+## DIAG-TUNNEL-DOWN
+
+Диагноз: основной туннель не работает / Diagnosis: the main tunnel is down
+
+**RU:** Диагностика WAN (небольшая байесовская модель по эхо-запросу роутера через WAN, вердиктам GL, проверкам обоих каналов и событиям WireGuard) считает, что не работает основной туннель или его сервер, а интернет и резерв работают. Это диагноз, а не переключение: Auto переключает по своим прежним правилам; при доказанно живом интернете основной канал перепроверяется сразу.
+
+**EN:** The WAN diagnosis (a small Bayesian model over the router's own WAN echo, the GL verdicts, both channels' checks and WireGuard events) finds the main tunnel or its server down while the Internet and the reserve work. This is a diagnosis, not a switch: Auto switches by its unchanged rules; with the Internet proven up the main channel is re-checked at once.
+
+**Что делать:** Делать ничего не нужно; если повторяется, проверьте основной сервер или выберите другой.
+
+**Action:** Nothing to do; if it repeats, check the main server or pick another one.
+
+## DIAG-VPN-SERVER
+
+Диагноз: VPN-сервер ничего не пропускает / Diagnosis: the VPN server passes nothing
+
+**RU:** Основной туннель отвечает на рукопожатие WireGuard (только что создан новый ключ), но ни одна проверка через него не проходит: вероятно, не работает интернет самого VPN-сервера.
+
+**EN:** The main tunnel answers its WireGuard handshake (a fresh key was just created) but no check passes through it: the VPN server's own Internet is probably broken.
+
+**Что делать:** В Auto ничего делать не нужно; если долго, выберите другой сервер провайдера.
+
+**Action:** Nothing to do in Auto; if it lasts, pick another server of the provider.
+
+## DIAG-VPN-BOTH-DOWN
+
+Диагноз: оба VPN не работают, интернет есть / Diagnosis: both VPN channels are down, the Internet works
+
+**RU:** Интернет самого роутера (WAN) доказанно работает, но оба VPN-канала не работают: недоступен VPN-провайдер (или оба сервера). У Auto нет исправного резерва для переключения.
+
+**EN:** The router's own Internet (WAN) is proven up but both VPN channels fail: the VPN provider (or both servers) is down. Auto has no healthy reserve to switch to.
+
+**Что делать:** Проверьте состояние VPN-провайдера; выберите для каналов другие серверы.
+
+**Action:** Check the VPN provider's status; pick other servers for the channels.
+
+## DIAG-WAN-SUSPECT
+
+Диагноз: вероятно, нет интернета / Diagnosis: the Internet is probably down
+
+**RU:** Диагностика считает, что у роутера, скорее всего, нет интернета, но доказательства для удержания не хватает (резерв ещё не проверен или диагностика WAN выключена). Auto работает как раньше.
+
+**EN:** The diagnosis finds the router's own Internet most likely down, but the proof the hold needs is missing (the reserve was not checked yet, or the WAN diagnosis is off). Auto behaves as before.
+
+**Что делать:** Проверьте подключение к провайдеру; нажимать ничего не нужно.
+
+**Action:** Check the uplink; nothing needs to be pressed.
+
+## DIAG-DNS-FAILED
+
+Диагноз: DNS не работает в обоих каналах / Diagnosis: DNS fails on both channels
+
+**RU:** HTTPS через оба канала работает, но DNS-проверка не проходит ни через один: проблема DNS, а не отказ туннеля.
+
+**EN:** HTTPS works through both channels but the DNS check fails through both: a DNS problem, not a tunnel failure.
+
+**Что делать:** Проверьте настройки DNS в профилях VPN и на роутере.
+
+**Action:** Check the DNS settings of the VPN profiles and of the router.
+
+## DIAG-UNSURE
+
+Диагноз: пока неясно / Diagnosis: not sure yet
+
+**RU:** Данные не указывают на одну причину с уверенностью 80 % (например, одна неудачная проверка основного канала). Auto работает в точности как раньше.
+
+**EN:** The evidence does not point to one cause with 80 % confidence (for example one failed check of the main channel). Auto behaves exactly as before.
+
+**Что делать:** Делать ничего не нужно.
+
+**Action:** Nothing to do.
+
+## CHANNEL-CONGESTED
+
+Задержка канала растёт / The channel's delay is climbing
+
+**RU:** Время ответа пульса этого канала держится заметно выше обычного (фильтр Калмана за последние минуты), с потерями или без них. Это мягкий сигнал: Auto из-за него не переключает канал и отказ не записывается. Появляется только при включённой опции rtt_watch.
+
+**EN:** The heartbeat round trips of this channel stay well above their usual level (a Kalman filter over the last minutes), with or without lost packets. This is a soft signal: Auto does not switch because of it and no failure is recorded. It appears only with option rtt_watch switched on.
+
+**Что делать:** Для Auto ничего делать не нужно. Если страницы открываются медленно, проверьте большую загрузку через канал или перегрузку сервера; сигнал снимется, когда задержка вернётся, а уровень, державшийся 30 минут, станет новой нормой.
+
+**Action:** Nothing is needed for Auto. If pages feel slow, look for a heavy download on the channel or a congested server; the signal clears when the delay returns, and a level that stays for 30 minutes becomes the new normal.
 
 ## WEBSITE-*
 
@@ -2139,9 +2739,9 @@ SQM не удалось снять / SQM could not be removed
 
 **EN:** The cake this application put on a tunnel could not be removed; the record is kept and the monitor and the service stop retry it.
 
-**Что делать:** Проверьте по SSH: tc qdisc show dev <туннель> root; если cake остался, снимите вручную: tc qdisc del dev <туннель> root.
+**Что делать:** Приложение не смогло подтвердить снятие своей очереди трафика. Не удаляйте корневую очередь вручную: её состояние и владелец могли измениться. Сохраните диагностику. Перед решением о восстановлении специалист должен проверить текущую очередь без изменений и сверить устройство и идентификатор интерфейса с сохранённой записью SQM.
 
-**Action:** Check by SSH: tc qdisc show dev <tunnel> root; if cake stays, remove it by hand: tc qdisc del dev <tunnel> root.
+**Action:** The app could not confirm removal of its traffic queue. Do not delete the root queue by hand: its state and owner may have changed. Save diagnostics. A maintainer should first inspect the current queue without changing it and compare it with the saved SQM device and interface identity before deciding on recovery.
 
 ## PROBE-POLICY-UNAVAILABLE
 
@@ -2999,13 +3599,13 @@ VPN-профиль изменился / VPN profile changed
 
 Защищённая конфигурация роутера отличается / Protected router configuration differs
 
-**RU:** Защищённая конфигурация (файрвол, DNS, Wi-Fi или профили VPN) отличается от той, которую Auto видел при запуске. Сравнение не показывает, кто или что её изменил: её могут менять и штатные службы роутера.
+**RU:** Защищённая конфигурация (файрвол, DNS, Wi-Fi, DHCP, сетевые интерфейсы или профили VPN) отличается от той, которую Auto видел при запуске. Сравнение не показывает, кто или что её изменил: её могут менять и штатные службы роутера. Auto принимает изменение сам только когда оно затрагивает лишь Wi-Fi, DHCP, страницу DNS GL или сетевые интерфейсы вне пары (PAIR-OUTSIDE-CHANGE-ADOPTED). Изменение ключей или профилей VPN, файрвола, правил маршрутов пары или другого пакета удерживается (PAIR-OUTSIDE-CHANGE-HELD), пока владелец не нажмёт Стоп и Старт.
 
-**EN:** A protected configuration (firewall, DNS, Wi-Fi or the VPN profiles) differs from the one Auto saw when it started. The comparison does not show who or what changed it: the stock router services can change it too.
+**EN:** A protected configuration (firewall, DNS, Wi-Fi, DHCP, the network interfaces or the VPN profiles) differs from the one Auto saw when it started. The comparison does not show who or what changed it: the stock router services can change it too. Auto adopts the change by itself only when it touches nothing but Wi-Fi, DHCP, the GL DNS page or network interfaces outside the pair (PAIR-OUTSIDE-CHANGE-ADOPTED). A change of the VPN keys or profiles, the firewall, the pair's routing rules or another package is held (PAIR-OUTSIDE-CHANGE-HELD) until the owner presses Stop and Start.
 
-**Что делать:** Включите Auto переключателем: Auto архивирует старую сессию и сам примет текущую конфигурацию.
+**Что делать:** Если Auto сообщает об этом как о блокировке, проверьте изменение сами. Если оно ваше, нажмите Стоп и затем Старт переключателем Auto: Start архивирует старую сессию и принимает текущую конфигурацию. Изменения Wi-Fi, DHCP, страницы DNS GL или сетевых интерфейсов вне пары действий не требуют: Auto принимает их сам.
 
-**Action:** Turn Auto on with the Auto switch: Auto archives the old session and adopts the current configuration by itself.
+**Action:** If Auto reports this as a block, check the change yourself. If it is yours, press Stop and then Start with the Auto switch: the Start archives the old session and adopts the current configuration. Changes to Wi-Fi, DHCP, the GL DNS page or the network interfaces outside the pair need no action: Auto adopts them by itself.
 
 ## PAIR-RECOVERY-REQUIRED
 
@@ -3018,6 +3618,66 @@ VPN-профиль изменился / VPN profile changed
 **Что делать:** Не повторяйте Start и ручное переключение: они отклоняются до завершения восстановления. Если роутер удерживается на резерве, дождитесь восстановления основного. Сохраните журнал; если состояние не меняется, роутеру нужна проверенная процедура восстановления.
 
 **Action:** Do not repeat Start or manual switching: they are refused until recovery completes. If the router is held on the reserve, wait for the primary to recover. Keep the journal; if the state does not change, the router needs its guarded recovery procedure.
+
+## PAIR-OUTSIDE-CHANGE-HELD
+
+Настройки изменены вне приложения: ждёт решения владельца / Settings changed outside the app: waiting for the owner
+
+**RU:** Пока Auto работал, защищённая настройка изменилась вне приложения, и изменение затрагивает профили VPN (wireguard, ovpnclient), файрвол, правила пары в route_policy, другой пакет, либо его класс не удалось прочитать. Такое изменение Auto сам не принимает (решение владельца 07.11.2026): сессия удерживается, защита LAN остаётся, в статусе названы класс и имена пакетов, никогда не значения и не ключи.
+
+**EN:** While Auto was running, a protected setting changed outside the app and the change touches the VPN profiles (wireguard, ovpnclient), the firewall, the pair rules of route_policy, another package, or its class could not be read. Auto does not adopt such a change by itself (owner decision 07.11.2026): the session is held, the LAN guard stays, the status names the class and the package names only, never a value or a key.
+
+**Что делать:** Проверьте изменение сами. Если оно ваше, выключите и снова включите Auto: Start архивирует старую сессию и принимает текущую конфигурацию, и это записывается как принятие владельцем. Stop снимает удержание без принятия.
+
+**Action:** Check the change yourself. If it is yours, switch Auto off and on again: the Start archives the old session and adopts the current configuration, and the adoption is recorded as made by the owner. Stop ends the hold without adopting.
+
+## PAIR-OUTSIDE-CHANGE-ADOPTED
+
+Принято изменение Wi-Fi, DHCP или DNS / Wi-Fi, DHCP or DNS change adopted
+
+**RU:** Изменение, сделанное вне приложения, затронуло только Wi-Fi (wireless), DHCP или страницу DNS GL (gl-dns-v2), либо только сетевые интерфейсы или адреса вне пары. Auto принял его сам (не более трёх раз за 15 минут), архивировал старую сессию и запустился заново; событие истории называет класс и пакеты.
+
+**EN:** A change made outside the app touched only Wi-Fi (wireless), DHCP or the GL DNS page (gl-dns-v2), or only the network interfaces or addresses outside the pair. Auto adopted it by itself (at most three times in 15 minutes), archived the old session and started again; the history event names the class and the packages.
+
+**Что делать:** Делать ничего не нужно. Строка журнала и событие истории говорят, какие пакеты изменились.
+
+**Action:** Nothing to do. The log line and the history event say which packages changed.
+
+## ADOPT-PACKAGES-ONLY
+
+Причина: изменились только допустимые настройки / Reason: only adoptable settings changed
+
+**RU:** Причина, записанная при автоматическом принятии: изменение вне приложения затронуло только Wi-Fi, DHCP, страницу DNS GL или сетевые интерфейсы вне пары.
+
+**EN:** The reason recorded with an automatic adoption: the outside change touched only Wi-Fi, DHCP, the GL DNS page or network interfaces outside the pair.
+
+**Что делать:** Делать ничего не нужно.
+
+**Action:** Nothing to do.
+
+## FOREIGN-PACKAGES
+
+Причина: изменились защищённые настройки / Reason: protected settings changed
+
+**RU:** Причина, записанная при удержании: изменение вне приложения затронуло ключи или профили VPN (wireguard, ovpnclient), firewall, правила маршрутизации пары или другой пакет. Такое изменение Auto сам не принимает.
+
+**EN:** The reason recorded with a hold: the outside change touched VPN keys or profiles (wireguard, ovpnclient), the firewall, the pair's routing rules or another package. Auto does not adopt such a change by itself.
+
+**Что делать:** Проверьте изменение. Если оно ваше, нажмите Stop, затем Start: Start владельца его принимает.
+
+**Action:** Check the change. If it is yours, press Stop and then Start: the owner's Start adopts it.
+
+## OWNER-START
+
+Причина: принято по Start владельца / Reason: adopted by the owner's Start
+
+**RU:** Причина, записанная, когда удержанное изменение вне приложения принято, потому что владелец нажал Start.
+
+**EN:** The reason recorded when a held outside change was adopted because the owner pressed Start.
+
+**Что делать:** Делать ничего не нужно.
+
+**Action:** Nothing to do.
 
 ## PAIR-READOPTED
 
@@ -3087,9 +3747,9 @@ Auto заново прочитал изменённые настройки / Aut
 
 **EN:** The router program answered, but its last measurement is older than 90 seconds, so it cannot describe the channels now.
 
-**Что делать:** Проверьте, что мониторинг запущен («Служба мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»)). Тест скорости приостанавливает измерения до минуты.
+**Что делать:** Проверьте, что мониторинг запущен («Служба мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»)). Тест скорости приостанавливает измерения на весь свой бюджет времени: 35 с плюс на каждый сервер 2 × длительность теста + 15 с, не больше 335 с, и ещё до 25 с, пока мониторинг возобновляется (два сервера при 5 с по умолчанию: около 85 с).
 
-**Action:** Check that monitoring is running (Monitoring service (Settings → System and diagnostics; Console: System tab)). A speed test pauses measurements for up to a minute.
+**Action:** Check that monitoring is running (Monitoring service (Settings → System and diagnostics; Console: System tab)). A speed test pauses measurements for its whole time budget: 35 s plus 2 × the test duration + 15 s per server, at most 335 s, and up to 25 s more while monitoring resumes (two servers at the default 5 s: about 85 s).
 
 ## VENDOR-OBSERVATION-PENDING
 
@@ -3119,13 +3779,37 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 Страница не смогла выполнить действие / The page could not finish the action
 
-**RU:** Страница отправила запрос, но он не прошёл до ответа роутера (связь пропала или ошибка страницы). Это нажатие ничего не изменило.
+**RU:** Страница отправила запрос, но он не прошёл до ответа роутера (связь пропала или ошибка страницы). Результат не подтверждён: роутер мог выполнить запрос, а мог и не выполнить.
 
-**EN:** The page sent a request, but it failed before the router answered (connection lost or a page error). Nothing was changed by this press.
+**EN:** The page sent a request, but it failed before the router answered (connection lost or a page error). The result is unconfirmed: the router may or may not have applied the request.
 
-**Что делать:** Обновите страницу (Ctrl+F5) и повторите действие.
+**Что делать:** Обновите страницу (Ctrl+F5) и сначала проверьте текущее состояние; повторите действие, только если оно не сработало.
 
-**Action:** Reload the page (Ctrl+F5) and repeat the action.
+**Action:** Reload the page (Ctrl+F5) and check the current state first; repeat the action only if it did not take effect.
+
+## HV-CORE-FALLBACK
+
+Единый Lua-процесс вернулся к двум процессам / The single Lua process fell back to two processes
+
+**RU:** Необязательное ядро в одном процессе (параметр lua_core_process: монитор и Auto вместе) отказало 3 раза за 600 секунд. Оно записало маркер с последней ошибкой и стало отдельным Lua-монитором; Lua-супервизор Auto снова работает отдельным процессом. Мониторинг и Auto продолжают работать в привычной схеме из двух процессов до перезапуска службы.
+
+**EN:** The optional single-process core (option lua_core_process: monitor and Auto in one process) failed 3 times within 600 seconds. It wrote a marker with the last error and became the separate Lua monitor; the Lua Auto supervisor runs as its own process again. Monitoring and Auto keep working in the usual two-process layout until the service restarts.
+
+**Что делать:** Ничего не потеряно. Причину смотрите в системном журнале (HV-CORE-FALLBACK и последняя ошибка). Два процесса — режим по умолчанию; держите lua_core_process выключенным, если вы его не проверяете.
+
+**Action:** Nothing is lost. Read the cause in the system log (HV-CORE-FALLBACK and the last error). Two processes are the default; leave lua_core_process off unless you are testing it.
+
+## HV-CORE-WATCHDOG
+
+Сторож перезапустил единый Lua-процесс / The watchdog restarted the single Lua process
+
+**RU:** Цикл событий необязательного ядра в одном процессе (hv-core) не работал больше 120 секунд. Сторож завершил процесс (сначала мягко, затем жёстко после короткой паузы), а менеджер служб запускает его снова. Записывается маркер с временем молчания.
+
+**EN:** The event loop of the optional single-process core (hv-core) had not run for more than 120 seconds. The watchdog ended the process (a polite stop first, a hard stop after a short grace period) and the service manager starts it again. A marker with the silent time is written.
+
+**Что делать:** Дождитесь перезапуска и проверьте, что мониторинг и Auto снова свежие. Если повторяется, выключите lua_core_process (два процесса — режим по умолчанию).
+
+**Action:** Wait for the restart and check that monitoring and Auto are fresh again. If it repeats, turn lua_core_process off (two processes are the default).
 
 ## UI-RENDER-FAILED
 
@@ -3195,9 +3879,9 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** The archive folder on the router is a link, not a folder, so the reset was refused.
 
-**Что делать:** Удалите /etc/homensai-vpn/stats-archive на роутере и повторите.
+**Что делать:** Не удаляйте папку архива или ссылку вслепую и не повторяйте сброс. Сохраните текущую статистику и диагностический пакет. Попросите проверить тип и владельца пути архива с сохранением существующих данных. После исправления снова проверьте возможность сброса.
 
-**Action:** Remove /etc/homensai-vpn/stats-archive on the router and try again.
+**Action:** Do not blindly delete the archive folder or link, or repeat the reset. Preserve the current statistics and diagnostic bundle. Have the archive path type and ownership checked while preserving existing data. After correction, check whether reset is available again.
 
 ## STATS-RESET-UNCONFIRMED
 
@@ -3207,9 +3891,9 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** The router accepted the request but its monitoring did not report the result within 45 seconds (it may be stopped or paused by a speed test).
 
-**Что делать:** Проверьте, что мониторинг запущен («Служба мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»)), подождите минуту и посмотрите на график; при необходимости нажмите «Сбросить статистику…» ещё раз.
+**Что делать:** Не отправляйте новый сброс, пока результат предыдущего неизвестен. Проверьте, что мониторинг работает, обновите страницу и посмотрите свежий результат сброса и текущую статистику. Истечение времени ожидания не доказывает ни успех, ни отказ. Если результат неясен, сохраните диагностику и попросите проверить ожидающий запрос перед новым сбросом.
 
-**Action:** Check that monitoring is running (Monitoring service (Settings → System and diagnostics; Console: System tab)), wait a minute and look at the chart; press “Reset statistics…” again if needed.
+**Action:** Do not submit another reset while the previous result is unknown. Check that monitoring is running, refresh the page and inspect the fresh reset result and current statistics. A timeout does not prove success or failure. If the result remains unclear, preserve diagnostics and have the pending request checked before any new reset.
 
 ## PRIMARY-RECOVERED-BEFORE-SWITCH
 
@@ -3282,6 +3966,66 @@ Auto не подтвердил команду / Auto did not confirm the command
 **Что делать:** Выберите активный профиль другого туннеля либо отложите пару.
 
 **Action:** Select an active profile on another tunnel, or defer the pair.
+
+## VENDOR-BUSY-RTP-LOCK-DEAD
+
+Блокировка GL.iNet называет исчезнувший процесс / GL.iNet lock names a process that is gone
+
+**RU:** VENDOR-WORKER-BUSY длится больше двух минут, а файл блокировки rtp2 называет процесс, которого уже нет. Это наблюдение, а не доказательство, что GL.iNet закончил работу: у убитого rtp2 могут работать дочерние команды. Auto остаётся заблокирован и не пытается переключиться. Блокировка не удаляется.
+
+**EN:** VENDOR-WORKER-BUSY has lasted over two minutes and the rtp2 lock file names a process that no longer runs. This is what was seen, not a proof that GL.iNet has finished: a killed rtp2 can leave its child commands running. Auto stays blocked and makes no switch attempt. The lock is not removed.
+
+**Что делать:** Перезагрузите роутер: файл живёт в оперативной памяти. Затем проверьте каналы.
+
+**Action:** Reboot the router: the file lives in RAM. Check the channels afterwards.
+
+## VENDOR-BUSY-RTP-LOCK-LIVE
+
+rtp2 GL.iNet работает долго / GL.iNet rtp2 keeps running
+
+**RU:** VENDOR-WORKER-BUSY длится больше двух минут, и процесс rtp2 из файла блокировки работает. Auto остаётся заблокирован и не пытается переключиться.
+
+**EN:** VENDOR-WORKER-BUSY has lasted over two minutes and the rtp2 process named in the lock file is running. Auto stays blocked and makes no switch attempt.
+
+**Что делать:** Дождитесь окончания работы GL.iNet. Если это затянулось, проверьте настройки VPN в панели GL.iNet или перезагрузите роутер.
+
+**Action:** Wait for GL.iNet to finish. If this lasts, check the VPN settings in the GL.iNet panel or reboot the router.
+
+## VENDOR-BUSY-TUNNEL-SWITCH
+
+Блокировка tunnel-switch GL.iNet держится / GL.iNet tunnel-switch lock stays
+
+**RU:** VENDOR-WORKER-BUSY длится больше двух минут, и есть файл блокировки tunnel-switch GL.iNet. Auto остаётся заблокирован и не пытается переключиться.
+
+**EN:** VENDOR-WORKER-BUSY has lasted over two minutes and a GL.iNet tunnel-switch lock file is present. Auto stays blocked and makes no switch attempt.
+
+**Что делать:** Дождитесь окончания работы GL.iNet. Если это затянулось, перезагрузите роутер.
+
+**Action:** Wait for GL.iNet to finish. If this lasts, reboot the router.
+
+## VENDOR-BUSY-WORKERS
+
+Обработчики GL.iNet работают долго / GL.iNet workers keep running
+
+**RU:** VENDOR-WORKER-BUSY длится больше двух минут. Файла блокировки не видно, но работают обработчики или очереди служб GL.iNet. Auto остаётся заблокирован и не пытается переключиться.
+
+**EN:** VENDOR-WORKER-BUSY has lasted over two minutes. No lock file is visible, but GL.iNet workers or service queues are running. Auto stays blocked and makes no switch attempt.
+
+**Что делать:** Дождитесь окончания работы GL.iNet. Если это затянулось, перезагрузите роутер.
+
+**Action:** Wait for GL.iNet to finish. If this lasts, reboot the router.
+
+## VENDOR-BUSY-UNIDENTIFIED
+
+GL.iNet занят, причина не видна / GL.iNet busy, cause not seen
+
+**RU:** VENDOR-WORKER-BUSY длится больше двух минут, причину определить не удалось. Отсутствие файла не доказывает, что GL.iNet простаивает: один запуск может стереть метку другого. Auto остаётся заблокирован и не пытается переключиться.
+
+**EN:** VENDOR-WORKER-BUSY has lasted over two minutes and no cause could be identified. A missing file does not prove GL.iNet is idle: one run can erase the mark of another. Auto stays blocked and makes no switch attempt.
+
+**Что делать:** Если это затянулось, перезагрузите роутер; по возможности сначала соберите диагностический пакет.
+
+**Action:** If this lasts, reboot the router and collect the diagnostic bundle first if you can.
 
 ## VENDOR-SETTLING
 
@@ -3655,9 +4399,9 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 Резерв подтверждён / Reserve confirmed
 
-**RU:** Переключение удалось и ваш компьютер его подтвердил: трафик идёт через резервный VPN.
+**RU:** Переключение удалось и подтверждено в выбранном режиме доказательства: в непрерывном режиме (проверка с роутера) его подтвердил сам роутер своими пробами, в пробе с подтверждением клиентом — LAN-помощник на вашем компьютере. Трафик идёт через резервный VPN.
 
-**EN:** The switch worked and your computer confirmed it: traffic goes through the reserve VPN.
+**EN:** The switch worked and was confirmed under the selected proof mode: in the continuous (router-probed) mode the router confirmed it with its own probes, in a client-confirmed trial the LAN helper on your computer did. Traffic goes through the reserve VPN.
 
 **Что делать:** Делать ничего не нужно. Auto вернётся на основной сам, когда он восстановится, либо нажмите «Переключить сюда» на карточке «Основной».
 
@@ -3829,11 +4573,11 @@ Auto выключен / Auto disabled
 
 ## CLIENT-CONFIRMED
 
-Компьютер подтвердил / Your computer confirmed
+Подтверждено после переключения / Confirmed after the switch
 
-**RU:** LAN-помощник на вашем компьютере подтвердил, что DNS, HTTPS и внешний адрес после переключения верны.
+**RU:** Проверка после переключения пройдена. В непрерывном режиме (проверка с роутера) её выполнил сам роутер своими пробами (DNS, HTTPS и внешний адрес так, как их видит роутер); в пробе с подтверждением клиентом — LAN-помощник на вашем компьютере.
 
-**EN:** The LAN helper on your computer confirmed that DNS, HTTPS and the exit address are right after the switch.
+**EN:** The check after the switch passed. In the continuous (router-probed) mode the router made it with its own probes (DNS, HTTPS and the exit address as the router sees them); in a client-confirmed trial the LAN helper on your computer made it.
 
 **Что делать:** Делать ничего не нужно.
 
@@ -3903,9 +4647,9 @@ Auto выключен / Auto disabled
 
 Удержание по вашему правилу / Held by your rule
 
-**RU:** Ваше правило восстановления говорит оставаться на резерве, пока вы не вернётесь вручную.
+**RU:** Ваше правило восстановления говорит оставаться на работающем резерве, пока вы не вернётесь вручную. Если сам этот резерв отказал (это доказала свежая проверка роутера), а основной исправен, Auto спасает трафик на основной после короткой стабильности; неизвестный результат проверки сохраняет удержание.
 
-**EN:** Your recovery rule says to stay on the reserve until you return manually.
+**EN:** Your recovery rule says to stay on a working reserve until you return manually. If this reserve itself fails (a fresh router check proves it) while the primary is healthy, Auto rescues the traffic to the primary after the short rescue stability; an unknown check keeps the hold.
 
 **Что делать:** Нажмите «Переключить сюда» на карточке «Основной», когда захотите вернуться.
 
@@ -4642,6 +5386,18 @@ VPN работает / VPN works
 **Что делать:** Дождитесь окончания переключения.
 
 **Action:** Wait until the switch ends.
+
+## ACCELERATION-PREPARE-UNAVAILABLE
+
+Подготовка недоступна в этом бэкенде / Preparation is not available in this backend
+
+**RU:** Подготовка роутера (отключение аппаратного ускорения) запрошена, но Lua-бэкенд, на котором работает Auto, её выполнить не может: этот шаг есть только в Python-бэкенде. Запрос отклонён, на роутере ничего не изменено.
+
+**EN:** The router preparation (hardware acceleration off) was requested, but the Lua backend that runs Auto cannot do it: the preparation step exists only in the Python backend. The request was refused and nothing on the router was changed.
+
+**Что делать:** Не повторяйте запрос. Сохраните отказ как свидетельство; подготовке нужен Python-бэкенд (отдельно утверждённый шаг), Auto сам её не применяет.
+
+**Action:** Do not repeat the request. Keep the failed request as evidence; the preparation needs the Python backend (a separately approved step), and Auto does not apply it by itself.
 
 ## HNAT-DISABLE-UNVERIFIED
 
@@ -5521,6 +6277,30 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **Action:** Look at the state on the page; press the button again only if nothing changed.
 
+## RPC-BRIDGE-UNCONFIRMED
+
+Ответ на кнопку потерялся / Button answer lost
+
+**RU:** Lua-монитор роутера не ответил на кнопку вовремя (или не смог записать ответ). Нажатие не повторялось, поэтому дважды выполниться не может; оно могло сработать, а могло и нет.
+
+**EN:** The router’s Lua monitor did not answer the button in time (or could not write its answer). The press was not repeated, so it cannot run twice; it may or may not have taken effect.
+
+**Что делать:** Подождите несколько секунд: страница перечитает состояние. Нажмите «Повторить», только если ничего не изменилось.
+
+**Action:** Wait a few seconds: the page re-reads the state. Press Retry only if nothing changed.
+
+## RPC-BRIDGE-STALE
+
+Опоздавший запрос отброшен / Late request dropped
+
+**RU:** Роутер дошёл до запроса страницы так поздно, что страница уже перестала ждать; запрос отброшен без действия.
+
+**EN:** The router handled a page request so late that the page had already stopped waiting; it was dropped without acting.
+
+**Что делать:** Ничего делать не нужно; если кнопка как будто не сработала, нажмите её ещё раз.
+
+**Action:** Nothing to do; if the button seems not to work, press it again.
+
 ## STATS-SETTINGS-FIELDS
 
 Настройка статистики не принята / Statistics setting not accepted
@@ -5664,6 +6444,42 @@ Auto на Lua передал работу Python / Lua Auto handed over to Pytho
 **Что делать:** Выключите и снова включите Auto переключателем. Если повторяется, отправьте код и папку quarantine (/etc/homensai-vpn/quarantine) разработчику.
 
 **Action:** Turn Auto off and on again with the Auto switch. If it repeats, send the code and the quarantine folder (/etc/homensai-vpn/quarantine) to the developer.
+
+## STATE-FILE-UNREADABLE
+
+Файл сохранённого состояния не читается / Saved state file unreadable
+
+**RU:** На месте файла состояния Auto оказалась символическая ссылка, папка или нечитаемый файл. Auto отказывается действовать по нему; файл не считается отсутствующим.
+
+**EN:** In the place of a state file of Auto there is a symlink, a folder or a file that cannot be read. Auto refuses to act on it; the file is not treated as missing.
+
+**Что делать:** Проверьте папки /etc/homensai-vpn и /var/run/homensai-vpn на роутере и удалите посторонний объект; затем нажмите Stop и Start. Если повторяется, отправьте код разработчику.
+
+**Action:** Check the folder /etc/homensai-vpn and /var/run/homensai-vpn on the router and remove the foreign object; then press Stop and Start. If it repeats, send the code to the developer.
+
+## DIAG-BUNDLE-UNVERIFIED
+
+Архив диагностики не прошёл проверку / Diagnostic archive not verified
+
+**RU:** Архив диагностики собран, но проверка после записи не прошла (ожидаемой папки внутри нет). Он не опубликован, ничего не осталось.
+
+**EN:** The diagnostic archive was built but its check after writing failed (the expected folder was not inside). It was not published, nothing was left behind.
+
+**Что делать:** Нажмите кнопку диагностики ещё раз. Если повторяется, проверьте свободное место в /tmp на роутере и отправьте код разработчику.
+
+**Action:** Press the diagnostics button again. If it repeats, check free space in /tmp on the router and send the code to the developer.
+
+## DIAG-BUNDLE-UNSAFE-OUTPUT
+
+Архив диагностики: небезопасное место записи / Diagnostic archive: unsafe destination
+
+**RU:** На месте, куда нужно положить архив диагностики, находится символическая ссылка или папка. Программа отказывается писать туда, чтобы не затереть чужой файл.
+
+**EN:** The place where the diagnostic archive should be published is a symbolic link or a folder. The program refuses to write there, so it cannot overwrite a foreign file.
+
+**Что делать:** Удалите постороннюю ссылку или папку по пути архива в /tmp на роутере и повторите. Если повторяется, отправьте код разработчику.
+
+**Action:** Remove the foreign link or folder at the archive path in /tmp on the router, then repeat. If it repeats, send the code to the developer.
 
 ## RPC-NONFINITE-NUMBER
 
@@ -6877,6 +7693,78 @@ Auto выключен на время обновления / Auto was switched o
 
 **Action:** Keep the journal and ask the maintainer; do not delete it.
 
+## LIFECYCLE-PAIR-UNVERIFIED
+
+Запись пары не подтверждена / Pair record not confirmed
+
+**RU:** Сохранённая запись пары каналов не прошла проверку контрольной суммы или владения, поэтому шаг обновления или удаления остановлен до каких-либо изменений.
+
+**EN:** The saved record of the channel pair failed its checksum or ownership check, so the upgrade or removal step stopped before changing anything.
+
+**Что делать:** Сохраните запись и обратитесь к разработчику; не удаляйте её.
+
+**Action:** Keep the record and ask the maintainer; do not delete it.
+
+## LIFECYCLE-REFUSED-AFTER-STOP
+
+Операция с пакетом прервана после остановки / Package operation aborted after the stop
+
+**RU:** После остановки службы восстановление не было завершено (сессия пары не остановлена, журнал не закрыт или запись не читается). Служба запущена снова, чтобы завершить восстановление, а обновление или удаление прервано.
+
+**EN:** After the service stopped, the recovery was not finished (pair session not stopped, journal not closed or a record unreadable). The service was started again so that it can finish the recovery, and the upgrade or removal was aborted.
+
+**Что делать:** Дождитесь, пока страница покажет Auto выключен и нет переключения, затем повторите операцию с пакетом.
+
+**Action:** Wait until the page shows Auto stopped and no switch in progress, then repeat the package operation.
+
+## LIFECYCLE-RESTART-FAILED
+
+Службу не удалось запустить снова / Service could not be started again
+
+**RU:** Операция с пакетом отклонена после остановки службы, и службу не удалось запустить снова.
+
+**EN:** A package operation was refused after the service stop and the service could not be started again.
+
+**Что делать:** Запустите службу: /etc/init.d/homensai-vpn start; если не получается, сохраните вывод и обратитесь к разработчику.
+
+**Action:** Start the service: /etc/init.d/homensai-vpn start; if it fails, keep the output and ask the maintainer.
+
+## LIFECYCLE-STOP-UNFINISHED
+
+Служба не остановилась вовремя / Service did not stop in time
+
+**RU:** Перед обновлением или удалением службе была дана команда остановиться, но её процессы работали и через 330 секунд (или их не удалось проверить). Служба запущена снова, операция с пакетом прервана.
+
+**EN:** Before the upgrade or removal the service was asked to stop, but its processes were still running after 330 seconds (or could not be checked). The service was started again and the package operation was aborted.
+
+**Что делать:** Дождитесь, пока страница покажет Auto выключен и нет переключения, затем повторите операцию с пакетом.
+
+**Action:** Wait until the page shows Auto stopped and no switch in progress, then repeat the package operation.
+
+## LIFECYCLE-RECOVERY-UNFINISHED
+
+Восстановление при остановке не завершено / Shutdown recovery not finished
+
+**RU:** При остановке службы Auto сообщил, что не смог завершить возврат каналов. Служба запущена снова, чтобы завершить его, а обновление или удаление прервано.
+
+**EN:** When the service stopped, Auto reported that it could not finish putting the channels back. The service was started again so that it can finish, and the upgrade or removal was aborted.
+
+**Что делать:** Дождитесь, пока страница покажет Auto выключен и нет переключения, затем повторите операцию с пакетом.
+
+**Action:** Wait until the page shows Auto stopped and no switch in progress, then repeat the package operation.
+
+## LIFECYCLE-MAINTENANCE-FAILED
+
+Отметка операции с пакетом не сохранена / Package operation mark not saved
+
+**RU:** Установка не смогла сохранить отметку, которая не даёт запустить Auto во время смены пакета (флеш заполнен или только для чтения), поэтому шаг остановлен до каких-либо изменений.
+
+**EN:** The installation could not save the mark that keeps Start refused while the package changes (flash full or read-only), so the step stopped before changing anything.
+
+**Что делать:** Освободите место на флеше и повторите операцию с пакетом.
+
+**Action:** Free flash space and repeat the package operation.
+
 ## LIFECYCLE-PENDING-UCI-CHANGES
 
 Есть неприменённые настройки роутера / Unsaved router settings exist
@@ -7869,11 +8757,11 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** Before an upgrade or a stop, the program checks that Auto is off and the original route is restored. One of the checks did not pass.
 
-**Что делать:** Выключите Auto переключателем, дождитесь возврата и повторите.
+**Что делать:** Остановите Auto штатным переключателем и проверьте подтверждённое состояние и используемый канал. Сохранённый резерв, закрытая защита или незавершённое восстановление могут по-прежнему запрещать это действие. Не переводите трафик принудительно на недоступный основной и не удаляйте записи защиты. Завершите предложенное программой восстановление, когда нужный канал доступен; само ожидание не подтверждает возврат маршрута.
 
-**Action:** Turn Auto off with the Auto switch, wait for the return, then repeat.
+**Action:** Stop Auto with its normal control and check the acknowledged state and channel in use. A retained reserve, closed safety guard or unfinished recovery can still prevent this operation. Do not force a return to an unavailable primary or remove safety records. Complete the recovery offered by the app when the required channel is available; waiting alone does not confirm route restoration.
 
-**Пример / Example:** LIFECYCLE-STOP-AUTO-FIRST: Auto всё ещё включён. / LIFECYCLE-STOP-AUTO-FIRST: Auto is still on.
+**Пример / Example:** LIFECYCLE-STOP-AUTO-FIRST может означать работающий Auto, сохранённый резерв или оставшуюся закрытой защиту. / LIFECYCLE-STOP-AUTO-FIRST can mean Auto is active, a reserve is retained or a safety guard remains closed.
 
 ## SPEED-*
 
@@ -7924,6 +8812,18 @@ Auto выключен на время обновления / Auto was switched o
 **Что делать:** Обновите страницу (Ctrl+F5) и повторите.
 
 **Action:** Reload the page (Ctrl+F5) and repeat.
+
+## ADVISOR-*
+
+Код автоподстройки (ADVISOR-…) / Auto-adaptation code (ADVISOR-…)
+
+**RU:** Шаг советчика сети или ползунка сообщил это состояние; настройки из-за него не менялись.
+
+**EN:** A step of the network advisor or the master slider reported this condition; the settings were not changed by it.
+
+**Что делать:** Обновите и повторите; строка точного кода объясняет подробнее.
+
+**Action:** Reload and repeat; the row of the exact code explains more.
 
 ## PRIORITY-*
 

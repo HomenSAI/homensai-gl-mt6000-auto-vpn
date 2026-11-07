@@ -1,0 +1,152 @@
+{
+  "all_ok": true,
+  "checks": {
+    "mocked_stamp_ots_info": {
+      "rc": 0,
+      "stderr": "",
+      "stdout": "File sha256 hash: 941e9fb24177d37ab9e3d1de10745dbb156a3bc6abd296e91e60854cfd3aa70d\nTimestamp:\nappend 000102030405060708090a0b0c0d0e0f\nsha256\n -> append 6d6f636b2d63616c656e6461722d68747470733a2f2f612e706f6f6c2e657465726e69747977616c6c2e636f6d2f646967657374\n    sha256\n    verify PendingAttestation('https://finney.calendar.eternitywall.com')\n -> append 6d6f636b2d63616c656e6461722d68747470733a2f2f612e706f6f6c2e6f70656e74696d657374616d70732e6f72672f646967657374\n    sha256\n    verify PendingAttestation('https://alice.btc.calendar.opentimestamps.org')\n -> append 6d6f636b2d63616c656e6461722d68747470733a2f2f622e706f6f6c2e6f70656e74696d657374616d70732e6f72672f646967657374\n    sha256\n    verify PendingAttestation('https://alice.btc.calendar.opentimestamps.org')\n -> append 6d6f636b2d63616c656e6461722d68747470733a2f2f6f74732e6274632e636174616c6c6178792e636f6d2f646967657374\n    sha256\n    verify PendingAttestation('https://finney.calendar.eternitywall.com')"
+    },
+    "mocked_stamp_parsed_by_official": {
+      "official_attestations": [
+        "PendingAttestation('https://alice.btc.calendar.opentimestamps.org')",
+        "PendingAttestation('https://alice.btc.calendar.opentimestamps.org')",
+        "PendingAttestation('https://finney.calendar.eternitywall.com')",
+        "PendingAttestation('https://finney.calendar.eternitywall.com')"
+      ],
+      "official_digest_matches": true,
+      "official_roundtrip_identical": true,
+      "ours_calendars_ok": [
+        "https://a.pool.opentimestamps.org",
+        "https://b.pool.opentimestamps.org",
+        "https://a.pool.eternitywall.com",
+        "https://ots.btc.catallaxy.com"
+      ]
+    },
+    "mocked_upgrade_parsed_by_official": {
+      "official_and_ours_agree_on_attested_messages": true,
+      "official_attestations": [
+        "BitcoinBlockHeaderAttestation(800000)",
+        "BitcoinBlockHeaderAttestation(800000)",
+        "BitcoinBlockHeaderAttestation(800000)",
+        "BitcoinBlockHeaderAttestation(800000)"
+      ],
+      "official_roundtrip_identical": true,
+      "upgraded": 4
+    },
+    "official_example_attested_message_equal": {
+      "equal": true,
+      "message": [
+        "007ee445d23ad061af4a36b809501fab1ac4f2d7e7a739817dd0cbb7ec661b8a"
+      ]
+    },
+    "official_example_live_verify": {
+      "block_time": "2015-05-28T15:41:18Z",
+      "block_time_unix": 1432827678,
+      "code": "ok",
+      "digest": "03ba204e50d126e4674c005e04d82e84c21366780af1f43bd54a37816b6ab340",
+      "height": 358391,
+      "merkle_root": "8a1b66ecb7cbd07d8139a7e7d7f2c41aab1f5009b8364aaf61d03ad245e47e00",
+      "status": "confirmed",
+      "trust": "merkle root and time of the Bitcoin block were confirmed by two independent explorers (blockstream.info, mempool.space); proof-of-work and chain selection are not checked locally"
+    },
+    "official_examples_roundtrip": {
+      "bitcoin.pdf.ots": {
+        "bytes": 1746,
+        "official_roundtrip_identical": true,
+        "our_roundtrip_identical": true,
+        "sha256": "3d3ec15890e6ee66cfe6a84d4bb2805fa66e59a569b4fad86d4b8c2a71859620"
+      },
+      "different-blockchains.txt.ots": {
+        "bytes": 1705,
+        "official_roundtrip_identical": true,
+        "our_roundtrip_identical": true,
+        "sha256": "f5c9b3c73ee7858e8349d3c1f9c4c78fa13596d7cbc42dd577bd1bb0699891b2"
+      },
+      "empty.ots": {
+        "bytes": 3812,
+        "official_roundtrip_identical": true,
+        "our_roundtrip_identical": true,
+        "sha256": "3bc98a0c89639e3e0b717701877a849bb8b38147402dfb19643cb3bd39894535"
+      },
+      "hello-world.txt.ots": {
+        "bytes": 688,
+        "official_roundtrip_identical": true,
+        "our_roundtrip_identical": true,
+        "sha256": "be61ecb940db2e4a6f89fbed59c8d4f7f74fa756cbc1fad1ad7aabcb2bf59c30"
+      },
+      "incomplete.txt.ots": {
+        "bytes": 175,
+        "official_roundtrip_identical": true,
+        "our_roundtrip_identical": true,
+        "sha256": "95673f2878cbcfdddded530bd2ad5f3fb04e13d2e659760d7c1386346fdd036c"
+      }
+    },
+    "real_stamp": {
+      "bytes": 840,
+      "official_attestations": [
+        "PendingAttestation('https://alice.btc.calendar.opentimestamps.org')",
+        "PendingAttestation('https://bob.btc.calendar.opentimestamps.org')",
+        "PendingAttestation('https://btc.calendar.catallaxy.com')",
+        "PendingAttestation('https://finney.calendar.eternitywall.com')"
+      ],
+      "official_digest_matches": true,
+      "official_ots_upgrade_on_copy": {
+        "rc": 1,
+        "stderr": "Calendar https://finney.calendar.eternitywall.com: Pending confirmation in Bitcoin blockchain\nCalendar https://bob.btc.calendar.opentimestamps.org: Pending confirmation in Bitcoin blockchain\nCalendar https://btc.calendar.catallaxy.com: Pending confirmation in Bitcoin blockchain\nCalendar https://alice.btc.calendar.opentimestamps.org: Pending confirmation in Bitcoin blockchain\nFailed! Timestamp not complete",
+        "stdout": ""
+      },
+      "official_roundtrip_identical": true,
+      "ots_info": {
+        "rc": 0,
+        "stderr": "",
+        "stdout": "File sha256 hash: 941e9fb24177d37ab9e3d1de10745dbb156a3bc6abd296e91e60854cfd3aa70d\nTimestamp:\nappend 9afd9c5e8a1569f317326433aefb7724\nsha256\n -> append 2b54277d4a9513e20ac8056bba8d7ce7\n    sha256\n    prepend be3752003d761a7e88f14e499162a8af2df6bc9e38deffc7ec8daeddd6a309b5\n    sha256\n    prepend 7c4e79c7689f924c646bcafda069e726007ad963c30951b7bfce068e918941d0\n    sha256\n    prepend 68a697ece1835344bf9b7b22d5684dac038f3ac3c9a3d9d0fc547a4f6598358a\n    sha256\n    prepend 6aea2c7c\n    append d57d304051949edb\n    verify PendingAttestation('https://finney.calendar.eternitywall.com')\n -> append 3f823c15310111da\n    sha256\n    append 279275d1d20fae43936bdc33254b31de0d642f8878e557f699e5058d1a191b71\n    sha256\n    prepend bbe253062cad3b2f8ccc6e8167f7d5f45b70ea13dfcf5cca3144b217eba61fd1\n    sha256\n    append 697e0ee4d644d574c18fe9261b9ca2a1\n    sha256\n    prepend 2d4540d9934dd05df8cd4a43a9c77d1f2ad49e601a0856e3f9d2c0e484bc42ad\n    sha256\n    prepend 08fd47582c5296ab2ffe3a7db91c7c258b37d0ad211146f7dfc85e8f1960016c\n    sha256\n    prepend 6aea2c7c\n    append c0bfa660e74da299\n    verify PendingAttestation('https://bob.btc.calendar.opentimestamps.org')\n -> append 6b55bf3154ba58e1e34a82056f13ee20\n    sha256\n    append 5c952399faf6f6d60574e1b88a76002516dd3aab4df610ddaf01ad253978e6bb\n    sha256\n    append c5f396eecebc30abd2fb2033ab643fc11f0ff812416704c264c681d90f280109\n    sha256\n    append c1b8eaf291f0f9106ceddf367d1e7d0c8fa844eb39e007fe8e0f8f27e01d0f9a\n    sha256\n    prepend 6aea2c7d\n    append 48091593236a6a7c\n    verify PendingAttestation('https://btc.calendar.catallaxy.com')\n -> append cff584f9ab6e56d0\n    sha256\n    append 5172194f879221a3bbcbd5087ef0727e\n    sha256\n    prepend 8741c548ec3e8803f5d38be412bc9abc867f62d9d027b0bae753a5f67629cf61\n    sha256\n    prepend 6aea2c7d\n    append d2a8cf9e140eac82\n    verify PendingAttestation('https://alice.btc.calendar.opentimestamps.org')"
+      },
+      "our_upgrade_report": {
+        "changed": false,
+        "errors": {},
+        "pending": [
+          "https://finney.calendar.eternitywall.com",
+          "https://bob.btc.calendar.opentimestamps.org",
+          "https://btc.calendar.catallaxy.com",
+          "https://alice.btc.calendar.opentimestamps.org"
+        ],
+        "rejected": [],
+        "upgraded": 0
+      },
+      "our_verify": {
+        "calendars": [
+          "https://alice.btc.calendar.opentimestamps.org",
+          "https://bob.btc.calendar.opentimestamps.org",
+          "https://btc.calendar.catallaxy.com",
+          "https://finney.calendar.eternitywall.com"
+        ],
+        "code": "pending_only",
+        "digest": "941e9fb24177d37ab9e3d1de10745dbb156a3bc6abd296e91e60854cfd3aa70d",
+        "status": "pending"
+      },
+      "report": {
+        "commitment": "8edb8f9db49be2808fbced891a17d571c64eef21ce65f00499f2a245370f537e",
+        "digest": "941e9fb24177d37ab9e3d1de10745dbb156a3bc6abd296e91e60854cfd3aa70d",
+        "failed": {},
+        "nonce": "9afd9c5e8a1569f317326433aefb7724",
+        "ok": [
+          "https://a.pool.opentimestamps.org",
+          "https://b.pool.opentimestamps.org",
+          "https://a.pool.eternitywall.com",
+          "https://ots.btc.catallaxy.com"
+        ]
+      },
+      "sha256_of_ots": "e4070247639dc626786d076b260ebbb6eb556af3a757c184d8e9f8a64b166bfb",
+      "stamped": true,
+      "test_digest_sha256": "941e9fb24177d37ab9e3d1de10745dbb156a3bc6abd296e91e60854cfd3aa70d",
+      "test_text": "HomenS.AI Auto VPN OTS test 2026-11-03"
+    }
+  },
+  "date": "2026-11-03",
+  "how": "docker run python:3.12-slim; pip install opentimestamps-client; python ots_crosscheck.py /repo /out",
+  "official": {
+    "opentimestamps": "0.5.0",
+    "opentimestamps-client": "0.8.0",
+    "python": "3.12.15"
+  }
+}
