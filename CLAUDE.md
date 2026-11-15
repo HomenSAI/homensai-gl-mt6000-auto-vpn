@@ -1,6 +1,6 @@
 # HomenS.AI Auto VPN — maintainer entry
 
-Read docs/CURRENT-STATUS.md, docs/RELEASE-0.9.0.md and docs/handoff/CURRENT.md first. README.md/README.ru.md describe the current release. Main contains the released application; old prototype-only/stopped-window descriptions are historical.
+Read docs/SESSION_STATE.md first (short current state); open docs/CURRENT-STATUS.md, docs/RELEASE-0.9.0.md and docs/handoff/CURRENT.md only for the section you need. README.md/README.ru.md describe the current release. Main contains the released application; old prototype-only/stopped-window descriptions are historical.
 
 Before device work consult private/ACTIVE-EXECUTOR.local.json and the current owner instruction. Only one executor may operate the dedicated MT3000 at a time. Do not resume historical observers or fault rules. Primary MT6000 and Windows networking remain excluded unless separately authorized. Model selection never bypasses detected hardware/firmware/readiness checks. Never accept terms for the owner or silently start Auto.
 
@@ -9,16 +9,17 @@ Respect verified facts and scope: router-probed IPv4 continuous mode/actual oper
 Historical independent-review proposals remain in .claude/handoff and dated reports. They are not current approvals, pauses or instructions to execute every old backlog item. Use docs/ROADMAP.md for current open work.
 
 <!-- HSAI-CLAUDE-CONTEXT-PREFLIGHT:BEGIN -->
-## Required preflight and prompt caching (owner instruction, 2026-11-12, updated with measurements)
-Read **all of AGENTS.md** and its AI context/caching policy before substantive work. Inventory the project and current state; fully trace task-relevant code/docs; reuse a compact context map; targeted reads, trimmed tool output (`head`/`tail`/`cut`), no pasting of whole repositories, logs or JSON.
-**Prompt caching is the main cost lever, always on.** Claude Code: user settings `~/.claude/settings.json` must contain `"promptCacheTtl": "1h"` and `"subagentPromptCacheTtl": "1h"` (documented settings; subagents otherwise get 5 min and every wait > 5 min rewrites their whole context). Do not switch model, effort or fast mode mid-session; continue a running agent (SendMessage) or fork instead of starting a fresh one; long commands in the background. Direct Claude Messages API: stable shared material first with `cache_control` at the end of it, the changing question after; cache only when the prefix is read again (1 task: no marks; 2+ tasks starting together: 5m + one `max_tokens: 0` pre-warm; 3+ queued: 1h); every report states **with cache $X vs old way $Y, saved $Z, ×K** from `cache_creation_input_tokens` / `cache_read_input_tokens`. Respect every existing project safety and release rule. Full policy: https://github.com/HomenSAI/homensai-core/blob/main/docs/AI_CONTEXT_EFFICIENCY_POLICY.md
+Предварительное чтение и кэширование промптов (кэш 1 ч всегда включён): [docs/rules/AI-PREFLIGHT-CACHING.md](docs/rules/AI-PREFLIGHT-CACHING.md) — читать по необходимости.
 <!-- HSAI-CLAUDE-CONTEXT-PREFLIGHT:END -->
 
-## Коды ошибок — только из базы HomenSAI/ERROR-DATABASE
-Решение владельца 15.11.2026: единственный источник кодов ошибок — https://github.com/HomenSAI/ERROR-DATABASE (читать `AGENTS.md`, `ARCHITECTURE.md` §3.1, §7, §9, §12, `namespaces.json`, `CHANGELOG.md` базы). Подробная инструкция: [docs/CONNECT-PRODUCT.md](https://github.com/HomenSAI/ERROR-DATABASE/blob/main/docs/CONNECT-PRODUCT.md).
-- Пространство продукта — **VPN (номер 005)**, области в `namespaces.json` (PAIR, MON, INST, INT, SET, RPC, SPEED, TG, ADV, SRV, FLT, EVT, CLI, SYS). Новые области заводятся в базе со следующим свободным номером.
-- Буквенный код `<ПРОСТРАНСТВО>-<ОБЛАСТЬ>-NNN` — основной, не переиспользуется; `key` — машинное имя; `aliases` — прежние коды продукта. Цифровой код `PPP-AAA-NNN` (9 цифр): PPP — номер продукта (COMMON 001, CORE 002, RENT 003, JP 004, VPN 005, SEC 006), AAA — номер области, NNN — номер из буквенного кода (`VPN-PAIR-007` → `005-001-007`).
-- Новый код добавляется только в базе (`codes/<NS>/<AREA>.json`): тексты ru/uk/en/de (title, cause, action + escalation, level, audience, retryable, help, since) понятны без технических знаний и без адресов, IP, ключей, путей, внутренней логики и ПДн; `python tools/validate.py` = 0 ошибок, `python -m pytest -q`, `python tools/gen_constants.py`, запись в CHANGELOG базы; перед коммитом в базу `git pull`.
-- В продукт кладутся файлы выпуска `errors.<NS>.json`, `errors.COMMON.json`, `errors.manifest.json` и `errors.lock` (SHA-256), как в Homensai-Rent; коды вшиваются при сборке, сеть не нужна; сборка и тесты сверяют хэш с `errors.lock`.
-- Интерфейс показывает текст ошибки, буквенный код, цифровой код («Цифровой код 005-001-007») и ссылку `https://homensai.github.io/ERROR-DATABASE/errors/<КОД>`; прежний код — в скобках как «прежний код».
-- Тесты продукта: каждый выдаваемый код есть в базе, цифровой код совпадает с базой, `errors.lock` совпадает, цифровой код виден в интерфейсе. Самодельные коды запрещены и ловятся тестом.
+## Модели агентов и порядок сессий (решение владельца 15.11.2026, экономия лимитов)
+- Модель и effort для каждой задачи выбирает оркестратор и пишет их в отчёте: механика (прогон тестов, перенос по готовому образцу, поиск, форматирование, документы) — Sonnet, effort medium; код с логикой (переключение каналов, деньги, безопасность, параллельность, непонятная ошибка) — Opus, effort medium или high; Fable — только по решению владельца (отдельные сложные решения, итоговое ревью).
+- Модель указывать явно в каждом запуске агента (worker, general-purpose) — никогда «как у основной сессии». Sonnet дважды не справился — та же задача тому же агенту (SendMessage) на Opus, а не новый агент.
+- Не больше 2 агентов одновременно; соседнюю задачу — продолжением агента (SendMessage), а не новым.
+- Одна задача — одна сессия; в конце — состояние в docs/SESSION_STATE.md (что сделано, что дальше), затем новая сессия.
+- Смена задачи — /clear; длинная сессия — /compact после каждого крупного шага.
+- Не держать сессию ради ожидания: ежечасные проверки и ночные наблюдения — запланированными задачами с чистым контекстом.
+
+## Ссылки на правила (читать по необходимости)
+- Коды ошибок — только из базы HomenSAI/ERROR-DATABASE (пространство VPN 005): [docs/rules/ERROR-CODES.md](docs/rules/ERROR-CODES.md).
+- Модели NanoGPT (GLM-5.3 thinking по умолчанию): [docs/rules/NANOGPT.md](docs/rules/NANOGPT.md).
